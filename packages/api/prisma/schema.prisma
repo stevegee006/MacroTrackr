@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ───────────────────────────────────────────────────────
+
+model User {
+  id              String       @id @default(uuid()) @db.Uuid
+  email           String       @unique @db.VarChar(255)
+  passwordHash    String?      @map("password_hash") @db.VarChar(255)
+  displayName     String?      @map("display_name") @db.VarChar(100)
+  avatarUrl       String?      @map("avatar_url") @db.Text
+  authProvider    AuthProvider @default(LOCAL) @map("auth_provider")
+  oauthProviderId String?      @map("oauth_provider_id") @db.VarChar(255)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  profile    UserProfile?
+  settings   UserSettings?
+  foodLogs   FoodLog[]
+  macroPlans MacroPlan[]
+  mealPlans  MealPlan[]
+
+  @@map("users")
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+model UserProfile {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @unique @map("user_id") @db.Uuid
+  heightCm       Float?         @map("height_cm")
+  weightKg       Float?         @map("weight_kg")
+  age            Int?
+  sex            Sex?
+  activityLevel  ActivityLevel? @map("activity_level")
+  goal           Goal?
+  targetCalories Int?           @map("target_calories")
+  targetProteinG Int?           @map("target_protein_g")
+  targetCarbsG   Int?           @map("target_carbs_g")
+  targetFatG     Int?           @map("target_fat_g")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHTLY_ACTIVE
+  MODERATELY_ACTIVE
+  VERY_ACTIVE
+  EXTREMELY_ACTIVE
+}
+
+enum Goal {
+  LOSE_WEIGHT
+  MAINTAIN
+  GAIN_MUSCLE
+}
+
+model UserSettings {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @map("user_id") @db.Uuid
+  openaiApiKey   String?  @map("openai_api_key") @db.Text
+  preferredUnits Units    @default(METRIC) @map("preferred_units")
+  darkMode       Boolean  @default(false) @map("dark_mode")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+enum Units {
+  METRIC
+  IMPERIAL
+}
+
+// ─── Food Items ──────────────────────────────────────────────────
+
+model FoodItem {
+  id              String     @id @default(uuid()) @db.Uuid
+  barcode         String?    @unique @db.VarChar(50)
+  name            String     @db.VarChar(255)
+  brand           String?    @db.VarChar(255)
+  servingSizeG    Float      @map("serving_size_g")
+  servingUnit     String     @default("g") @map("serving_unit") @db.VarChar(20)
+  caloriesPer100g Float      @map("calories_per_100g")
+  proteinPer100g  Float      @map("protein_per_100g")
+  carbsPer100g    Float      @map("carbs_per_100g")
+  fatPer100g      Float      @map("fat_per_100g")
+  fiberPer100g    Float?     @map("fiber_per_100g")
+  sugarPer100g    Float?     @map("sugar_per_100g")
+  sodiumPer100g   Float?     @map("sodium_per_100g")
+  imageUrl        String?    @map("image_url") @db.Text
+  source          FoodSource @default(OPENFOODFACTS)
+  offProductJson  Json?      @map("off_product_json")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  foodLogs FoodLog[]
+
+  @@index([barcode])
+  @@index([name])
+  @@map("food_items")
+}
+
+enum FoodSource {
+  OPENFOODFACTS
+  MANUAL
+}
+
+// ─── Food Log ────────────────────────────────────────────────────
+
+model FoodLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  foodItemId    String   @map("food_item_id") @db.Uuid
+  logDate       DateTime @map("log_date") @db.Date
+  mealType      MealType @map("meal_type")
+  servingQty    Float    @map("serving_qty")
+  servingSizeG  Float    @map("serving_size_g")
+  totalCalories Float    @map("total_calories")
+  totalProteinG Float    @map("total_protein_g")
+  totalCarbsG   Float    @map("total_carbs_g")
+  totalFatG     Float    @map("total_fat_g")
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodItem FoodItem @relation(fields: [foodItemId], references: [id])
+
+  @@index([userId, logDate])
+  @@index([logDate])
+  @@map("food_logs")
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+// ─── AI Macro Plans ──────────────────────────────────────────────
+
+model MacroPlan {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  goal           Goal
+  targetCalories Int      @map("target_calories")
+  targetProteinG Int      @map("target_protein_g")
+  targetCarbsG   Int      @map("target_carbs_g")
+  targetFatG     Int      @map("target_fat_g")
+  reasoning      String   @db.Text
+  inputSnapshot  Json     @map("input_snapshot")
+  aiModel        String   @map("ai_model") @db.VarChar(50)
+  isActive       Boolean  @default(false) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("macro_plans")
+}
+
+// ─── AI Meal Plans ───────────────────────────────────────────────
+
+model MealPlan {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  durationDays   Int      @map("duration_days")
+  targetCalories Int      @map("target_calories")
+  targetProteinG Int      @map("target_protein_g")
+  targetCarbsG   Int      @map("target_carbs_g")
+  targetFatG     Int      @map("target_fat_g")
+  planData       Json     @map("plan_data")
+  preferences    Json?
+  aiModel        String   @map("ai_model") @db.VarChar(50)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("meal_plans")
+}

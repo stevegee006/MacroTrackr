@@ -29,15 +29,15 @@ export const scanLabelSchema = z.object({
 
 export const labelScanResponseSchema = z.object({
   name: z.string().min(1),
-  brand: z.string().optional(),
-  servingSizeG: z.number().positive(),
-  caloriesPer100g: z.number().nonnegative(),
-  proteinPer100g: z.number().nonnegative(),
-  carbsPer100g: z.number().nonnegative(),
-  fatPer100g: z.number().nonnegative(),
-  fiberPer100g: z.number().nonnegative().nullable().optional(),
-  sugarPer100g: z.number().nonnegative().nullable().optional(),
-  sodiumPer100g: z.number().nonnegative().nullable().optional(),
+  brand: z.string().nullable().optional(),
+  servingSizeG: z.coerce.number().positive(),
+  caloriesPer100g: z.coerce.number().nonnegative(),
+  proteinPer100g: z.coerce.number().nonnegative(),
+  carbsPer100g: z.coerce.number().nonnegative(),
+  fatPer100g: z.coerce.number().nonnegative(),
+  fiberPer100g: z.coerce.number().nonnegative().nullable().optional(),
+  sugarPer100g: z.coerce.number().nonnegative().nullable().optional(),
+  sodiumPer100g: z.coerce.number().nonnegative().nullable().optional(),
 });
 
 export const estimateFoodSchema = z.object({

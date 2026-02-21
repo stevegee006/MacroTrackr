@@ -44,9 +44,9 @@ export function LabelScanner({ onResult, existingFoodId }: LabelScannerProps) {
     const previewUrl = URL.createObjectURL(file);
     setPreview(previewUrl);
 
-    // Compress and convert to base64 (reduces 10MB+ phone photos to ~200-500KB)
+    // Compress and convert to base64 (reduces 10MB+ phone photos to ~150-400KB)
     try {
-      const compressed = await compressImage(file, 1500, 0.7);
+      const compressed = await compressImage(file, 1200, 0.6);
       setImageBase64(compressed);
     } catch {
       setPreview(null);

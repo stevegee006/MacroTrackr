@@ -4,6 +4,7 @@ import { labelScanResponseSchema } from '@macrotracker/shared';
 import { lookupBarcode } from './openfoodfacts.service.js';
 import { getOpenAIClient, visionCompletion, chatCompletion } from './openai.service.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
+import { logger } from '../utils/logger.js';
 
 export async function getFoodByBarcode(fastify: FastifyInstance, barcode: string) {
   // Check local cache first
@@ -144,8 +145,19 @@ export async function extractNutritionFromLabel(
     },
   );
 
-  const parsed = labelScanResponseSchema.safeParse(JSON.parse(result.content));
+  let jsonContent: unknown;
+  try {
+    // Strip markdown code fences if present (```json ... ```)
+    const cleaned = result.content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    jsonContent = JSON.parse(cleaned);
+  } catch {
+    logger.error({ raw: result.content.slice(0, 500) }, 'Label scan: failed to parse AI JSON');
+    throw new AppError(502, 'AI_PARSE_ERROR', 'Failed to parse nutrition data from label. Please try again with a clearer photo.');
+  }
+
+  const parsed = labelScanResponseSchema.safeParse(jsonContent);
   if (!parsed.success) {
+    logger.error({ errors: parsed.error.flatten(), raw: result.content.slice(0, 500) }, 'Label scan: Zod validation failed');
     throw new AppError(502, 'AI_PARSE_ERROR', 'Failed to parse nutrition data from label. Please try again with a clearer photo.');
   }
 
@@ -190,8 +202,18 @@ export async function updateFoodFromLabel(
     },
   );
 
-  const parsed = labelScanResponseSchema.safeParse(JSON.parse(result.content));
+  let jsonContent: unknown;
+  try {
+    const cleaned = result.content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    jsonContent = JSON.parse(cleaned);
+  } catch {
+    logger.error({ raw: result.content.slice(0, 500) }, 'Label rescan: failed to parse AI JSON');
+    throw new AppError(502, 'AI_PARSE_ERROR', 'Failed to parse nutrition data from label. Please try again with a clearer photo.');
+  }
+
+  const parsed = labelScanResponseSchema.safeParse(jsonContent);
   if (!parsed.success) {
+    logger.error({ errors: parsed.error.flatten(), raw: result.content.slice(0, 500) }, 'Label rescan: Zod validation failed');
     throw new AppError(502, 'AI_PARSE_ERROR', 'Failed to parse nutrition data from label. Please try again with a clearer photo.');
   }
 
@@ -261,14 +283,18 @@ export async function estimateFoodMacros(
     },
   );
 
-  let parsed;
+  let jsonContent: unknown;
   try {
-    parsed = labelScanResponseSchema.safeParse(JSON.parse(result.content));
+    const cleaned = result.content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    jsonContent = JSON.parse(cleaned);
   } catch {
+    logger.error({ raw: result.content.slice(0, 500) }, 'AI estimate: failed to parse AI JSON');
     throw new AppError(502, 'AI_PARSE_ERROR', 'Failed to estimate nutrition data. Please try again with a more specific description.');
   }
 
+  const parsed = labelScanResponseSchema.safeParse(jsonContent);
   if (!parsed.success) {
+    logger.error({ errors: parsed.error.flatten(), raw: result.content.slice(0, 500) }, 'AI estimate: Zod validation failed');
     throw new AppError(502, 'AI_PARSE_ERROR', 'Failed to estimate nutrition data. Please try again with a more specific description.');
   }
 

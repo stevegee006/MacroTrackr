@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createFoodItemSchema, updateFoodItemSchema, searchFoodSchema } from '@macrotracker/shared';
+import { createFoodItemSchema, updateFoodItemSchema, searchFoodSchema, scanLabelSchema } from '@macrotracker/shared';
 import * as foodService from '../../services/food.service.js';
 
 export default async function foodRoutes(fastify: FastifyInstance) {
@@ -34,5 +34,18 @@ export default async function foodRoutes(fastify: FastifyInstance) {
     const body = updateFoodItemSchema.parse(request.body);
     const item = await foodService.updateFoodItem(fastify, id, body);
     return { data: item };
+  });
+
+  fastify.post('/food/scan-label', {
+    bodyLimit: 10 * 1024 * 1024, // 10MB for base64 images
+    handler: async (request, reply) => {
+      const body = scanLabelSchema.parse(request.body);
+      const item = await foodService.extractNutritionFromLabel(
+        fastify,
+        request.user.sub,
+        body.image,
+      );
+      reply.code(201).send({ data: item });
+    },
   });
 }

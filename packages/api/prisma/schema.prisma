@@ -125,6 +125,7 @@ model FoodItem {
 enum FoodSource {
   OPENFOODFACTS
   MANUAL
+  LABEL_SCAN
 }
 
 // ─── Food Log ────────────────────────────────────────────────────

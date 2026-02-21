@@ -1,7 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import type { CreateFoodItemInput } from '@macrotracker/shared';
+import { labelScanResponseSchema } from '@macrotracker/shared';
 import { lookupBarcode } from './openfoodfacts.service.js';
-import { NotFoundError } from '../utils/errors.js';
+import { getOpenAIClient, visionCompletion } from './openai.service.js';
+import { NotFoundError, AppError } from '../utils/errors.js';
 
 export async function getFoodByBarcode(fastify: FastifyInstance, barcode: string) {
   // Check local cache first
@@ -96,4 +98,71 @@ export async function updateFoodItem(
   const existing = await fastify.prisma.foodItem.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError('Food item');
   return fastify.prisma.foodItem.update({ where: { id }, data });
+}
+
+const LABEL_SCAN_SYSTEM_PROMPT = `You are a nutrition label reader. Given a photo of a nutrition/supplement facts label, extract the nutritional information accurately.
+
+IMPORTANT RULES:
+- Read the serving size from the label carefully.
+- Extract ALL values per 100g. If the label shows values per serving only, calculate per-100g values using: (value / servingSizeG) * 100
+- If the label already shows "per 100g" or "per 100ml" values, use those directly.
+- If a nutrient is not listed on the label, return null for that field.
+- For the product name: read it from the label/packaging if visible, otherwise use "Scanned Food Item".
+- For the brand: read it from the label/packaging if visible.
+- Round all values to at most 2 decimal places.
+
+Respond ONLY with valid JSON matching this exact structure:
+{
+  "name": "<product name>",
+  "brand": "<brand name or null>",
+  "servingSizeG": <serving size in grams>,
+  "caloriesPer100g": <number>,
+  "proteinPer100g": <number>,
+  "carbsPer100g": <number>,
+  "fatPer100g": <number>,
+  "fiberPer100g": <number or null>,
+  "sugarPer100g": <number or null>,
+  "sodiumPer100g": <number or null>
+}`;
+
+export async function extractNutritionFromLabel(
+  fastify: FastifyInstance,
+  userId: string,
+  imageBase64: string,
+) {
+  const client = await getOpenAIClient(fastify, userId);
+
+  const result = await visionCompletion(
+    client,
+    LABEL_SCAN_SYSTEM_PROMPT,
+    'Extract the nutrition information from this label. Return JSON only.',
+    imageBase64,
+    {
+      model: 'gpt-4o',
+      temperature: 0.1,
+      maxTokens: 1000,
+    },
+  );
+
+  const parsed = labelScanResponseSchema.safeParse(JSON.parse(result.content));
+  if (!parsed.success) {
+    throw new AppError(502, 'AI_PARSE_ERROR', 'Failed to parse nutrition data from label. Please try again with a clearer photo.');
+  }
+
+  // Create FoodItem in DB
+  return fastify.prisma.foodItem.create({
+    data: {
+      name: parsed.data.name,
+      brand: parsed.data.brand ?? null,
+      servingSizeG: parsed.data.servingSizeG,
+      caloriesPer100g: parsed.data.caloriesPer100g,
+      proteinPer100g: parsed.data.proteinPer100g,
+      carbsPer100g: parsed.data.carbsPer100g,
+      fatPer100g: parsed.data.fatPer100g,
+      fiberPer100g: parsed.data.fiberPer100g ?? null,
+      sugarPer100g: parsed.data.sugarPer100g ?? null,
+      sodiumPer100g: parsed.data.sodiumPer100g ?? null,
+      source: 'LABEL_SCAN',
+    },
+  });
 }

@@ -7,15 +7,22 @@ import { todayString } from '@/lib/utils';
 import { MacroRings } from '@/components/log/MacroRings';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
-import { ChevronLeft, ChevronRight, Trash2, Loader2 } from 'lucide-react';
-import type { DailySummary, FoodLogEntry } from '@macrotracker/shared';
+import { ChevronLeft, ChevronRight, Trash2, Pencil, Loader2, X } from 'lucide-react';
+import type { DailySummary, FoodLogEntry, MealType } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@macrotracker/shared';
 import Link from 'next/link';
 
 export default function LogPage() {
   const [date, setDate] = useState(todayString());
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{
+    servingQty: string;
+    servingSizeG: string;
+    mealType: MealType;
+  } | null>(null);
   const queryClient = useQueryClient();
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -31,8 +38,6 @@ export default function LogPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       setDeletingId(id);
-      // Use raw fetch for DELETE to avoid Content-Type: application/json
-      // on a 204 No Content response which can cause parsing issues
       const baseUrl = getApiUrl();
       const token = getAccessToken();
       const headers: Record<string, string> = {};
@@ -41,9 +46,7 @@ export default function LogPage() {
         method: 'DELETE',
         headers,
       });
-      if (!res.ok) {
-        throw new Error('Failed to delete entry');
-      }
+      if (!res.ok) throw new Error('Failed to delete entry');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['food-log', date] });
@@ -52,10 +55,52 @@ export default function LogPage() {
     onSettled: () => setDeletingId(null),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { servingQty: number; servingSizeG: number; mealType: string } }) => {
+      return apiFetch(`/food-log/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['food-log', date] });
+      queryClient.invalidateQueries({ queryKey: ['food-log-summary', date] });
+      setEditingId(null);
+      setEditForm(null);
+    },
+  });
+
+  function startEditing(entry: FoodLogEntry) {
+    setEditingId(entry.id);
+    setEditForm({
+      servingQty: entry.servingQty.toString(),
+      servingSizeG: entry.servingSizeG.toString(),
+      mealType: entry.mealType as MealType,
+    });
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setEditForm(null);
+  }
+
+  function saveEdit(entryId: string) {
+    if (!editForm) return;
+    updateMutation.mutate({
+      id: entryId,
+      data: {
+        servingQty: parseFloat(editForm.servingQty) || 1,
+        servingSizeG: parseFloat(editForm.servingSizeG) || 100,
+        mealType: editForm.mealType,
+      },
+    });
+  }
+
   function changeDate(offset: number) {
     const d = new Date(date);
     d.setDate(d.getDate() + offset);
     setDate(d.toISOString().split('T')[0]);
+    cancelEditing();
   }
 
   const logs = entries?.data ?? [];
@@ -110,41 +155,147 @@ export default function LogPage() {
                 <h3 className="text-sm font-semibold text-gray-500 uppercase">
                   {MEAL_TYPE_LABELS[mealType as keyof typeof MEAL_TYPE_LABELS]}
                 </h3>
-                {items.map((entry) => (
-                  <Card key={entry.id} className="flex items-center justify-between py-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{entry.foodItem?.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {entry.servingQty} x {entry.servingSizeG}g &middot;{' '}
-                        {Math.round(entry.totalCalories)} kcal
-                      </p>
-                      <p className="text-xs mt-0.5">
-                        <span className="text-blue-500">P:{Math.round(entry.totalProteinG)}g</span>
-                        {' '}
-                        <span className="text-amber-500">C:{Math.round(entry.totalCarbsG)}g</span>
-                        {' '}
-                        <span className="text-red-500">F:{Math.round(entry.totalFatG)}g</span>
-                        {entry.totalFiberG != null && (
-                          <>{' '}<span className="text-green-600">Fb:{Math.round(entry.totalFiberG)}g</span></>
+                {items.map((entry) => {
+                  const isEditing = editingId === entry.id;
+
+                  if (isEditing && editForm) {
+                    // Compute preview macros
+                    const qty = parseFloat(editForm.servingQty) || 0;
+                    const sizeG = parseFloat(editForm.servingSizeG) || 0;
+                    const factor = (sizeG * qty) / 100;
+                    const fi = entry.foodItem;
+
+                    return (
+                      <Card key={entry.id} className="space-y-3 py-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium truncate">{fi?.name}</p>
+                          <button
+                            onClick={cancelEditing}
+                            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <Input
+                            label="Servings"
+                            type="number"
+                            min={0.1}
+                            step={0.1}
+                            value={editForm.servingQty}
+                            onChange={(e) => setEditForm({ ...editForm, servingQty: e.target.value })}
+                            className="w-24"
+                          />
+                          <Input
+                            label="Size (g)"
+                            type="number"
+                            min={1}
+                            value={editForm.servingSizeG}
+                            onChange={(e) => setEditForm({ ...editForm, servingSizeG: e.target.value })}
+                            className="w-28"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Meal</label>
+                          <div className="flex gap-1.5 flex-wrap">
+                            {MEAL_TYPES.map((type) => (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => setEditForm({ ...editForm, mealType: type })}
+                                className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                                  editForm.mealType === type
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                }`}
+                              >
+                                {MEAL_TYPE_LABELS[type]}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Preview macros */}
+                        {fi && (
+                          <div className="rounded-lg bg-gray-50 p-2 text-xs">
+                            <span className="font-medium">{Math.round((fi.caloriesPer100g ?? 0) * factor)} kcal</span>
+                            {' · '}
+                            <span className="text-blue-500">P:{Math.round((fi.proteinPer100g ?? 0) * factor)}g</span>
+                            {' '}
+                            <span className="text-amber-500">C:{Math.round((fi.carbsPer100g ?? 0) * factor)}g</span>
+                            {' '}
+                            <span className="text-red-500">F:{Math.round((fi.fatPer100g ?? 0) * factor)}g</span>
+                          </div>
                         )}
-                        {entry.totalSugarG != null && (
-                          <>{' '}<span className="text-purple-500">S:{Math.round(entry.totalSugarG)}g</span></>
+
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => saveEdit(entry.id)}
+                            isLoading={updateMutation.isPending}
+                            className="flex-1"
+                          >
+                            Save
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={cancelEditing} className="flex-1">
+                            Cancel
+                          </Button>
+                        </div>
+
+                        {updateMutation.isError && (
+                          <p className="text-xs text-red-600">Failed to update entry</p>
                         )}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => deleteMutation.mutate(entry.id)}
-                      disabled={deletingId === entry.id}
-                      className="ml-2 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50 active:bg-red-100"
-                    >
-                      {deletingId === entry.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </button>
-                  </Card>
-                ))}
+                      </Card>
+                    );
+                  }
+
+                  // Display mode
+                  return (
+                    <Card key={entry.id} className="flex items-center justify-between py-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{entry.foodItem?.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {entry.servingQty} x {entry.servingSizeG}g &middot;{' '}
+                          {Math.round(entry.totalCalories)} kcal
+                        </p>
+                        <p className="text-xs mt-0.5">
+                          <span className="text-blue-500">P:{Math.round(entry.totalProteinG)}g</span>
+                          {' '}
+                          <span className="text-amber-500">C:{Math.round(entry.totalCarbsG)}g</span>
+                          {' '}
+                          <span className="text-red-500">F:{Math.round(entry.totalFatG)}g</span>
+                          {entry.totalFiberG != null && (
+                            <>{' '}<span className="text-green-600">Fb:{Math.round(entry.totalFiberG)}g</span></>
+                          )}
+                          {entry.totalSugarG != null && (
+                            <>{' '}<span className="text-purple-500">S:{Math.round(entry.totalSugarG)}g</span></>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center ml-2">
+                        <button
+                          onClick={() => startEditing(entry)}
+                          className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-emerald-600 active:text-emerald-700 transition-colors rounded-lg hover:bg-emerald-50"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteMutation.mutate(entry.id)}
+                          disabled={deletingId === entry.id}
+                          className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50 active:bg-red-100"
+                        >
+                          {deletingId === entry.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
             ))
           )}

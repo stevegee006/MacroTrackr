@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { BarcodeScanner } from '@/components/scanner/BarcodeScanner';
+import { LabelScanner } from '@/components/scanner/LabelScanner';
 import { ManualBarcodeEntry } from '@/components/scanner/ManualBarcodeEntry';
 import { NutritionLabel } from '@/components/food/NutritionLabel';
 import { AddToLogForm } from '@/components/food/AddToLogForm';
@@ -36,7 +37,20 @@ export default function ScanPage() {
 
       <div className="relative flex items-center gap-4">
         <div className="h-px flex-1 bg-gray-200" />
-        <span className="text-xs text-gray-400">or enter manually</span>
+        <span className="text-xs text-gray-400">or scan a label</span>
+        <div className="h-px flex-1 bg-gray-200" />
+      </div>
+
+      <LabelScanner
+        onResult={(food) => {
+          setScannedFood(food);
+          setAdded(false);
+        }}
+      />
+
+      <div className="relative flex items-center gap-4">
+        <div className="h-px flex-1 bg-gray-200" />
+        <span className="text-xs text-gray-400">or enter barcode manually</span>
         <div className="h-px flex-1 bg-gray-200" />
       </div>
 

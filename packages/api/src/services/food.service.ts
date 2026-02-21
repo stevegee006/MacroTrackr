@@ -87,3 +87,13 @@ export async function createFoodItem(fastify: FastifyInstance, data: CreateFoodI
     },
   });
 }
+
+export async function updateFoodItem(
+  fastify: FastifyInstance,
+  id: string,
+  data: Partial<CreateFoodItemInput>,
+) {
+  const existing = await fastify.prisma.foodItem.findUnique({ where: { id } });
+  if (!existing) throw new NotFoundError('Food item');
+  return fastify.prisma.foodItem.update({ where: { id }, data });
+}

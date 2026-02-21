@@ -21,5 +21,8 @@ export const searchFoodSchema = z.object({
   limit: z.coerce.number().int().positive().max(50).default(20),
 });
 
+export const updateFoodItemSchema = createFoodItemSchema.partial();
+
 export type CreateFoodItemInput = z.infer<typeof createFoodItemSchema>;
+export type UpdateFoodItemInput = z.infer<typeof updateFoodItemSchema>;
 export type SearchFoodInput = z.infer<typeof searchFoodSchema>;

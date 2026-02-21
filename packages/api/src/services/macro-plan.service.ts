@@ -150,6 +150,28 @@ export async function activateMacroPlan(
   return { ...plan, isActive: true };
 }
 
+export async function createManualMacroPlan(
+  fastify: FastifyInstance,
+  userId: string,
+  input: { name: string; goal: string; targetCalories: number; targetProteinG: number; targetCarbsG: number; targetFatG: number },
+) {
+  return fastify.prisma.macroPlan.create({
+    data: {
+      userId,
+      name: input.name,
+      goal: input.goal as any,
+      targetCalories: input.targetCalories,
+      targetProteinG: input.targetProteinG,
+      targetCarbsG: input.targetCarbsG,
+      targetFatG: input.targetFatG,
+      reasoning: 'Manually created plan',
+      inputSnapshot: {},
+      aiModel: 'manual',
+      isActive: false,
+    },
+  });
+}
+
 export async function deleteMacroPlan(fastify: FastifyInstance, userId: string, planId: string) {
   const plan = await getMacroPlan(fastify, userId, planId);
   await fastify.prisma.macroPlan.delete({ where: { id: plan.id } });

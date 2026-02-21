@@ -11,12 +11,26 @@ import { GOAL_LABELS } from '@macrotracker/shared';
 import type { MacroPlan, Goal } from '@macrotracker/shared';
 import { Check, Trash2, Loader2 } from 'lucide-react';
 
+type Tab = 'manual' | 'ai';
+
 export default function MacroPlanPage() {
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState<Tab>('manual');
+
+  // Shared state
   const [goal, setGoal] = useState<Goal>('MAINTAIN');
-  const [customNotes, setCustomNotes] = useState('');
   const [activatingId, setActivatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // AI tab state
+  const [customNotes, setCustomNotes] = useState('');
+
+  // Manual tab state
+  const [manualName, setManualName] = useState('');
+  const [manualCalories, setManualCalories] = useState('');
+  const [manualProtein, setManualProtein] = useState('');
+  const [manualCarbs, setManualCarbs] = useState('');
+  const [manualFat, setManualFat] = useState('');
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['macro-plans'],
@@ -30,6 +44,29 @@ export default function MacroPlanPage() {
         body: JSON.stringify({ goal, customNotes: customNotes || undefined }),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['macro-plans'] }),
+  });
+
+  const manualMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ data: MacroPlan }>('/macro-plan', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: manualName,
+          goal,
+          targetCalories: parseInt(manualCalories) || 0,
+          targetProteinG: parseInt(manualProtein) || 0,
+          targetCarbsG: parseInt(manualCarbs) || 0,
+          targetFatG: parseInt(manualFat) || 0,
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['macro-plans'] });
+      setManualName('');
+      setManualCalories('');
+      setManualProtein('');
+      setManualCarbs('');
+      setManualFat('');
+    },
   });
 
   const activateMutation = useMutation({
@@ -54,7 +91,6 @@ export default function MacroPlanPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       setDeletingId(id);
-      // Use raw fetch for DELETE to avoid 204 parsing issues
       const baseUrl = getApiUrl();
       const token = getAccessToken();
       const headers: Record<string, string> = {};
@@ -71,64 +107,181 @@ export default function MacroPlanPage() {
     onSettled: () => setDeletingId(null),
   });
 
+  const manualFormValid =
+    manualName.trim().length > 0 && parseInt(manualCalories) > 0;
+
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold">AI Macro Plans</h1>
+      <h1 className="text-xl font-bold">Macro Plans</h1>
 
-      <Card className="space-y-4">
-        <h2 className="font-semibold">Generate New Plan</h2>
-        <p className="text-sm text-gray-500">
-          Uses your profile stats and OpenAI to calculate personalized macro targets.
-        </p>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Goal</label>
-          <div className="flex gap-2 flex-wrap">
-            {(Object.entries(GOAL_LABELS) as [Goal, string][]).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setGoal(key)}
-                className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                  goal === key
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Input
-          label="Additional notes (optional)"
-          placeholder="e.g., high protein, low carb"
-          value={customNotes}
-          onChange={(e) => setCustomNotes(e.target.value)}
-        />
-
-        <Button
-          onClick={() => generateMutation.mutate()}
-          isLoading={generateMutation.isPending}
-          className="w-full"
+      {/* Tab toggle */}
+      <div className="flex rounded-lg bg-gray-100 p-1">
+        <button
+          onClick={() => setTab('manual')}
+          className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
+            tab === 'manual'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
         >
-          Generate Macro Plan
-        </Button>
+          Manual
+        </button>
+        <button
+          onClick={() => setTab('ai')}
+          className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
+            tab === 'ai'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          AI Generate
+        </button>
+      </div>
 
-        {generateMutation.isError && (
-          <p className="text-sm text-red-600">
-            {(generateMutation.error as any)?.message || 'Failed to generate plan'}
+      {/* Manual creation form */}
+      {tab === 'manual' && (
+        <Card className="space-y-4">
+          <h2 className="font-semibold">Create Custom Plan</h2>
+          <p className="text-sm text-gray-500">
+            Set your own macro targets manually.
           </p>
-        )}
-      </Card>
 
+          <Input
+            label="Plan name"
+            placeholder="e.g., Cut Phase 1"
+            value={manualName}
+            onChange={(e) => setManualName(e.target.value)}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Goal</label>
+            <div className="flex gap-2 flex-wrap">
+              {(Object.entries(GOAL_LABELS) as [Goal, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setGoal(key)}
+                  className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                    goal === key
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Calories"
+              type="number"
+              min={0}
+              placeholder="2000"
+              value={manualCalories}
+              onChange={(e) => setManualCalories(e.target.value)}
+            />
+            <Input
+              label="Protein (g)"
+              type="number"
+              min={0}
+              placeholder="150"
+              value={manualProtein}
+              onChange={(e) => setManualProtein(e.target.value)}
+            />
+            <Input
+              label="Carbs (g)"
+              type="number"
+              min={0}
+              placeholder="200"
+              value={manualCarbs}
+              onChange={(e) => setManualCarbs(e.target.value)}
+            />
+            <Input
+              label="Fat (g)"
+              type="number"
+              min={0}
+              placeholder="65"
+              value={manualFat}
+              onChange={(e) => setManualFat(e.target.value)}
+            />
+          </div>
+
+          <Button
+            onClick={() => manualMutation.mutate()}
+            isLoading={manualMutation.isPending}
+            disabled={!manualFormValid}
+            className="w-full"
+          >
+            Create Plan
+          </Button>
+
+          {manualMutation.isError && (
+            <p className="text-sm text-red-600">
+              {(manualMutation.error as any)?.message || 'Failed to create plan'}
+            </p>
+          )}
+        </Card>
+      )}
+
+      {/* AI generation form */}
+      {tab === 'ai' && (
+        <Card className="space-y-4">
+          <h2 className="font-semibold">Generate with AI</h2>
+          <p className="text-sm text-gray-500">
+            Uses your profile stats and OpenAI to calculate personalized macro targets.
+          </p>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Goal</label>
+            <div className="flex gap-2 flex-wrap">
+              {(Object.entries(GOAL_LABELS) as [Goal, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setGoal(key)}
+                  className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                    goal === key
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Input
+            label="Additional notes (optional)"
+            placeholder="e.g., high protein, low carb"
+            value={customNotes}
+            onChange={(e) => setCustomNotes(e.target.value)}
+          />
+
+          <Button
+            onClick={() => generateMutation.mutate()}
+            isLoading={generateMutation.isPending}
+            className="w-full"
+          >
+            Generate Macro Plan
+          </Button>
+
+          {generateMutation.isError && (
+            <p className="text-sm text-red-600">
+              {(generateMutation.error as any)?.message || 'Failed to generate plan. Make sure your profile is complete and API key is set.'}
+            </p>
+          )}
+        </Card>
+      )}
+
+      {/* Plans list */}
       <h2 className="text-lg font-semibold">Your Plans</h2>
 
       {isLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : plans?.data.length === 0 ? (
         <Card className="py-6 text-center text-gray-500">
-          No plans yet. Generate your first macro plan above!
+          No plans yet. Create your first macro plan above!
         </Card>
       ) : (
         <div className="space-y-3">
@@ -150,7 +303,14 @@ export default function MacroPlanPage() {
 
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium">{plan.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{plan.name}</p>
+                    {(plan as any).aiModel === 'manual' && (
+                      <span className="text-[10px] font-medium uppercase tracking-wide bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                        Manual
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500">
                     {new Date(plan.createdAt).toLocaleDateString()}
                   </p>
@@ -204,7 +364,7 @@ export default function MacroPlanPage() {
                 </div>
               </div>
 
-              {plan.reasoning && (
+              {plan.reasoning && (plan as any).aiModel !== 'manual' && (
                 <details className="mt-3">
                   <summary className="cursor-pointer text-xs text-gray-500 hover:text-gray-700">
                     Show reasoning

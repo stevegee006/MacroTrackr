@@ -58,7 +58,7 @@ export default function ScanPage() {
 
       {scannedFood && !added && (
         <div className="space-y-4">
-          <NutritionLabel food={scannedFood} />
+          <NutritionLabel food={scannedFood} onUpdated={(updated) => setScannedFood(updated)} />
           <AddToLogForm food={scannedFood} onSuccess={() => setAdded(true)} />
         </div>
       )}

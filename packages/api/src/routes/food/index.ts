@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createFoodItemSchema, searchFoodSchema } from '@macrotracker/shared';
+import { createFoodItemSchema, updateFoodItemSchema, searchFoodSchema } from '@macrotracker/shared';
 import * as foodService from '../../services/food.service.js';
 
 export default async function foodRoutes(fastify: FastifyInstance) {
@@ -27,5 +27,12 @@ export default async function foodRoutes(fastify: FastifyInstance) {
     const body = createFoodItemSchema.parse(request.body);
     const item = await foodService.createFoodItem(fastify, body);
     reply.code(201).send({ data: item });
+  });
+
+  fastify.patch('/food/:id', async (request) => {
+    const { id } = request.params as { id: string };
+    const body = updateFoodItemSchema.parse(request.body);
+    const item = await foodService.updateFoodItem(fastify, id, body);
+    return { data: item };
   });
 }

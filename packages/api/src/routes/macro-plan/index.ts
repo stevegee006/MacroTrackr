@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { generateMacroPlanSchema } from '@macrotracker/shared';
+import { generateMacroPlanSchema, createManualMacroPlanSchema } from '@macrotracker/shared';
 import * as macroPlanService from '../../services/macro-plan.service.js';
 
 export default async function macroPlanRoutes(fastify: FastifyInstance) {
@@ -8,6 +8,12 @@ export default async function macroPlanRoutes(fastify: FastifyInstance) {
   fastify.post('/macro-plan/generate', async (request, reply) => {
     const body = generateMacroPlanSchema.parse(request.body);
     const plan = await macroPlanService.generateMacroPlan(fastify, request.user.sub, body);
+    reply.code(201).send({ data: plan });
+  });
+
+  fastify.post('/macro-plan', async (request, reply) => {
+    const body = createManualMacroPlanSchema.parse(request.body);
+    const plan = await macroPlanService.createManualMacroPlan(fastify, request.user.sub, body);
     reply.code(201).send({ data: plan });
   });
 

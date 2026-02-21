@@ -9,8 +9,33 @@ import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { ACTIVITY_LABELS, GOAL_LABELS } from '@macrotracker/shared';
-import type { UserProfile, ActivityLevel, Goal, Sex } from '@macrotracker/shared';
+import type { UserProfile, UserSettings, ActivityLevel, Goal, Sex } from '@macrotracker/shared';
 import Link from 'next/link';
+
+// Conversion helpers
+const CM_PER_INCH = 2.54;
+const KG_PER_LB = 0.453592;
+const LB_PER_KG = 2.20462;
+const IN_PER_CM = 1 / CM_PER_INCH;
+
+function cmToFeetInches(cm: number): { feet: number; inches: number } {
+  const totalInches = cm * IN_PER_CM;
+  const feet = Math.floor(totalInches / 12);
+  const inches = Math.round(totalInches % 12);
+  return { feet, inches };
+}
+
+function feetInchesToCm(feet: number, inches: number): number {
+  return (feet * 12 + inches) * CM_PER_INCH;
+}
+
+function kgToLbs(kg: number): number {
+  return Math.round(kg * LB_PER_KG * 10) / 10;
+}
+
+function lbsToKg(lbs: number): number {
+  return lbs * KG_PER_LB;
+}
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
@@ -21,9 +46,21 @@ export default function ProfilePage() {
     queryFn: () => apiFetch<{ data: UserProfile }>('/users/me/profile'),
   });
 
+  const { data: settingsData } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => apiFetch<{ data: UserSettings }>('/users/me/settings'),
+  });
+
+  const isImperial = settingsData?.data?.preferredUnits === 'IMPERIAL';
+
+  // For metric: heightCm, weightKg
+  // For imperial: feet, inches, weightLbs
   const [form, setForm] = useState({
     heightCm: '',
     weightKg: '',
+    feet: '',
+    inches: '',
+    weightLbs: '',
     age: '',
     sex: '' as string,
     activityLevel: '' as string,
@@ -33,9 +70,16 @@ export default function ProfilePage() {
   useEffect(() => {
     if (data?.data) {
       const p = data.data;
+      const heightCm = p.heightCm ?? 0;
+      const weightKg = p.weightKg ?? 0;
+      const { feet, inches } = cmToFeetInches(heightCm);
+
       setForm({
         heightCm: p.heightCm?.toString() || '',
         weightKg: p.weightKg?.toString() || '',
+        feet: heightCm ? feet.toString() : '',
+        inches: heightCm ? inches.toString() : '',
+        weightLbs: weightKg ? kgToLbs(weightKg).toString() : '',
         age: p.age?.toString() || '',
         sex: p.sex || '',
         activityLevel: p.activityLevel || '',
@@ -52,9 +96,28 @@ export default function ProfilePage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    let heightCm: number | null = null;
+    let weightKg: number | null = null;
+
+    if (isImperial) {
+      // Convert imperial inputs to metric for storage
+      const feet = form.feet ? parseInt(form.feet) : 0;
+      const inches = form.inches ? parseInt(form.inches) : 0;
+      if (feet || inches) {
+        heightCm = Math.round(feetInchesToCm(feet, inches) * 10) / 10;
+      }
+      if (form.weightLbs) {
+        weightKg = Math.round(lbsToKg(parseFloat(form.weightLbs)) * 10) / 10;
+      }
+    } else {
+      heightCm = form.heightCm ? parseFloat(form.heightCm) : null;
+      weightKg = form.weightKg ? parseFloat(form.weightKg) : null;
+    }
+
     mutation.mutate({
-      heightCm: form.heightCm ? parseFloat(form.heightCm) : null,
-      weightKg: form.weightKg ? parseFloat(form.weightKg) : null,
+      heightCm,
+      weightKg,
       age: form.age ? parseInt(form.age) : null,
       sex: form.sex || null,
       activityLevel: form.activityLevel || null,
@@ -81,18 +144,60 @@ export default function ProfilePage() {
       <Card>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Height (cm)"
-              type="number"
-              value={form.heightCm}
-              onChange={(e) => setForm({ ...form, heightCm: e.target.value })}
-            />
-            <Input
-              label="Weight (kg)"
-              type="number"
-              value={form.weightKg}
-              onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
-            />
+            {isImperial ? (
+              <>
+                {/* Imperial height: feet + inches */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        label=""
+                        type="number"
+                        placeholder="ft"
+                        value={form.feet}
+                        onChange={(e) => setForm({ ...form, feet: e.target.value })}
+                      />
+                      <span className="text-xs text-gray-500">feet</span>
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        label=""
+                        type="number"
+                        placeholder="in"
+                        value={form.inches}
+                        onChange={(e) => setForm({ ...form, inches: e.target.value })}
+                      />
+                      <span className="text-xs text-gray-500">inches</span>
+                    </div>
+                  </div>
+                </div>
+                <Input
+                  label="Weight (lbs)"
+                  type="number"
+                  step="0.1"
+                  value={form.weightLbs}
+                  onChange={(e) => setForm({ ...form, weightLbs: e.target.value })}
+                />
+              </>
+            ) : (
+              <>
+                {/* Metric height + weight */}
+                <Input
+                  label="Height (cm)"
+                  type="number"
+                  value={form.heightCm}
+                  onChange={(e) => setForm({ ...form, heightCm: e.target.value })}
+                />
+                <Input
+                  label="Weight (kg)"
+                  type="number"
+                  step="0.1"
+                  value={form.weightKg}
+                  onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
+                />
+              </>
+            )}
             <Input
               label="Age"
               type="number"

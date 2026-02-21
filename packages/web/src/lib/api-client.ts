@@ -10,7 +10,7 @@ function deriveApiUrl(): string {
   return 'http://localhost:4000/api/v1';
 }
 
-function getApiUrl(): string {
+export function getApiUrl(): string {
   if (apiUrl) return apiUrl;
   apiUrl = deriveApiUrl();
   return apiUrl;

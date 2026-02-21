@@ -2,19 +2,20 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, getApiUrl, getAccessToken } from '@/lib/api-client';
 import { todayString } from '@/lib/utils';
 import { MacroRings } from '@/components/log/MacroRings';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2, Loader2 } from 'lucide-react';
 import type { DailySummary, FoodLogEntry } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@macrotracker/shared';
 import Link from 'next/link';
 
 export default function LogPage() {
   const [date, setDate] = useState(todayString());
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -28,11 +29,27 @@ export default function LogPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiFetch(`/food-log/${id}`, { method: 'DELETE' }),
+    mutationFn: async (id: string) => {
+      setDeletingId(id);
+      // Use raw fetch for DELETE to avoid Content-Type: application/json
+      // on a 204 No Content response which can cause parsing issues
+      const baseUrl = getApiUrl();
+      const token = getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${baseUrl}/food-log/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok) {
+        throw new Error('Failed to delete entry');
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['food-log', date] });
       queryClient.invalidateQueries({ queryKey: ['food-log-summary', date] });
     },
+    onSettled: () => setDeletingId(null),
   });
 
   function changeDate(offset: number) {
@@ -104,9 +121,14 @@ export default function LogPage() {
                     </div>
                     <button
                       onClick={() => deleteMutation.mutate(entry.id)}
-                      className="ml-2 p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                      disabled={deletingId === entry.id}
+                      className="ml-2 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50 active:bg-red-100"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {deletingId === entry.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                     </button>
                   </Card>
                 ))}

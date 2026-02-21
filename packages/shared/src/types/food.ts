@@ -1,4 +1,4 @@
-export type FoodSource = 'OPENFOODFACTS' | 'MANUAL';
+export type FoodSource = 'OPENFOODFACTS' | 'MANUAL' | 'LABEL_SCAN' | 'AI_ESTIMATE';
 
 export interface FoodItem {
   id: string;

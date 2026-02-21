@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ScanBarcode, UtensilsCrossed, Brain, ChefHat, User } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, UtensilsCrossed, Brain, ChefHat, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { href: '/scan', label: 'Scan', icon: ScanBarcode },
+  { href: '/scan', label: 'Add', icon: PlusCircle },
   { href: '/log', label: 'Log', icon: UtensilsCrossed },
   { href: '/macro-plan', label: 'Macros', icon: Brain },
   { href: '/meal-plan', label: 'Meals', icon: ChefHat },

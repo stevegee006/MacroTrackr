@@ -133,6 +133,7 @@ enum FoodSource {
   OPENFOODFACTS
   MANUAL
   LABEL_SCAN
+  AI_ESTIMATE
 }
 
 // ─── Food Log ────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { Camera, X } from 'lucide-react';
+import { compressImage } from '@/lib/image-utils';
 import type { FoodItem } from '@macrotracker/shared';
 
 interface LabelScannerProps {
@@ -35,7 +36,7 @@ export function LabelScanner({ onResult, existingFoodId }: LabelScannerProps) {
     },
   });
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -43,13 +44,13 @@ export function LabelScanner({ onResult, existingFoodId }: LabelScannerProps) {
     const previewUrl = URL.createObjectURL(file);
     setPreview(previewUrl);
 
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      setImageBase64(base64);
-    };
-    reader.readAsDataURL(file);
+    // Compress and convert to base64 (reduces 10MB+ phone photos to ~200-500KB)
+    try {
+      const compressed = await compressImage(file, 1500, 0.7);
+      setImageBase64(compressed);
+    } catch {
+      setPreview(null);
+    }
 
     // Reset input so same file can be re-selected
     e.target.value = '';

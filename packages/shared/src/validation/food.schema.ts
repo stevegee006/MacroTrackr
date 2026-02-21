@@ -40,8 +40,14 @@ export const labelScanResponseSchema = z.object({
   sodiumPer100g: z.number().nonnegative().nullable().optional(),
 });
 
+export const estimateFoodSchema = z.object({
+  description: z.string().min(1).max(500),
+  weightG: z.number().positive(),
+});
+
 export type CreateFoodItemInput = z.infer<typeof createFoodItemSchema>;
 export type UpdateFoodItemInput = z.infer<typeof updateFoodItemSchema>;
 export type ScanLabelInput = z.infer<typeof scanLabelSchema>;
 export type LabelScanResponse = z.infer<typeof labelScanResponseSchema>;
 export type SearchFoodInput = z.infer<typeof searchFoodSchema>;
+export type EstimateFoodInput = z.infer<typeof estimateFoodSchema>;

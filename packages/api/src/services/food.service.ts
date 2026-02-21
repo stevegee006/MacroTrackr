@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { CreateFoodItemInput } from '@macrotracker/shared';
 import { labelScanResponseSchema } from '@macrotracker/shared';
 import { lookupBarcode } from './openfoodfacts.service.js';
-import { getOpenAIClient, visionCompletion } from './openai.service.js';
+import { getOpenAIClient, visionCompletion, chatCompletion } from './openai.service.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
 
 export async function getFoodByBarcode(fastify: FastifyInstance, barcode: string) {
@@ -210,6 +210,81 @@ export async function updateFoodFromLabel(
       sugarPer100g: parsed.data.sugarPer100g ?? null,
       sodiumPer100g: parsed.data.sodiumPer100g ?? null,
       source: 'LABEL_SCAN',
+    },
+  });
+}
+
+const FOOD_ESTIMATE_SYSTEM_PROMPT = `You are a nutrition expert. Given a food description and weight in grams, estimate the macronutrient content per 100g.
+
+Use your knowledge of USDA food composition databases and common nutritional values.
+
+IMPORTANT RULES:
+- Estimate values per 100g of the described food.
+- Use the food description to determine the most likely food item and preparation method.
+- If the description is ambiguous, assume the most common form (e.g., "chicken breast" = boneless, skinless, raw).
+- Round all values to at most 1 decimal place.
+- For the product name: use a clean, descriptive name based on the description.
+- If a nutrient value is unknown, provide your best estimate rather than null.
+
+Respond ONLY with valid JSON matching this exact structure:
+{
+  "name": "<descriptive food name>",
+  "brand": null,
+  "servingSizeG": <the weight the user provided>,
+  "caloriesPer100g": <number>,
+  "proteinPer100g": <number>,
+  "carbsPer100g": <number>,
+  "fatPer100g": <number>,
+  "fiberPer100g": <number or null>,
+  "sugarPer100g": <number or null>,
+  "sodiumPer100g": <number or null>
+}`;
+
+export async function estimateFoodMacros(
+  fastify: FastifyInstance,
+  userId: string,
+  description: string,
+  weightG: number,
+) {
+  const client = await getOpenAIClient(fastify, userId);
+
+  const userPrompt = `Estimate the nutrition per 100g for: "${description}" (weighed at ${weightG}g). Return JSON only.`;
+
+  const result = await chatCompletion(
+    client,
+    FOOD_ESTIMATE_SYSTEM_PROMPT,
+    userPrompt,
+    {
+      model: 'gpt-4o-mini',
+      temperature: 0.2,
+      maxTokens: 500,
+    },
+  );
+
+  let parsed;
+  try {
+    parsed = labelScanResponseSchema.safeParse(JSON.parse(result.content));
+  } catch {
+    throw new AppError(502, 'AI_PARSE_ERROR', 'Failed to estimate nutrition data. Please try again with a more specific description.');
+  }
+
+  if (!parsed.success) {
+    throw new AppError(502, 'AI_PARSE_ERROR', 'Failed to estimate nutrition data. Please try again with a more specific description.');
+  }
+
+  return fastify.prisma.foodItem.create({
+    data: {
+      name: parsed.data.name,
+      brand: null,
+      servingSizeG: weightG,
+      caloriesPer100g: parsed.data.caloriesPer100g,
+      proteinPer100g: parsed.data.proteinPer100g,
+      carbsPer100g: parsed.data.carbsPer100g,
+      fatPer100g: parsed.data.fatPer100g,
+      fiberPer100g: parsed.data.fiberPer100g ?? null,
+      sugarPer100g: parsed.data.sugarPer100g ?? null,
+      sodiumPer100g: parsed.data.sodiumPer100g ?? null,
+      source: 'AI_ESTIMATE',
     },
   });
 }

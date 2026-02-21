@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createFoodItemSchema, updateFoodItemSchema, searchFoodSchema, scanLabelSchema } from '@macrotracker/shared';
+import { createFoodItemSchema, updateFoodItemSchema, searchFoodSchema, scanLabelSchema, estimateFoodSchema } from '@macrotracker/shared';
 import * as foodService from '../../services/food.service.js';
 
 export default async function foodRoutes(fastify: FastifyInstance) {
@@ -62,5 +62,16 @@ export default async function foodRoutes(fastify: FastifyInstance) {
       );
       return { data: item };
     },
+  });
+
+  fastify.post('/food/estimate', async (request, reply) => {
+    const body = estimateFoodSchema.parse(request.body);
+    const item = await foodService.estimateFoodMacros(
+      fastify,
+      request.user.sub,
+      body.description,
+      body.weightG,
+    );
+    reply.code(201).send({ data: item });
   });
 }

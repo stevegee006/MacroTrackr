@@ -18,6 +18,7 @@ CMD ["pnpm", "--filter", "@macrotracker/api", "dev"]
 
 # Build
 FROM deps AS build
+COPY tsconfig.base.json ./
 COPY packages/shared/ ./packages/shared/
 COPY packages/api/ ./packages/api/
 RUN pnpm --filter @macrotracker/shared build

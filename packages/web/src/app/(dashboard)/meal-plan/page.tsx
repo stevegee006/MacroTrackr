@@ -78,6 +78,10 @@ export default function MealPlanPage() {
   const [editForm, setEditForm] = useState<MealPlanEditForm | null>(null);
   const [regeneratingMeal, setRegeneratingMeal] = useState<string | null>(null);
 
+  // Inline meal editing state
+  const [editingMealKey, setEditingMealKey] = useState<string | null>(null); // "planId-dayNumber-mealIndex"
+  const [editingMealForm, setEditingMealForm] = useState<MealForm | null>(null);
+
   // Manual builder state
   const [builderStep, setBuilderStep] = useState<1 | 2>(1);
   const [manualName, setManualName] = useState('');
@@ -177,6 +181,115 @@ export default function MealPlanPage() {
     },
     onSettled: () => setRegeneratingMeal(null),
   });
+
+  const updatePlanDataMutation = useMutation({
+    mutationFn: async ({ planId, planData }: { planId: string; planData: MealPlanData }) => {
+      return apiFetch(`/meal-plan/${planId}/data`, {
+        method: 'PUT',
+        body: JSON.stringify(planData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meal-plans'] });
+      setEditingMealKey(null);
+      setEditingMealForm(null);
+    },
+  });
+
+  function startEditingMeal(planId: string, dayNumber: number, mealIndex: number, meal: MealPlanMeal) {
+    const key = `${planId}-${dayNumber}-${mealIndex}`;
+    setEditingMealKey(key);
+    setEditingMealForm({
+      mealType: meal.mealType as MealForm['mealType'],
+      name: meal.name,
+      ingredients: meal.ingredients.map((ing) => ({
+        name: ing.name,
+        quantityG: String(ing.quantityG),
+        notes: ing.notes || '',
+      })),
+      calories: String(meal.macros.calories),
+      proteinG: String(meal.macros.proteinG),
+      carbsG: String(meal.macros.carbsG),
+      fatG: String(meal.macros.fatG),
+      prepTimeMinutes: String(meal.prepTimeMinutes),
+      instructions: meal.instructions,
+    });
+  }
+
+  function cancelEditingMeal() {
+    setEditingMealKey(null);
+    setEditingMealForm(null);
+  }
+
+  function saveEditedMeal(planId: string, dayNumber: number, mealIndex: number, currentPlanData: MealPlanData) {
+    if (!editingMealForm) return;
+
+    const updatedMeal = {
+      mealType: editingMealForm.mealType,
+      name: editingMealForm.name || 'Unnamed Meal',
+      ingredients: editingMealForm.ingredients
+        .filter((ing) => ing.name.trim())
+        .map((ing) => ({
+          name: ing.name,
+          quantityG: parseFloat(ing.quantityG) || 100,
+          notes: ing.notes || undefined,
+        })),
+      macros: {
+        calories: parseFloat(editingMealForm.calories) || 0,
+        proteinG: parseFloat(editingMealForm.proteinG) || 0,
+        carbsG: parseFloat(editingMealForm.carbsG) || 0,
+        fatG: parseFloat(editingMealForm.fatG) || 0,
+      },
+      prepTimeMinutes: parseInt(editingMealForm.prepTimeMinutes) || 15,
+      instructions: editingMealForm.instructions || 'No instructions provided.',
+    };
+
+    const newPlanData: MealPlanData = {
+      days: currentPlanData.days.map((day) => {
+        if (day.dayNumber !== dayNumber) return day;
+
+        const newMeals = day.meals.map((m, i) => (i === mealIndex ? updatedMeal : m));
+        const dayTotals = {
+          calories: newMeals.reduce((sum, ml) => sum + ml.macros.calories, 0),
+          proteinG: newMeals.reduce((sum, ml) => sum + ml.macros.proteinG, 0),
+          carbsG: newMeals.reduce((sum, ml) => sum + ml.macros.carbsG, 0),
+          fatG: newMeals.reduce((sum, ml) => sum + ml.macros.fatG, 0),
+        };
+
+        return { ...day, meals: newMeals, dayTotals };
+      }),
+    };
+
+    updatePlanDataMutation.mutate({ planId, planData: newPlanData });
+  }
+
+  function updateEditingMealField(field: keyof MealForm, value: any) {
+    if (!editingMealForm) return;
+    setEditingMealForm({ ...editingMealForm, [field]: value });
+  }
+
+  function addEditingIngredient() {
+    if (!editingMealForm) return;
+    setEditingMealForm({
+      ...editingMealForm,
+      ingredients: [...editingMealForm.ingredients, emptyIngredient()],
+    });
+  }
+
+  function removeEditingIngredient(ingIndex: number) {
+    if (!editingMealForm) return;
+    setEditingMealForm({
+      ...editingMealForm,
+      ingredients: editingMealForm.ingredients.filter((_, i) => i !== ingIndex),
+    });
+  }
+
+  function updateEditingIngredient(ingIndex: number, field: keyof IngredientForm, value: string) {
+    if (!editingMealForm) return;
+    const ings = [...editingMealForm.ingredients];
+    ings[ingIndex] = { ...ings[ingIndex], [field]: value };
+    setEditingMealForm({ ...editingMealForm, ingredients: ings });
+  }
 
   function resetManualBuilder() {
     setBuilderStep(1);
@@ -890,23 +1003,38 @@ export default function MealPlanPage() {
                       <div key={day.dayNumber}>
                         <h4 className="font-medium text-sm mb-2">Day {day.dayNumber}</h4>
                         <div className="space-y-2">
-                          {day.meals.map((meal, i) => (
-                            <MealCard
-                              key={i}
-                              meal={meal}
-                              isRegenerating={regeneratingMeal === `${plan.id}-${day.dayNumber}-${i}`}
-                              onRegenerate={
-                                !isManual
-                                  ? () =>
-                                      regenerateMutation.mutate({
-                                        planId: plan.id,
-                                        dayNumber: day.dayNumber,
-                                        mealIndex: i,
-                                      })
-                                  : undefined
-                              }
-                            />
-                          ))}
+                          {day.meals.map((meal, i) => {
+                            const mealKey = `${plan.id}-${day.dayNumber}-${i}`;
+                            const isEditingThisMeal = editingMealKey === mealKey;
+
+                            return (
+                              <MealCard
+                                key={i}
+                                meal={meal}
+                                isRegenerating={regeneratingMeal === mealKey}
+                                onRegenerate={
+                                  !isManual
+                                    ? () =>
+                                        regenerateMutation.mutate({
+                                          planId: plan.id,
+                                          dayNumber: day.dayNumber,
+                                          mealIndex: i,
+                                        })
+                                    : undefined
+                                }
+                                isEditing={isEditingThisMeal}
+                                editForm={isEditingThisMeal ? editingMealForm : null}
+                                isSaving={updatePlanDataMutation.isPending && isEditingThisMeal}
+                                onEdit={() => startEditingMeal(plan.id, day.dayNumber, i, meal)}
+                                onCancelEdit={cancelEditingMeal}
+                                onSaveEdit={() => saveEditedMeal(plan.id, day.dayNumber, i, planData)}
+                                onFieldChange={updateEditingMealField}
+                                onAddIngredient={addEditingIngredient}
+                                onRemoveIngredient={removeEditingIngredient}
+                                onUpdateIngredient={updateEditingIngredient}
+                              />
+                            );
+                          })}
                         </div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           Day totals: {day.dayTotals.calories} kcal | P:{day.dayTotals.proteinG}g C:{day.dayTotals.carbsG}g F:{day.dayTotals.fatG}g
@@ -935,7 +1063,180 @@ export default function MealPlanPage() {
   );
 }
 
-function MealCard({ meal, isRegenerating, onRegenerate }: { meal: MealPlanMeal; isRegenerating?: boolean; onRegenerate?: () => void }) {
+interface MealCardProps {
+  meal: MealPlanMeal;
+  isRegenerating?: boolean;
+  onRegenerate?: () => void;
+  isEditing?: boolean;
+  editForm?: MealForm | null;
+  isSaving?: boolean;
+  onEdit?: () => void;
+  onCancelEdit?: () => void;
+  onSaveEdit?: () => void;
+  onFieldChange?: (field: keyof MealForm, value: any) => void;
+  onAddIngredient?: () => void;
+  onRemoveIngredient?: (index: number) => void;
+  onUpdateIngredient?: (index: number, field: keyof IngredientForm, value: string) => void;
+}
+
+function MealCard({
+  meal,
+  isRegenerating,
+  onRegenerate,
+  isEditing,
+  editForm,
+  isSaving,
+  onEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onFieldChange,
+  onAddIngredient,
+  onRemoveIngredient,
+  onUpdateIngredient,
+}: MealCardProps) {
+  if (isEditing && editForm && onFieldChange && onCancelEdit && onSaveEdit) {
+    return (
+      <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 space-y-3 ring-2 ring-emerald-400 dark:ring-emerald-600">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Edit Meal</p>
+          <button
+            onClick={onCancelEdit}
+            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Type</label>
+            <select
+              value={editForm.mealType}
+              onChange={(e) => onFieldChange('mealType', e.target.value)}
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+            >
+              <option value="BREAKFAST">Breakfast</option>
+              <option value="LUNCH">Lunch</option>
+              <option value="DINNER">Dinner</option>
+              <option value="SNACK">Snack</option>
+            </select>
+          </div>
+          <Input
+            label="Name"
+            value={editForm.name}
+            onChange={(e) => onFieldChange('name', e.target.value)}
+            placeholder="Meal name"
+          />
+        </div>
+
+        <div className="grid grid-cols-4 gap-2">
+          <Input
+            label="Cal"
+            type="number"
+            min={0}
+            value={editForm.calories}
+            onChange={(e) => onFieldChange('calories', e.target.value)}
+          />
+          <Input
+            label="P (g)"
+            type="number"
+            min={0}
+            value={editForm.proteinG}
+            onChange={(e) => onFieldChange('proteinG', e.target.value)}
+          />
+          <Input
+            label="C (g)"
+            type="number"
+            min={0}
+            value={editForm.carbsG}
+            onChange={(e) => onFieldChange('carbsG', e.target.value)}
+          />
+          <Input
+            label="F (g)"
+            type="number"
+            min={0}
+            value={editForm.fatG}
+            onChange={(e) => onFieldChange('fatG', e.target.value)}
+          />
+        </div>
+
+        <Input
+          label="Prep time (minutes)"
+          type="number"
+          min={1}
+          value={editForm.prepTimeMinutes}
+          onChange={(e) => onFieldChange('prepTimeMinutes', e.target.value)}
+        />
+
+        {/* Ingredients */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Ingredients</label>
+            {onAddIngredient && (
+              <button
+                onClick={onAddIngredient}
+                className="text-xs text-emerald-600 hover:text-emerald-700 dark:hover:text-emerald-400"
+              >
+                + Add
+              </button>
+            )}
+          </div>
+          {editForm.ingredients.map((ing, ingIndex) => (
+            <div key={ingIndex} className="flex gap-1.5 items-start">
+              <input
+                placeholder="Name"
+                value={ing.name}
+                onChange={(e) => onUpdateIngredient?.(ingIndex, 'name', e.target.value)}
+                className="flex-1 min-w-0 rounded-md border border-gray-300 px-2 py-1.5 text-xs shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder:text-gray-500"
+              />
+              <input
+                placeholder="g"
+                type="number"
+                min={0}
+                value={ing.quantityG}
+                onChange={(e) => onUpdateIngredient?.(ingIndex, 'quantityG', e.target.value)}
+                className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-xs shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder:text-gray-500"
+              />
+              <input
+                placeholder="Notes"
+                value={ing.notes}
+                onChange={(e) => onUpdateIngredient?.(ingIndex, 'notes', e.target.value)}
+                className="w-24 rounded-md border border-gray-300 px-2 py-1.5 text-xs shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder:text-gray-500"
+              />
+              {editForm.ingredients.length > 1 && onRemoveIngredient && (
+                <button
+                  onClick={() => onRemoveIngredient(ingIndex)}
+                  className="p-1 text-gray-400 hover:text-red-500 transition-colors shrink-0"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Instructions</label>
+          <textarea
+            value={editForm.instructions}
+            onChange={(e) => onFieldChange('instructions', e.target.value)}
+            rows={3}
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-xs shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder:text-gray-500"
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <Button size="sm" onClick={onSaveEdit} isLoading={isSaving} className="flex-1">
+            Save Meal
+          </Button>
+          <Button size="sm" variant="secondary" onClick={onCancelEdit} className="flex-1">
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
       <div className="flex items-center justify-between mb-1">
@@ -944,6 +1245,15 @@ function MealCard({ meal, isRegenerating, onRegenerate }: { meal: MealPlanMeal; 
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {MEAL_TYPE_LABELS[meal.mealType]} &middot; {meal.prepTimeMinutes}min
           </span>
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="p-1 text-gray-400 hover:text-blue-500 active:text-blue-600 transition-colors rounded hover:bg-blue-50 dark:hover:bg-blue-950"
+              title="Edit this meal"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
           {onRegenerate && (
             <button
               onClick={onRegenerate}

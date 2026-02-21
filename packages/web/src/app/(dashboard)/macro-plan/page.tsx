@@ -127,7 +127,21 @@ export default function MacroPlanPage() {
       ) : (
         <div className="space-y-3">
           {plans?.data.map((plan) => (
-            <Card key={plan.id} className={plan.isActive ? 'ring-2 ring-emerald-500' : ''}>
+            <Card
+              key={plan.id}
+              className={
+                plan.isActive
+                  ? 'ring-2 ring-emerald-500 bg-emerald-50/50'
+                  : 'opacity-75'
+              }
+            >
+              {plan.isActive && (
+                <div className="flex items-center gap-1.5 mb-3 pb-2 border-b border-emerald-200">
+                  <Check className="h-4 w-4 text-emerald-600" />
+                  <span className="text-sm font-semibold text-emerald-700">Active Plan</span>
+                </div>
+              )}
+
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium">{plan.name}</p>
@@ -136,11 +150,7 @@ export default function MacroPlanPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 ml-2">
-                  {plan.isActive ? (
-                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                      <Check className="h-3 w-3" /> Active
-                    </span>
-                  ) : (
+                  {!plan.isActive && (
                     <Button
                       size="sm"
                       variant="outline"

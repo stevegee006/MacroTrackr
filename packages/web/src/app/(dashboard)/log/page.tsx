@@ -118,6 +118,13 @@ export default function LogPage() {
                         {entry.servingQty} x {entry.servingSizeG}g &middot;{' '}
                         {Math.round(entry.totalCalories)} kcal
                       </p>
+                      <p className="text-xs mt-0.5">
+                        <span className="text-blue-500">P:{Math.round(entry.totalProteinG)}g</span>
+                        {' '}
+                        <span className="text-amber-500">C:{Math.round(entry.totalCarbsG)}g</span>
+                        {' '}
+                        <span className="text-red-500">F:{Math.round(entry.totalFatG)}g</span>
+                      </p>
                     </div>
                     <button
                       onClick={() => deleteMutation.mutate(entry.id)}

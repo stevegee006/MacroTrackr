@@ -37,6 +37,6 @@ COPY --from=build /app/packages/api/package.json ./packages/api/
 COPY --from=build /app/packages/api/prisma ./packages/api/prisma
 COPY --from=build /app/packages/api/node_modules ./packages/api/node_modules
 COPY packages/api/docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 EXPOSE 4000
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

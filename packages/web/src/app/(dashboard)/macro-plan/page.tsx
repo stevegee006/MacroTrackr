@@ -2,19 +2,21 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, getApiUrl, getAccessToken } from '@/lib/api-client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { GOAL_LABELS } from '@macrotracker/shared';
 import type { MacroPlan, Goal } from '@macrotracker/shared';
-import { Check } from 'lucide-react';
+import { Check, Trash2, Loader2 } from 'lucide-react';
 
 export default function MacroPlanPage() {
   const queryClient = useQueryClient();
   const [goal, setGoal] = useState<Goal>('MAINTAIN');
   const [customNotes, setCustomNotes] = useState('');
+  const [activatingId, setActivatingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['macro-plans'],
@@ -31,12 +33,36 @@ export default function MacroPlanPage() {
   });
 
   const activateMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiFetch(`/macro-plan/${id}/activate`, { method: 'POST' }),
+    mutationFn: async (id: string) => {
+      setActivatingId(id);
+      return apiFetch(`/macro-plan/${id}/activate`, { method: 'POST' });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['macro-plans'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['food-log-summary'] });
     },
+    onSettled: () => setActivatingId(null),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setDeletingId(id);
+      // Use raw fetch for DELETE to avoid 204 parsing issues
+      const baseUrl = getApiUrl();
+      const token = getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${baseUrl}/macro-plan/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok) throw new Error('Failed to delete plan');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['macro-plans'] });
+    },
+    onSettled: () => setDeletingId(null),
   });
 
   return (
@@ -103,26 +129,44 @@ export default function MacroPlanPage() {
           {plans?.data.map((plan) => (
             <Card key={plan.id} className={plan.isActive ? 'ring-2 ring-emerald-500' : ''}>
               <div className="flex items-start justify-between mb-2">
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="font-medium">{plan.name}</p>
                   <p className="text-xs text-gray-500">
                     {new Date(plan.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-                {plan.isActive ? (
-                  <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
-                    <Check className="h-3 w-3" /> Active
-                  </span>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => activateMutation.mutate(plan.id)}
-                    isLoading={activateMutation.isPending}
+                <div className="flex items-center gap-2 ml-2">
+                  {plan.isActive ? (
+                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                      <Check className="h-3 w-3" /> Active
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => activateMutation.mutate(plan.id)}
+                      isLoading={activatingId === plan.id}
+                      disabled={activatingId !== null}
+                    >
+                      Activate
+                    </Button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (confirm('Delete this macro plan?')) {
+                        deleteMutation.mutate(plan.id);
+                      }
+                    }}
+                    disabled={deletingId === plan.id}
+                    className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50"
                   >
-                    Activate
-                  </Button>
-                )}
+                    {deletingId === plan.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-4 gap-2 text-center text-sm">

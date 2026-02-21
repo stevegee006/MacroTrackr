@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, getApiUrl, getAccessToken } from '@/lib/api-client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import type { MealPlan, MealPlanData, MealPlanMeal } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS } from '@macrotracker/shared';
+import { Trash2, Loader2 } from 'lucide-react';
 
 export default function MealPlanPage() {
   const queryClient = useQueryClient();
@@ -16,6 +17,7 @@ export default function MealPlanPage() {
   const [restrictions, setRestrictions] = useState('');
   const [cuisine, setCuisine] = useState('');
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['meal-plans'],
@@ -37,6 +39,26 @@ export default function MealPlanPage() {
         }),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meal-plans'] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setDeletingId(id);
+      // Use raw fetch for DELETE to avoid 204 parsing issues
+      const baseUrl = getApiUrl();
+      const token = getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${baseUrl}/meal-plan/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok) throw new Error('Failed to delete meal plan');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meal-plans'] });
+    },
+    onSettled: () => setDeletingId(null),
   });
 
   return (
@@ -113,21 +135,39 @@ export default function MealPlanPage() {
 
             return (
               <Card key={plan.id}>
-                <button
-                  onClick={() => setExpandedPlan(isExpanded ? null : plan.id)}
-                  className="w-full text-left"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{plan.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(plan.createdAt).toLocaleDateString()} &middot;{' '}
-                        {plan.targetCalories} kcal/day
-                      </p>
+                <div className="flex items-start justify-between">
+                  <button
+                    onClick={() => setExpandedPlan(isExpanded ? null : plan.id)}
+                    className="flex-1 text-left"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{plan.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(plan.createdAt).toLocaleDateString()} &middot;{' '}
+                          {plan.targetCalories} kcal/day
+                        </p>
+                      </div>
+                      <span className="text-gray-400 mr-2">{isExpanded ? '−' : '+'}</span>
                     </div>
-                    <span className="text-gray-400">{isExpanded ? '−' : '+'}</span>
-                  </div>
-                </button>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Delete this meal plan?')) {
+                        deleteMutation.mutate(plan.id);
+                      }
+                    }}
+                    disabled={deletingId === plan.id}
+                    className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50 shrink-0"
+                  >
+                    {deletingId === plan.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
 
                 {isExpanded && planData?.days && (
                   <div className="mt-4 space-y-4">

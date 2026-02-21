@@ -16,7 +16,7 @@ import { AppError } from './utils/errors.js';
 import { logger } from './utils/logger.js';
 
 export async function buildApp() {
-  const app = Fastify({ logger });
+  const app = Fastify({ loggerInstance: logger });
 
   // Plugins
   await app.register(cors, corsOptions);

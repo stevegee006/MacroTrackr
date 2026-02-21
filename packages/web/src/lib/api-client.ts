@@ -17,7 +17,7 @@ async function getApiUrl(): Promise<string> {
     if (res.ok) {
       const config = await res.json();
       if (config.apiUrl) {
-        apiUrl = config.apiUrl;
+        apiUrl = config.apiUrl as string;
         return apiUrl;
       }
     }

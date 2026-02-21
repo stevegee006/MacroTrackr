@@ -29,6 +29,16 @@ export default async function mealPlanRoutes(fastify: FastifyInstance) {
     return { data: plan };
   });
 
+  fastify.post('/meal-plan/:id/regenerate-meal', async (request) => {
+    const { id } = request.params as { id: string };
+    const { dayNumber, mealIndex } = request.body as { dayNumber: number; mealIndex: number };
+    if (typeof dayNumber !== 'number' || typeof mealIndex !== 'number') {
+      throw new Error('dayNumber and mealIndex are required');
+    }
+    const plan = await mealPlanService.regenerateMeal(fastify, request.user.sub, id, dayNumber, mealIndex);
+    return { data: plan };
+  });
+
   fastify.delete('/meal-plan/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     await mealPlanService.deleteMealPlan(fastify, request.user.sub, id);

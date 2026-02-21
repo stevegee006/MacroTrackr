@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import type { MealPlan, MealPlanData, MealPlanMeal } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS } from '@macrotracker/shared';
-import { Trash2, Loader2, Pencil, X } from 'lucide-react';
+import { Trash2, Loader2, Pencil, X, RefreshCw } from 'lucide-react';
 
 interface MealPlanEditForm {
   name: string;
@@ -28,6 +28,7 @@ export default function MealPlanPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<MealPlanEditForm | null>(null);
+  const [regeneratingMeal, setRegeneratingMeal] = useState<string | null>(null); // "planId-day-index"
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['meal-plans'],
@@ -83,6 +84,20 @@ export default function MealPlanPage() {
       queryClient.invalidateQueries({ queryKey: ['meal-plans'] });
     },
     onSettled: () => setDeletingId(null),
+  });
+
+  const regenerateMutation = useMutation({
+    mutationFn: async ({ planId, dayNumber, mealIndex }: { planId: string; dayNumber: number; mealIndex: number }) => {
+      setRegeneratingMeal(`${planId}-${dayNumber}-${mealIndex}`);
+      return apiFetch<{ data: MealPlan }>(`/meal-plan/${planId}/regenerate-meal`, {
+        method: 'POST',
+        body: JSON.stringify({ dayNumber, mealIndex }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meal-plans'] });
+    },
+    onSettled: () => setRegeneratingMeal(null),
   });
 
   function startEditing(plan: MealPlan) {
@@ -313,7 +328,18 @@ export default function MealPlanPage() {
                         <h4 className="font-medium text-sm mb-2">Day {day.dayNumber}</h4>
                         <div className="space-y-2">
                           {day.meals.map((meal, i) => (
-                            <MealCard key={i} meal={meal} />
+                            <MealCard
+                              key={i}
+                              meal={meal}
+                              isRegenerating={regeneratingMeal === `${plan.id}-${day.dayNumber}-${i}`}
+                              onRegenerate={() =>
+                                regenerateMutation.mutate({
+                                  planId: plan.id,
+                                  dayNumber: day.dayNumber,
+                                  mealIndex: i,
+                                })
+                              }
+                            />
                           ))}
                         </div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
@@ -332,14 +358,26 @@ export default function MealPlanPage() {
   );
 }
 
-function MealCard({ meal }: { meal: MealPlanMeal }) {
+function MealCard({ meal, isRegenerating, onRegenerate }: { meal: MealPlanMeal; isRegenerating?: boolean; onRegenerate?: () => void }) {
   return (
     <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
       <div className="flex items-center justify-between mb-1">
         <p className="text-sm font-medium">{meal.name}</p>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {MEAL_TYPE_LABELS[meal.mealType]} &middot; {meal.prepTimeMinutes}min
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {MEAL_TYPE_LABELS[meal.mealType]} &middot; {meal.prepTimeMinutes}min
+          </span>
+          {onRegenerate && (
+            <button
+              onClick={onRegenerate}
+              disabled={isRegenerating}
+              className="p-1 text-gray-400 hover:text-emerald-600 active:text-emerald-700 transition-colors rounded hover:bg-emerald-50 dark:hover:bg-emerald-950 disabled:opacity-50"
+              title="Regenerate this meal"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+        </div>
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
         {meal.macros.calories} kcal | P:{meal.macros.proteinG}g C:{meal.macros.carbsG}g F:{meal.macros.fatG}g

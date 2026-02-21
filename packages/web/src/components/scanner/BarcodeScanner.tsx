@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { ScanBarcode } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface BarcodeScannerProps {
@@ -93,7 +94,14 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
         variant="secondary"
         className="w-full"
       >
-        {isScanning ? 'Stop Scanner' : 'Scan Barcode'}
+        {isScanning ? (
+          'Stop Scanner'
+        ) : (
+          <span className="inline-flex items-center gap-2">
+            <ScanBarcode className="h-4 w-4" />
+            Scan Barcode
+          </span>
+        )}
       </Button>
     </div>
   );

@@ -8,15 +8,17 @@ import { LabelScanner } from '@/components/scanner/LabelScanner';
 import { ManualBarcodeEntry } from '@/components/scanner/ManualBarcodeEntry';
 import { ManualFoodForm } from '@/components/food/ManualFoodForm';
 import { AIFoodEstimateForm } from '@/components/food/AIFoodEstimateForm';
+import { FoodSearchForm } from '@/components/food/FoodSearchForm';
 import { NutritionLabel } from '@/components/food/NutritionLabel';
 import { AddToLogForm } from '@/components/food/AddToLogForm';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import type { FoodItem } from '@macrotracker/shared';
 
-type InputMethod = 'barcode' | 'label' | 'manual' | 'estimate';
+type InputMethod = 'search' | 'barcode' | 'label' | 'manual' | 'estimate';
 
 const TABS: { key: InputMethod; label: string }[] = [
+  { key: 'search', label: 'Search' },
   { key: 'barcode', label: 'Barcode' },
   { key: 'label', label: 'Label' },
   { key: 'manual', label: 'Manual' },
@@ -24,7 +26,7 @@ const TABS: { key: InputMethod; label: string }[] = [
 ];
 
 export default function ScanPage() {
-  const [method, setMethod] = useState<InputMethod>('barcode');
+  const [method, setMethod] = useState<InputMethod>('search');
   const [scannedFood, setScannedFood] = useState<FoodItem | null>(null);
   const [added, setAdded] = useState(false);
 
@@ -73,6 +75,10 @@ export default function ScanPage() {
       </div>
 
       {/* Tab content */}
+      {method === 'search' && !scannedFood && (
+        <FoodSearchForm onResult={handleFoodResult} />
+      )}
+
       {method === 'barcode' && !scannedFood && (
         <div className="space-y-4">
           <BarcodeScanner onScan={handleScan} />

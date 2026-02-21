@@ -34,7 +34,8 @@ function kgToLbs(kg: number): number {
 }
 
 function lbsToKg(lbs: number): number {
-  return lbs * KG_PER_LB;
+  // Round to 2dp to preserve enough precision for accurate round-trip
+  return Math.round(lbs * KG_PER_LB * 100) / 100;
 }
 
 export default function ProfilePage() {
@@ -108,7 +109,7 @@ export default function ProfilePage() {
         heightCm = Math.round(feetInchesToCm(feet, inches) * 10) / 10;
       }
       if (form.weightLbs) {
-        weightKg = Math.round(lbsToKg(parseFloat(form.weightLbs)) * 10) / 10;
+        weightKg = lbsToKg(parseFloat(form.weightLbs));
       }
     } else {
       heightCm = form.heightCm ? parseFloat(form.heightCm) : null;

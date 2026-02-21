@@ -93,7 +93,7 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
         variant="secondary"
         className="w-full"
       >
-        {isScanning ? 'Stop Scanner' : 'Start Camera Scanner'}
+        {isScanning ? 'Stop Scanner' : 'Scan Barcode'}
       </Button>
     </div>
   );

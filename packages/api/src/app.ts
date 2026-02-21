@@ -16,7 +16,10 @@ import { AppError } from './utils/errors.js';
 import { logger } from './utils/logger.js';
 
 export async function buildApp() {
-  const app = Fastify({ loggerInstance: logger });
+  const app = Fastify({
+    loggerInstance: logger,
+    trustProxy: true,
+  });
 
   // Plugins
   await app.register(cors, corsOptions);

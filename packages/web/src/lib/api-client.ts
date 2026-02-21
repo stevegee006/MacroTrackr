@@ -1,16 +1,32 @@
 let apiUrl: string | null = null;
 
+function deriveApiUrl(): string {
+  if (typeof window === 'undefined') return 'http://localhost:4000/api/v1';
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  // If running on a custom domain, assume api. subdomain
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    return `${protocol}//api.${hostname}/api/v1`;
+  }
+  return 'http://localhost:4000/api/v1';
+}
+
 async function getApiUrl(): Promise<string> {
   if (apiUrl) return apiUrl;
   try {
     const res = await fetch('/api/config');
-    const config = await res.json();
-    apiUrl = config.apiUrl;
-    return apiUrl!;
+    if (res.ok) {
+      const config = await res.json();
+      if (config.apiUrl) {
+        apiUrl = config.apiUrl;
+        return apiUrl;
+      }
+    }
   } catch {
-    apiUrl = 'http://localhost:4000/api/v1';
-    return apiUrl;
+    // fallback below
   }
+  apiUrl = deriveApiUrl();
+  return apiUrl;
 }
 
 let accessToken: string | null = null;

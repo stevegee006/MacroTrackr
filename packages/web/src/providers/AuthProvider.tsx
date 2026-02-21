@@ -1,8 +1,13 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import { apiFetch, setAccessToken, type ApiError } from '@/lib/api-client';
+import { apiFetch, setAccessToken, setRefreshToken, getRefreshToken } from '@/lib/api-client';
 import type { User } from '@macrotracker/shared';
+
+interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -26,20 +31,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       setUser(null);
       setAccessToken(null);
+      setRefreshToken(null);
     }
   }, []);
 
   useEffect(() => {
-    // Try to refresh token on mount
+    // Try to refresh token on mount if we have a stored refresh token
     (async () => {
+      const storedRefreshToken = getRefreshToken();
+      if (!storedRefreshToken) {
+        setIsLoading(false);
+        return;
+      }
       try {
-        const res = await apiFetch<{ data: { accessToken: string } }>('/auth/refresh', {
+        const res = await apiFetch<{ data: AuthTokens }>('/auth/refresh', {
           method: 'POST',
+          body: JSON.stringify({ refreshToken: storedRefreshToken }),
         });
         setAccessToken(res.data.accessToken);
+        setRefreshToken(res.data.refreshToken);
         await refreshUser();
       } catch {
-        // Not logged in
+        // Invalid or expired refresh token
+        setRefreshToken(null);
       } finally {
         setIsLoading(false);
       }
@@ -47,30 +61,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshUser]);
 
   const login = async (email: string, password: string) => {
-    const res = await apiFetch<{ data: { accessToken: string } }>('/auth/login', {
+    const res = await apiFetch<{ data: AuthTokens }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
     setAccessToken(res.data.accessToken);
+    setRefreshToken(res.data.refreshToken);
     await refreshUser();
   };
 
   const register = async (email: string, password: string, displayName?: string) => {
-    const res = await apiFetch<{ data: { accessToken: string } }>('/auth/register', {
+    const res = await apiFetch<{ data: AuthTokens }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, displayName }),
     });
     setAccessToken(res.data.accessToken);
+    setRefreshToken(res.data.refreshToken);
     await refreshUser();
   };
 
   const logout = async () => {
+    const refreshToken = getRefreshToken();
     try {
-      await apiFetch('/auth/logout', { method: 'POST' });
+      await apiFetch('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken }),
+      });
     } catch {
       // ignore
     }
     setAccessToken(null);
+    setRefreshToken(null);
     setUser(null);
   };
 

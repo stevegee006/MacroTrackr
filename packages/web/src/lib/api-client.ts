@@ -4,7 +4,6 @@ function deriveApiUrl(): string {
   if (typeof window === 'undefined') return 'http://localhost:4000/api/v1';
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
-  // If running on a custom domain, assume api. subdomain
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
     return `${protocol}//api.${hostname}/api/v1`;
   }
@@ -39,18 +38,38 @@ export function getAccessToken() {
   return accessToken;
 }
 
+export function getRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('refreshToken');
+}
+
+export function setRefreshToken(token: string | null) {
+  if (typeof window === 'undefined') return;
+  if (token) {
+    localStorage.setItem('refreshToken', token);
+  } else {
+    localStorage.removeItem('refreshToken');
+  }
+}
+
 async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return null;
   try {
     const baseUrl = await getApiUrl();
     const res = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
-      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      setRefreshToken(null);
+      return null;
+    }
     const data = await res.json();
-    const token = data.data.accessToken;
-    setAccessToken(token);
-    return token;
+    setAccessToken(data.data.accessToken);
+    setRefreshToken(data.data.refreshToken);
+    return data.data.accessToken;
   } catch {
     return null;
   }
@@ -75,7 +94,6 @@ export async function apiFetch<T>(
   let res = await fetch(url, {
     ...options,
     headers,
-    credentials: 'include',
   });
 
   // If 401, try refreshing the token
@@ -86,7 +104,6 @@ export async function apiFetch<T>(
       res = await fetch(url, {
         ...options,
         headers,
-        credentials: 'include',
       });
     }
   }

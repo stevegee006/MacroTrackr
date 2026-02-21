@@ -35,12 +35,18 @@ export default function MacroPlanPage() {
   const activateMutation = useMutation({
     mutationFn: async (id: string) => {
       setActivatingId(id);
-      return apiFetch(`/macro-plan/${id}/activate`, { method: 'POST' });
+      return apiFetch(`/macro-plan/${id}/activate`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['macro-plans'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       queryClient.invalidateQueries({ queryKey: ['food-log-summary'] });
+    },
+    onError: (error) => {
+      console.error('Activate failed:', error);
     },
     onSettled: () => setActivatingId(null),
   });

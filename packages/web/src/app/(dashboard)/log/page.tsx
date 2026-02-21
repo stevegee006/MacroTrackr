@@ -124,6 +124,12 @@ export default function LogPage() {
                         <span className="text-amber-500">C:{Math.round(entry.totalCarbsG)}g</span>
                         {' '}
                         <span className="text-red-500">F:{Math.round(entry.totalFatG)}g</span>
+                        {entry.totalFiberG != null && (
+                          <>{' '}<span className="text-green-600">Fb:{Math.round(entry.totalFiberG)}g</span></>
+                        )}
+                        {entry.totalSugarG != null && (
+                          <>{' '}<span className="text-purple-500">S:{Math.round(entry.totalSugarG)}g</span></>
+                        )}
                       </p>
                     </div>
                     <button

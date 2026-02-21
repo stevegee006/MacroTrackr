@@ -5,6 +5,10 @@ interface NutritionLabelProps {
   food: FoodItem;
 }
 
+function round1(n: number): string {
+  return (Math.round(n * 10) / 10).toString();
+}
+
 export function NutritionLabel({ food }: NutritionLabelProps) {
   return (
     <Card className="space-y-3">
@@ -18,30 +22,30 @@ export function NutritionLabel({ food }: NutritionLabelProps) {
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-600">Calories</span>
-            <span className="font-medium">{food.caloriesPer100g} kcal</span>
+            <span className="font-medium">{Math.round(food.caloriesPer100g)} kcal</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Protein</span>
-            <span className="font-medium">{food.proteinPer100g}g</span>
+            <span className="font-medium">{round1(food.proteinPer100g)}g</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Carbs</span>
-            <span className="font-medium">{food.carbsPer100g}g</span>
+            <span className="font-medium">{round1(food.carbsPer100g)}g</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Fat</span>
-            <span className="font-medium">{food.fatPer100g}g</span>
+            <span className="font-medium">{round1(food.fatPer100g)}g</span>
           </div>
           {food.fiberPer100g != null && (
             <div className="flex justify-between">
               <span className="text-gray-600">Fiber</span>
-              <span className="font-medium">{food.fiberPer100g}g</span>
+              <span className="font-medium">{round1(food.fiberPer100g)}g</span>
             </div>
           )}
           {food.sugarPer100g != null && (
             <div className="flex justify-between">
               <span className="text-gray-600">Sugar</span>
-              <span className="font-medium">{food.sugarPer100g}g</span>
+              <span className="font-medium">{round1(food.sugarPer100g)}g</span>
             </div>
           )}
         </div>

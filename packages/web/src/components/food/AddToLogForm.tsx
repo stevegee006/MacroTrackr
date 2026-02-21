@@ -84,13 +84,23 @@ export function AddToLogForm({ food, onSuccess }: AddToLogFormProps) {
       </div>
 
       <div className="rounded-lg bg-gray-50 p-3 text-sm">
-        <p className="font-medium">Total for this entry:</p>
+        <p className="font-medium mb-1">Total for this entry:</p>
         <p>
           {Math.round(food.caloriesPer100g * factor)} kcal &middot;{' '}
-          P: {Math.round(food.proteinPer100g * factor)}g &middot;{' '}
-          C: {Math.round(food.carbsPer100g * factor)}g &middot;{' '}
-          F: {Math.round(food.fatPer100g * factor)}g
+          <span className="text-blue-600">P: {Math.round(food.proteinPer100g * factor)}g</span> &middot;{' '}
+          <span className="text-amber-600">C: {Math.round(food.carbsPer100g * factor)}g</span> &middot;{' '}
+          <span className="text-red-600">F: {Math.round(food.fatPer100g * factor)}g</span>
         </p>
+        {(food.fiberPer100g != null || food.sugarPer100g != null) && (
+          <p className="text-xs text-gray-500 mt-1">
+            {food.fiberPer100g != null && (
+              <><span className="text-green-600">Fiber: {Math.round(food.fiberPer100g * factor * 10) / 10}g</span>{' '}</>
+            )}
+            {food.sugarPer100g != null && (
+              <span className="text-purple-600">Sugar: {Math.round(food.sugarPer100g * factor * 10) / 10}g</span>
+            )}
+          </p>
+        )}
       </div>
 
       <Button

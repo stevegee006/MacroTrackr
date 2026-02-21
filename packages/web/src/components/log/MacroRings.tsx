@@ -67,36 +67,48 @@ function Ring({
 
 export function MacroRings({ totals, targets }: MacroRingsProps) {
   return (
-    <div className="grid grid-cols-4 gap-1 py-3">
-      <Ring
-        value={totals.calories}
-        max={targets.calories}
-        label="Calories"
-        unit=""
-        color="#10b981"
-        size={76}
-      />
-      <Ring
-        value={totals.proteinG}
-        max={targets.proteinG}
-        label="Protein"
-        unit="g"
-        color="#3b82f6"
-      />
-      <Ring
-        value={totals.carbsG}
-        max={targets.carbsG}
-        label="Carbs"
-        unit="g"
-        color="#f59e0b"
-      />
-      <Ring
-        value={totals.fatG}
-        max={targets.fatG}
-        label="Fat"
-        unit="g"
-        color="#ef4444"
-      />
+    <div>
+      <div className="grid grid-cols-4 gap-1 py-3">
+        <Ring
+          value={totals.calories}
+          max={targets.calories}
+          label="Calories"
+          unit=""
+          color="#10b981"
+          size={76}
+        />
+        <Ring
+          value={totals.proteinG}
+          max={targets.proteinG}
+          label="Protein"
+          unit="g"
+          color="#3b82f6"
+        />
+        <Ring
+          value={totals.carbsG}
+          max={targets.carbsG}
+          label="Carbs"
+          unit="g"
+          color="#f59e0b"
+        />
+        <Ring
+          value={totals.fatG}
+          max={targets.fatG}
+          label="Fat"
+          unit="g"
+          color="#ef4444"
+        />
+      </div>
+      <div className="flex justify-center gap-4 text-xs text-gray-500 pt-1 border-t border-gray-100">
+        <span>
+          <span className="text-green-600 font-medium">Fiber:</span>{' '}
+          {totals.fiberG}/{targets.fiberG}g
+        </span>
+        <span>
+          <span className="text-purple-500 font-medium">Sugar:</span>{' '}
+          {totals.sugarG}/{targets.sugarG}g
+        </span>
+      </div>
     </div>
   );
 }

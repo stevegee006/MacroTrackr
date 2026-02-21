@@ -141,6 +141,8 @@ model FoodLog {
   totalProteinG Float    @map("total_protein_g")
   totalCarbsG   Float    @map("total_carbs_g")
   totalFatG     Float    @map("total_fat_g")
+  totalFiberG   Float?   @map("total_fiber_g")
+  totalSugarG   Float?   @map("total_sugar_g")
   notes         String?  @db.Text
   createdAt     DateTime @default(now()) @map("created_at")
 

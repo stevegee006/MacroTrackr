@@ -21,8 +21,10 @@ export async function getDailySummary(fastify: FastifyInstance, userId: string, 
       proteinG: acc.proteinG + log.totalProteinG,
       carbsG: acc.carbsG + log.totalCarbsG,
       fatG: acc.fatG + log.totalFatG,
+      fiberG: acc.fiberG + (log.totalFiberG ?? 0),
+      sugarG: acc.sugarG + (log.totalSugarG ?? 0),
     }),
-    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, fiberG: 0, sugarG: 0 },
   );
 
   const profile = await fastify.prisma.userProfile.findUnique({ where: { userId } });
@@ -34,12 +36,16 @@ export async function getDailySummary(fastify: FastifyInstance, userId: string, 
       proteinG: Math.round(totals.proteinG),
       carbsG: Math.round(totals.carbsG),
       fatG: Math.round(totals.fatG),
+      fiberG: Math.round(totals.fiberG),
+      sugarG: Math.round(totals.sugarG),
     },
     targets: {
       calories: profile?.targetCalories ?? 2000,
       proteinG: profile?.targetProteinG ?? 150,
       carbsG: profile?.targetCarbsG ?? 250,
       fatG: profile?.targetFatG ?? 65,
+      fiberG: 30,
+      sugarG: 50,
     },
     entries: logs.length,
   };
@@ -73,6 +79,8 @@ export async function getLogRange(
       proteinG: Math.round(dayLogs.reduce((s, l) => s + l.totalProteinG, 0)),
       carbsG: Math.round(dayLogs.reduce((s, l) => s + l.totalCarbsG, 0)),
       fatG: Math.round(dayLogs.reduce((s, l) => s + l.totalFatG, 0)),
+      fiberG: Math.round(dayLogs.reduce((s, l) => s + (l.totalFiberG ?? 0), 0)),
+      sugarG: Math.round(dayLogs.reduce((s, l) => s + (l.totalSugarG ?? 0), 0)),
     },
     entries: dayLogs.length,
   }));
@@ -102,6 +110,12 @@ export async function createLogEntry(
       totalProteinG: Math.round(foodItem.proteinPer100g * factor * 10) / 10,
       totalCarbsG: Math.round(foodItem.carbsPer100g * factor * 10) / 10,
       totalFatG: Math.round(foodItem.fatPer100g * factor * 10) / 10,
+      totalFiberG: foodItem.fiberPer100g != null
+        ? Math.round(foodItem.fiberPer100g * factor * 10) / 10
+        : null,
+      totalSugarG: foodItem.sugarPer100g != null
+        ? Math.round(foodItem.sugarPer100g * factor * 10) / 10
+        : null,
       notes: input.notes ?? null,
     },
     include: { foodItem: true },
@@ -135,6 +149,12 @@ export async function updateLogEntry(
       totalProteinG: Math.round(existing.foodItem.proteinPer100g * factor * 10) / 10,
       totalCarbsG: Math.round(existing.foodItem.carbsPer100g * factor * 10) / 10,
       totalFatG: Math.round(existing.foodItem.fatPer100g * factor * 10) / 10,
+      totalFiberG: existing.foodItem.fiberPer100g != null
+        ? Math.round(existing.foodItem.fiberPer100g * factor * 10) / 10
+        : null,
+      totalSugarG: existing.foodItem.sugarPer100g != null
+        ? Math.round(existing.foodItem.sugarPer100g * factor * 10) / 10
+        : null,
       notes: input.notes !== undefined ? input.notes : existing.notes,
     },
     include: { foodItem: true },

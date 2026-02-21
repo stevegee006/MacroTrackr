@@ -14,6 +14,8 @@ export interface FoodLogEntry {
   totalProteinG: number;
   totalCarbsG: number;
   totalFatG: number;
+  totalFiberG: number | null;
+  totalSugarG: number | null;
   notes: string | null;
   createdAt: string;
   foodItem?: FoodItem;
@@ -31,4 +33,6 @@ export interface MacroTotals {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  fiberG: number;
+  sugarG: number;
 }

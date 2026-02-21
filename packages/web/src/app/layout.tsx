@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
+import { ThemeProvider } from '@/providers/ThemeProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -18,11 +19,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="bg-gray-50 text-gray-900 antialiased">
-        <QueryProvider>
-          <AuthProvider>{children}</AuthProvider>
-        </QueryProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className="bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 antialiased">
+        <ThemeProvider>
+          <QueryProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

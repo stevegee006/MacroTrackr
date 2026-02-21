@@ -12,6 +12,7 @@ export async function getUser(fastify: FastifyInstance, userId: string) {
       displayName: true,
       avatarUrl: true,
       authProvider: true,
+      isAdmin: true,
       createdAt: true,
     },
   });
@@ -33,6 +34,7 @@ export async function updateUser(
       displayName: true,
       avatarUrl: true,
       authProvider: true,
+      isAdmin: true,
       createdAt: true,
     },
   });

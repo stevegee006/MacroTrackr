@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { generateMealPlanSchema } from '@macrotracker/shared';
+import { generateMealPlanSchema, updateMealPlanSchema } from '@macrotracker/shared';
 import * as mealPlanService from '../../services/meal-plan.service.js';
 
 export default async function mealPlanRoutes(fastify: FastifyInstance) {
@@ -19,6 +19,13 @@ export default async function mealPlanRoutes(fastify: FastifyInstance) {
   fastify.get('/meal-plan/:id', async (request) => {
     const { id } = request.params as { id: string };
     const plan = await mealPlanService.getMealPlan(fastify, request.user.sub, id);
+    return { data: plan };
+  });
+
+  fastify.patch('/meal-plan/:id', async (request) => {
+    const { id } = request.params as { id: string };
+    const body = updateMealPlanSchema.parse(request.body);
+    const plan = await mealPlanService.updateMealPlan(fastify, request.user.sub, id, body);
     return { data: plan };
   });
 

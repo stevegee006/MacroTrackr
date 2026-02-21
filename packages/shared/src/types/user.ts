@@ -15,6 +15,7 @@ export interface User {
   displayName: string | null;
   avatarUrl: string | null;
   authProvider: AuthProvider;
+  isAdmin: boolean;
   createdAt: string;
 }
 

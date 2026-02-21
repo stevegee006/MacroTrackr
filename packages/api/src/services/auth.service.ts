@@ -17,6 +17,10 @@ export async function registerUser(
     throw new ConflictError('A user with this email already exists');
   }
 
+  // First user becomes admin
+  const userCount = await fastify.prisma.user.count();
+  const isAdmin = userCount === 0;
+
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await fastify.prisma.user.create({
     data: {
@@ -24,19 +28,20 @@ export async function registerUser(
       passwordHash,
       displayName: displayName ?? null,
       authProvider: 'LOCAL',
+      isAdmin,
       profile: { create: {} },
       settings: { create: {} },
     },
-    select: { id: true, email: true, displayName: true },
+    select: { id: true, email: true, displayName: true, isAdmin: true },
   });
 
-  return generateTokens(fastify, user.id, user.email);
+  return generateTokens(fastify, user.id, user.email, user.isAdmin);
 }
 
 export async function loginUser(fastify: FastifyInstance, email: string, password: string) {
   const user = await fastify.prisma.user.findUnique({
     where: { email },
-    select: { id: true, email: true, passwordHash: true, authProvider: true },
+    select: { id: true, email: true, passwordHash: true, authProvider: true, isAdmin: true },
   });
 
   if (!user || user.authProvider !== 'LOCAL' || !user.passwordHash) {
@@ -48,7 +53,7 @@ export async function loginUser(fastify: FastifyInstance, email: string, passwor
     throw new UnauthorizedError('Invalid email or password');
   }
 
-  return generateTokens(fastify, user.id, user.email);
+  return generateTokens(fastify, user.id, user.email, user.isAdmin);
 }
 
 export async function refreshTokens(fastify: FastifyInstance, refreshToken: string) {
@@ -63,14 +68,14 @@ export async function refreshTokens(fastify: FastifyInstance, refreshToken: stri
 
   const user = await fastify.prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true },
+    select: { id: true, email: true, isAdmin: true },
   });
 
   if (!user) {
     throw new UnauthorizedError('User not found');
   }
 
-  return generateTokens(fastify, user.id, user.email);
+  return generateTokens(fastify, user.id, user.email, user.isAdmin);
 }
 
 export async function logoutUser(fastify: FastifyInstance, refreshToken: string) {
@@ -87,10 +92,14 @@ export async function findOrCreateOAuthUser(
 ) {
   let user = await fastify.prisma.user.findUnique({
     where: { email },
-    select: { id: true, email: true },
+    select: { id: true, email: true, isAdmin: true },
   });
 
   if (!user) {
+    // First user becomes admin
+    const userCount = await fastify.prisma.user.count();
+    const isAdmin = userCount === 0;
+
     user = await fastify.prisma.user.create({
       data: {
         email,
@@ -98,18 +107,19 @@ export async function findOrCreateOAuthUser(
         avatarUrl,
         authProvider: 'GOOGLE',
         oauthProviderId,
+        isAdmin,
         profile: { create: {} },
         settings: { create: {} },
       },
-      select: { id: true, email: true },
+      select: { id: true, email: true, isAdmin: true },
     });
   }
 
-  return generateTokens(fastify, user.id, user.email);
+  return generateTokens(fastify, user.id, user.email, user.isAdmin);
 }
 
-async function generateTokens(fastify: FastifyInstance, userId: string, email: string) {
-  const accessToken = fastify.jwt.sign({ sub: userId, email });
+async function generateTokens(fastify: FastifyInstance, userId: string, email: string, isAdmin: boolean) {
+  const accessToken = fastify.jwt.sign({ sub: userId, email, isAdmin });
 
   const refreshToken = crypto.randomBytes(48).toString('hex');
   const tokenHash = hashToken(refreshToken);

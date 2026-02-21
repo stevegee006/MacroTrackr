@@ -48,5 +48,14 @@ export const mealPlanDataSchema = z.object({
   days: z.array(mealPlanDaySchema),
 });
 
+export const updateMealPlanSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  targetCalories: z.number().int().positive().optional(),
+  targetProteinG: z.number().int().nonnegative().optional(),
+  targetCarbsG: z.number().int().nonnegative().optional(),
+  targetFatG: z.number().int().nonnegative().optional(),
+});
+
 export type GenerateMealPlanInput = z.infer<typeof generateMealPlanSchema>;
+export type UpdateMealPlanInput = z.infer<typeof updateMealPlanSchema>;
 export type MealPlanDataSchema = z.infer<typeof mealPlanDataSchema>;

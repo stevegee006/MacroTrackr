@@ -98,7 +98,7 @@ export function NutritionLabel({ food, onUpdated }: NutritionLabelProps) {
       <Card className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Edit Nutrition</h3>
-          <button onClick={() => setEditing(false)} className="text-xs text-gray-500 hover:text-gray-700">
+          <button onClick={() => setEditing(false)} className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
             Cancel
           </button>
         </div>
@@ -116,7 +116,7 @@ export function NutritionLabel({ food, onUpdated }: NutritionLabelProps) {
         />
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Enter values</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">Enter values</span>
           <button
             type="button"
             onClick={toggleInputMode}
@@ -155,24 +155,24 @@ export function NutritionLabel({ food, onUpdated }: NutritionLabelProps) {
       <div className="flex items-start justify-between">
         <div>
           <h3 className="font-semibold text-lg">{food.name}</h3>
-          {food.brand && <p className="text-sm text-gray-500">{food.brand}</p>}
+          {food.brand && <p className="text-sm text-gray-500 dark:text-gray-400">{food.brand}</p>}
         </div>
         <button
           onClick={() => setEditing(true)}
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           title="Edit nutrition"
         >
           <Pencil className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="border-t border-gray-200 pt-3">
-        <p className="text-xs font-medium uppercase text-gray-500 mb-2">
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+        <p className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400 mb-2">
           Per serving ({food.servingSizeG}g)
         </p>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-600">Calories</span>
+            <span className="text-gray-600 dark:text-gray-400">Calories</span>
             <span className="font-medium">{Math.round(food.caloriesPer100g * displayFactor)} kcal</span>
           </div>
           <div className="flex justify-between">
@@ -202,9 +202,9 @@ export function NutritionLabel({ food, onUpdated }: NutritionLabelProps) {
         </div>
       </div>
 
-      <details className="text-xs text-gray-400">
-        <summary className="cursor-pointer hover:text-gray-600">Per 100g values</summary>
-        <div className="grid grid-cols-2 gap-1 mt-2 text-gray-500">
+      <details className="text-xs text-gray-400 dark:text-gray-500">
+        <summary className="cursor-pointer hover:text-gray-600 dark:hover:text-gray-400">Per 100g values</summary>
+        <div className="grid grid-cols-2 gap-1 mt-2 text-gray-500 dark:text-gray-400">
           <span>Cal: {Math.round(food.caloriesPer100g)}</span>
           <span>P: {round1(food.proteinPer100g)}g</span>
           <span>C: {round1(food.carbsPer100g)}g</span>

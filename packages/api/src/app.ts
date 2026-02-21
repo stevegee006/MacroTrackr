@@ -12,6 +12,7 @@ import foodRoutes from './routes/food/index.js';
 import foodLogRoutes from './routes/food-log/index.js';
 import macroPlanRoutes from './routes/macro-plan/index.js';
 import mealPlanRoutes from './routes/meal-plan/index.js';
+import adminRoutes from './routes/admin/index.js';
 import { AppError } from './utils/errors.js';
 import { logger } from './utils/logger.js';
 
@@ -69,6 +70,7 @@ export async function buildApp() {
       await api.register(foodLogRoutes);
       await api.register(macroPlanRoutes);
       await api.register(mealPlanRoutes);
+      await api.register(adminRoutes);
     },
     { prefix: '/api/v1' },
   );

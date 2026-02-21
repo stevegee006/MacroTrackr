@@ -36,9 +36,9 @@ export default function ScanPage() {
       <BarcodeScanner onScan={handleScan} />
 
       <div className="relative flex items-center gap-4">
-        <div className="h-px flex-1 bg-gray-200" />
-        <span className="text-xs text-gray-400">or scan a label</span>
-        <div className="h-px flex-1 bg-gray-200" />
+        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+        <span className="text-xs text-gray-400 dark:text-gray-500">or scan a label</span>
+        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
       </div>
 
       <LabelScanner
@@ -49,9 +49,9 @@ export default function ScanPage() {
       />
 
       <div className="relative flex items-center gap-4">
-        <div className="h-px flex-1 bg-gray-200" />
-        <span className="text-xs text-gray-400">or enter barcode manually</span>
-        <div className="h-px flex-1 bg-gray-200" />
+        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+        <span className="text-xs text-gray-400 dark:text-gray-500">or enter barcode manually</span>
+        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
       </div>
 
       <ManualBarcodeEntry onSubmit={handleScan} />
@@ -63,7 +63,7 @@ export default function ScanPage() {
       )}
 
       {lookup.isError && (
-        <Card className="bg-red-50 text-red-700">
+        <Card className="bg-red-50 dark:bg-red-950 text-red-700">
           <p className="text-sm">
             {(lookup.error as any)?.message || 'Product not found. Try a different barcode.'}
           </p>
@@ -73,12 +73,16 @@ export default function ScanPage() {
       {scannedFood && !added && (
         <div className="space-y-4">
           <NutritionLabel food={scannedFood} onUpdated={(updated) => setScannedFood(updated)} />
+          <LabelScanner
+            existingFoodId={scannedFood.id}
+            onResult={(updated) => setScannedFood(updated)}
+          />
           <AddToLogForm food={scannedFood} onSuccess={() => setAdded(true)} />
         </div>
       )}
 
       {added && (
-        <Card className="bg-emerald-50 text-emerald-700 text-center">
+        <Card className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 text-center">
           <p className="font-medium">Added to your food log!</p>
           <button
             onClick={() => {

@@ -34,8 +34,8 @@ export default function RegisterPage() {
   return (
     <Card className="p-8">
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
-        <p className="mt-1 text-sm text-gray-500">Start tracking your macros</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create Account</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Start tracking your macros</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -70,7 +70,7 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-gray-500">
+      <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
         Already have an account?{' '}
         <Link href="/login" className="text-emerald-600 hover:underline">
           Sign in

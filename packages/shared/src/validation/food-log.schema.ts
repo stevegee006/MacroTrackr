@@ -14,6 +14,13 @@ export const updateFoodLogSchema = z.object({
   servingQty: z.number().positive().optional(),
   servingSizeG: z.number().positive().optional(),
   notes: z.string().max(500).nullable().optional(),
+  // Direct macro overrides (skip recalculation when provided)
+  totalCalories: z.number().nonnegative().optional(),
+  totalProteinG: z.number().nonnegative().optional(),
+  totalCarbsG: z.number().nonnegative().optional(),
+  totalFatG: z.number().nonnegative().optional(),
+  totalFiberG: z.number().nonnegative().nullable().optional(),
+  totalSugarG: z.number().nonnegative().nullable().optional(),
 });
 
 export const foodLogQuerySchema = z.object({

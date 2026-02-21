@@ -64,7 +64,7 @@ export function AddToLogForm({ food, onSuccess }: AddToLogFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Meal</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Meal</label>
         <div className="flex gap-2 flex-wrap">
           {MEAL_TYPES.map((type) => (
             <button
@@ -74,7 +74,7 @@ export function AddToLogForm({ food, onSuccess }: AddToLogFormProps) {
               className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                 mealType === type
                   ? 'bg-emerald-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
               }`}
             >
               {MEAL_TYPE_LABELS[type]}
@@ -83,7 +83,7 @@ export function AddToLogForm({ food, onSuccess }: AddToLogFormProps) {
         </div>
       </div>
 
-      <div className="rounded-lg bg-gray-50 p-3 text-sm">
+      <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 text-sm">
         <p className="font-medium mb-1">Total for this entry:</p>
         <p>
           {Math.round(food.caloriesPer100g * factor)} kcal &middot;{' '}
@@ -92,7 +92,7 @@ export function AddToLogForm({ food, onSuccess }: AddToLogFormProps) {
           <span className="text-red-600">F: {Math.round(food.fatPer100g * factor)}g</span>
         </p>
         {(food.fiberPer100g != null || food.sugarPer100g != null) && (
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {food.fiberPer100g != null && (
               <><span className="text-green-600">Fiber: {Math.round(food.fiberPer100g * factor * 10) / 10}g</span>{' '}</>
             )}

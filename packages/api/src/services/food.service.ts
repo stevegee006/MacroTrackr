@@ -166,3 +166,50 @@ export async function extractNutritionFromLabel(
     },
   });
 }
+
+export async function updateFoodFromLabel(
+  fastify: FastifyInstance,
+  userId: string,
+  foodId: string,
+  imageBase64: string,
+) {
+  const existing = await fastify.prisma.foodItem.findUnique({ where: { id: foodId } });
+  if (!existing) throw new NotFoundError('Food item');
+
+  const client = await getOpenAIClient(fastify, userId);
+
+  const result = await visionCompletion(
+    client,
+    LABEL_SCAN_SYSTEM_PROMPT,
+    'Extract the nutrition information from this label. Return JSON only.',
+    imageBase64,
+    {
+      model: 'gpt-4o',
+      temperature: 0.1,
+      maxTokens: 1000,
+    },
+  );
+
+  const parsed = labelScanResponseSchema.safeParse(JSON.parse(result.content));
+  if (!parsed.success) {
+    throw new AppError(502, 'AI_PARSE_ERROR', 'Failed to parse nutrition data from label. Please try again with a clearer photo.');
+  }
+
+  // Update existing food item in-place (keeps barcode association)
+  return fastify.prisma.foodItem.update({
+    where: { id: foodId },
+    data: {
+      name: parsed.data.name,
+      brand: parsed.data.brand ?? existing.brand,
+      servingSizeG: parsed.data.servingSizeG,
+      caloriesPer100g: parsed.data.caloriesPer100g,
+      proteinPer100g: parsed.data.proteinPer100g,
+      carbsPer100g: parsed.data.carbsPer100g,
+      fatPer100g: parsed.data.fatPer100g,
+      fiberPer100g: parsed.data.fiberPer100g ?? null,
+      sugarPer100g: parsed.data.sugarPer100g ?? null,
+      sodiumPer100g: parsed.data.sodiumPer100g ?? null,
+      source: 'LABEL_SCAN',
+    },
+  });
+}

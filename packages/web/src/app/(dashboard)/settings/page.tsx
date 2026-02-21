@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
+import { useTheme } from '@/providers/ThemeProvider';
 import type { UserSettings } from '@macrotracker/shared';
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
+  const { isDark, toggle } = useTheme();
 
   const { data, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -35,6 +37,14 @@ export default function SettingsPage() {
     },
   });
 
+  const darkModeMutation = useMutation({
+    mutationFn: (dark: boolean) =>
+      apiFetch('/users/me/settings', { method: 'PUT', body: JSON.stringify({ darkMode: dark }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
+  });
+
   function handleSaveApiKey(e: React.FormEvent) {
     e.preventDefault();
     if (apiKey.trim()) {
@@ -46,6 +56,12 @@ export default function SettingsPage() {
     mutation.mutate({ preferredUnits });
   }
 
+  function handleToggleDarkMode() {
+    const newDark = !isDark;
+    toggle();
+    darkModeMutation.mutate(newDark);
+  }
+
   if (isLoading) {
     return <div className="flex justify-center py-12"><Spinner /></div>;
   }
@@ -55,8 +71,29 @@ export default function SettingsPage() {
       <h1 className="text-xl font-bold">Settings</h1>
 
       <Card className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold">Dark Mode</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Switch between light and dark theme</p>
+          </div>
+          <button
+            onClick={handleToggleDarkMode}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              isDark ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                isDark ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </Card>
+
+      <Card className="space-y-4">
         <h2 className="font-semibold">OpenAI API Key</h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Required for AI-powered macro plans and meal plans. Your key is encrypted and stored securely.
         </p>
         {data?.data.hasOpenaiKey && (
@@ -86,7 +123,7 @@ export default function SettingsPage() {
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 preferredUnits === unit
                   ? 'bg-emerald-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
               }`}
             >
               {unit === 'METRIC' ? 'Metric (kg, cm)' : 'Imperial (lbs, in)'}

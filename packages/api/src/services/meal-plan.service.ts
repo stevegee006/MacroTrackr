@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { mealPlanDataSchema, type GenerateMealPlanInput } from '@macrotracker/shared';
+import { mealPlanDataSchema, type GenerateMealPlanInput, type UpdateMealPlanInput } from '@macrotracker/shared';
 import { getOpenAIClient, chatCompletion } from './openai.service.js';
 import { getProfile } from './user.service.js';
 import { ValidationError, NotFoundError, ForbiddenError, AppError } from '../utils/errors.js';
@@ -120,6 +120,26 @@ export async function getMealPlan(fastify: FastifyInstance, userId: string, plan
   if (!plan) throw new NotFoundError('Meal plan');
   if (plan.userId !== userId) throw new ForbiddenError();
   return plan;
+}
+
+export async function updateMealPlan(
+  fastify: FastifyInstance,
+  userId: string,
+  planId: string,
+  input: UpdateMealPlanInput,
+) {
+  const plan = await getMealPlan(fastify, userId, planId);
+
+  return fastify.prisma.mealPlan.update({
+    where: { id: plan.id },
+    data: {
+      name: input.name ?? plan.name,
+      targetCalories: input.targetCalories ?? plan.targetCalories,
+      targetProteinG: input.targetProteinG ?? plan.targetProteinG,
+      targetCarbsG: input.targetCarbsG ?? plan.targetCarbsG,
+      targetFatG: input.targetFatG ?? plan.targetFatG,
+    },
+  });
 }
 
 export async function deleteMealPlan(fastify: FastifyInstance, userId: string, planId: string) {

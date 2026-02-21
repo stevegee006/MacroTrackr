@@ -1,6 +1,7 @@
 'use client';
 
 import type { MacroTotals } from '@macrotracker/shared';
+import { useTheme } from '@/providers/ThemeProvider';
 
 interface MacroRingsProps {
   totals: MacroTotals;
@@ -14,6 +15,7 @@ function Ring({
   unit,
   color,
   size = 72,
+  bgStroke,
 }: {
   value: number;
   max: number;
@@ -21,6 +23,7 @@ function Ring({
   unit: string;
   color: string;
   size?: number;
+  bgStroke: string;
 }) {
   const strokeWidth = 5;
   const radius = (size - strokeWidth) / 2;
@@ -37,7 +40,7 @@ function Ring({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#e5e7eb"
+          stroke={bgStroke}
           strokeWidth={strokeWidth}
         />
         <circle
@@ -66,6 +69,9 @@ function Ring({
 }
 
 export function MacroRings({ totals, targets }: MacroRingsProps) {
+  const { isDark } = useTheme();
+  const bgStroke = isDark ? '#374151' : '#e5e7eb';
+
   return (
     <div>
       <div className="grid grid-cols-4 gap-1 py-3">
@@ -76,6 +82,7 @@ export function MacroRings({ totals, targets }: MacroRingsProps) {
           unit=""
           color="#10b981"
           size={76}
+          bgStroke={bgStroke}
         />
         <Ring
           value={totals.proteinG}
@@ -83,6 +90,7 @@ export function MacroRings({ totals, targets }: MacroRingsProps) {
           label="Protein"
           unit="g"
           color="#3b82f6"
+          bgStroke={bgStroke}
         />
         <Ring
           value={totals.carbsG}
@@ -90,6 +98,7 @@ export function MacroRings({ totals, targets }: MacroRingsProps) {
           label="Carbs"
           unit="g"
           color="#f59e0b"
+          bgStroke={bgStroke}
         />
         <Ring
           value={totals.fatG}
@@ -97,9 +106,10 @@ export function MacroRings({ totals, targets }: MacroRingsProps) {
           label="Fat"
           unit="g"
           color="#ef4444"
+          bgStroke={bgStroke}
         />
       </div>
-      <div className="flex justify-center gap-4 text-xs text-gray-500 pt-1 border-t border-gray-100">
+      <div className="flex justify-center gap-4 text-xs text-gray-500 pt-1 border-t border-gray-100 dark:border-gray-700 dark:text-gray-400">
         <span>
           <span className="text-green-600 font-medium">Fiber:</span>{' '}
           {totals.fiberG}/{targets.fiberG}g

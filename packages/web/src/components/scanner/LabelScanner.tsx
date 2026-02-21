@@ -11,19 +11,24 @@ import type { FoodItem } from '@macrotracker/shared';
 
 interface LabelScannerProps {
   onResult: (food: FoodItem) => void;
+  existingFoodId?: string;
 }
 
-export function LabelScanner({ onResult }: LabelScannerProps) {
+export function LabelScanner({ onResult, existingFoodId }: LabelScannerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
 
   const scanMutation = useMutation({
-    mutationFn: (image: string) =>
-      apiFetch<{ data: FoodItem }>('/food/scan-label', {
+    mutationFn: (image: string) => {
+      const url = existingFoodId
+        ? `/food/${existingFoodId}/scan-label`
+        : '/food/scan-label';
+      return apiFetch<{ data: FoodItem }>(url, {
         method: 'POST',
         body: JSON.stringify({ image }),
-      }),
+      });
+    },
     onSuccess: (res) => {
       onResult(res.data);
       clearPhoto();
@@ -56,6 +61,9 @@ export function LabelScanner({ onResult }: LabelScannerProps) {
     setImageBase64(null);
   }
 
+  const buttonLabel = existingFoodId ? 'Rescan with Label Photo' : 'Scan Nutrition Label';
+  const extractLabel = existingFoodId ? 'Update from Label' : 'Extract Nutrition';
+
   if (preview && imageBase64) {
     return (
       <Card className="space-y-3">
@@ -63,7 +71,7 @@ export function LabelScanner({ onResult }: LabelScannerProps) {
           <h3 className="text-sm font-semibold">Label Photo</h3>
           <button
             onClick={clearPhoto}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
             disabled={scanMutation.isPending}
           >
             <X className="h-4 w-4" />
@@ -73,20 +81,20 @@ export function LabelScanner({ onResult }: LabelScannerProps) {
         <img
           src={preview}
           alt="Nutrition label"
-          className="w-full max-h-64 object-contain rounded-lg bg-gray-50"
+          className="w-full max-h-64 object-contain rounded-lg bg-gray-50 dark:bg-gray-800"
         />
 
         {scanMutation.isPending ? (
           <div className="flex items-center justify-center gap-2 py-3">
             <Spinner />
-            <span className="text-sm text-gray-500">Analyzing label with AI...</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Analyzing label with AI...</span>
           </div>
         ) : (
           <Button
             onClick={() => scanMutation.mutate(imageBase64)}
             className="w-full"
           >
-            Extract Nutrition
+            {extractLabel}
           </Button>
         )}
 
@@ -115,7 +123,7 @@ export function LabelScanner({ onResult }: LabelScannerProps) {
         className="w-full flex items-center justify-center gap-2"
       >
         <Camera className="h-4 w-4" />
-        Scan Nutrition Label
+        {buttonLabel}
       </Button>
     </div>
   );

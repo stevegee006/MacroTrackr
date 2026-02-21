@@ -137,14 +137,24 @@ export async function updateLogEntry(
 
   const servingQty = input.servingQty ?? existing.servingQty;
   const servingSizeG = input.servingSizeG ?? existing.servingSizeG;
-  const factor = (servingSizeG * servingQty) / 100;
 
-  return fastify.prisma.foodLog.update({
-    where: { id: logId },
-    data: {
-      mealType: input.mealType ?? existing.mealType,
-      servingQty,
-      servingSizeG,
+  // If direct macro overrides are provided, use them instead of recalculating
+  const hasOverrides = input.totalCalories !== undefined || input.totalProteinG !== undefined
+    || input.totalCarbsG !== undefined || input.totalFatG !== undefined;
+
+  let macros;
+  if (hasOverrides) {
+    macros = {
+      totalCalories: input.totalCalories ?? existing.totalCalories,
+      totalProteinG: input.totalProteinG ?? existing.totalProteinG,
+      totalCarbsG: input.totalCarbsG ?? existing.totalCarbsG,
+      totalFatG: input.totalFatG ?? existing.totalFatG,
+      totalFiberG: input.totalFiberG !== undefined ? input.totalFiberG : existing.totalFiberG,
+      totalSugarG: input.totalSugarG !== undefined ? input.totalSugarG : existing.totalSugarG,
+    };
+  } else {
+    const factor = (servingSizeG * servingQty) / 100;
+    macros = {
       totalCalories: Math.round(existing.foodItem.caloriesPer100g * factor),
       totalProteinG: Math.round(existing.foodItem.proteinPer100g * factor * 10) / 10,
       totalCarbsG: Math.round(existing.foodItem.carbsPer100g * factor * 10) / 10,
@@ -155,6 +165,16 @@ export async function updateLogEntry(
       totalSugarG: existing.foodItem.sugarPer100g != null
         ? Math.round(existing.foodItem.sugarPer100g * factor * 10) / 10
         : null,
+    };
+  }
+
+  return fastify.prisma.foodLog.update({
+    where: { id: logId },
+    data: {
+      mealType: input.mealType ?? existing.mealType,
+      servingQty,
+      servingSizeG,
+      ...macros,
       notes: input.notes !== undefined ? input.notes : existing.notes,
     },
     include: { foodItem: true },

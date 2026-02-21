@@ -33,8 +33,8 @@ export default function LoginPage() {
   return (
     <Card className="p-8">
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
-        <p className="mt-1 text-sm text-gray-500">Sign in to MacroTracker</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome Back</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Sign in to MacroTracker</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,7 +62,7 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-gray-500">
+      <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
         Don&apos;t have an account?{' '}
         <Link href="/register" className="text-emerald-600 hover:underline">
           Sign up

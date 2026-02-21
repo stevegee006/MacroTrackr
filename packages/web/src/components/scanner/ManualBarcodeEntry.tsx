@@ -29,7 +29,7 @@ export function ManualBarcodeEntry({ onSubmit }: ManualBarcodeEntryProps) {
         inputMode="numeric"
         pattern="[0-9]*"
       />
-      <Button type="submit" disabled={!barcode.trim()}>
+      <Button type="submit" variant="secondary" disabled={!barcode.trim()}>
         Look Up
       </Button>
     </form>

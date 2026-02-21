@@ -134,11 +134,18 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Profile</h1>
-          <p className="text-sm text-gray-500">{user?.email}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
         </div>
-        <Link href="/settings" className="text-sm text-emerald-600 hover:underline">
-          Settings
-        </Link>
+        <div className="flex gap-3">
+          {user?.isAdmin && (
+            <Link href="/admin" className="text-sm text-purple-600 hover:underline">
+              Admin
+            </Link>
+          )}
+          <Link href="/settings" className="text-sm text-emerald-600 hover:underline">
+            Settings
+          </Link>
+        </div>
       </div>
 
       <Card>
@@ -148,7 +155,7 @@ export default function ProfilePage() {
               <>
                 {/* Imperial height: feet + inches */}
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Height</label>
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <Input
@@ -158,7 +165,7 @@ export default function ProfilePage() {
                         value={form.feet}
                         onChange={(e) => setForm({ ...form, feet: e.target.value })}
                       />
-                      <span className="text-xs text-gray-500">feet</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">feet</span>
                     </div>
                     <div className="flex-1">
                       <Input
@@ -168,7 +175,7 @@ export default function ProfilePage() {
                         value={form.inches}
                         onChange={(e) => setForm({ ...form, inches: e.target.value })}
                       />
-                      <span className="text-xs text-gray-500">inches</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">inches</span>
                     </div>
                   </div>
                 </div>
@@ -205,11 +212,11 @@ export default function ProfilePage() {
               onChange={(e) => setForm({ ...form, age: e.target.value })}
             />
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sex</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sex</label>
               <select
                 value={form.sex}
                 onChange={(e) => setForm({ ...form, sex: e.target.value })}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               >
                 <option value="">Select</option>
                 <option value="MALE">Male</option>
@@ -220,11 +227,11 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Activity Level</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Activity Level</label>
             <select
               value={form.activityLevel}
               onChange={(e) => setForm({ ...form, activityLevel: e.target.value })}
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
             >
               <option value="">Select</option>
               {Object.entries(ACTIVITY_LABELS).map(([key, label]) => (
@@ -234,11 +241,11 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Goal</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Goal</label>
             <select
               value={form.goal}
               onChange={(e) => setForm({ ...form, goal: e.target.value })}
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
             >
               <option value="">Select</option>
               {Object.entries(GOAL_LABELS).map(([key, label]) => (

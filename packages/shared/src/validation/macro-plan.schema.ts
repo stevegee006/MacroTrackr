@@ -22,6 +22,16 @@ export const createManualMacroPlanSchema = z.object({
   targetFatG: z.number().int().nonnegative(),
 });
 
+export const updateMacroPlanSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  goal: z.enum(['LOSE_WEIGHT', 'MAINTAIN', 'GAIN_MUSCLE']).optional(),
+  targetCalories: z.number().int().positive().optional(),
+  targetProteinG: z.number().int().nonnegative().optional(),
+  targetCarbsG: z.number().int().nonnegative().optional(),
+  targetFatG: z.number().int().nonnegative().optional(),
+});
+
 export type GenerateMacroPlanInput = z.infer<typeof generateMacroPlanSchema>;
 export type CreateManualMacroPlanInput = z.infer<typeof createManualMacroPlanSchema>;
+export type UpdateMacroPlanInput = z.infer<typeof updateMacroPlanSchema>;
 export type MacroPlanResponse = z.infer<typeof macroPlanResponseSchema>;

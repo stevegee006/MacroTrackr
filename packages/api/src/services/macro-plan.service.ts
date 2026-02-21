@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { macroPlanResponseSchema, type GenerateMacroPlanInput } from '@macrotracker/shared';
+import { macroPlanResponseSchema, type GenerateMacroPlanInput, type UpdateMacroPlanInput } from '@macrotracker/shared';
 import { getOpenAIClient, chatCompletion } from './openai.service.js';
 import { getProfile } from './user.service.js';
 import { ValidationError, NotFoundError, ForbiddenError, AppError } from '../utils/errors.js';
@@ -170,6 +170,43 @@ export async function createManualMacroPlan(
       isActive: false,
     },
   });
+}
+
+export async function updateMacroPlan(
+  fastify: FastifyInstance,
+  userId: string,
+  planId: string,
+  input: UpdateMacroPlanInput,
+) {
+  const plan = await getMacroPlan(fastify, userId, planId);
+
+  const updated = await fastify.prisma.macroPlan.update({
+    where: { id: plan.id },
+    data: {
+      name: input.name ?? plan.name,
+      goal: (input.goal as any) ?? plan.goal,
+      targetCalories: input.targetCalories ?? plan.targetCalories,
+      targetProteinG: input.targetProteinG ?? plan.targetProteinG,
+      targetCarbsG: input.targetCarbsG ?? plan.targetCarbsG,
+      targetFatG: input.targetFatG ?? plan.targetFatG,
+    },
+  });
+
+  // If this plan is active, also sync targets to user profile
+  if (updated.isActive) {
+    await fastify.prisma.userProfile.update({
+      where: { userId },
+      data: {
+        goal: updated.goal,
+        targetCalories: updated.targetCalories,
+        targetProteinG: updated.targetProteinG,
+        targetCarbsG: updated.targetCarbsG,
+        targetFatG: updated.targetFatG,
+      },
+    });
+  }
+
+  return updated;
 }
 
 export async function deleteMacroPlan(fastify: FastifyInstance, userId: string, planId: string) {

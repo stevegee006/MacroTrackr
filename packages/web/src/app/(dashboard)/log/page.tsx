@@ -14,15 +14,24 @@ import type { DailySummary, FoodLogEntry, MealType } from '@macrotracker/shared'
 import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@macrotracker/shared';
 import Link from 'next/link';
 
+interface EditForm {
+  servingQty: string;
+  servingSizeG: string;
+  mealType: MealType;
+  showMacroOverride: boolean;
+  totalCalories: string;
+  totalProteinG: string;
+  totalCarbsG: string;
+  totalFatG: string;
+  totalFiberG: string;
+  totalSugarG: string;
+}
+
 export default function LogPage() {
   const [date, setDate] = useState(todayString());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{
-    servingQty: string;
-    servingSizeG: string;
-    mealType: MealType;
-  } | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
   const queryClient = useQueryClient();
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -56,7 +65,7 @@ export default function LogPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { servingQty: number; servingSizeG: number; mealType: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
       return apiFetch(`/food-log/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -76,6 +85,13 @@ export default function LogPage() {
       servingQty: entry.servingQty.toString(),
       servingSizeG: entry.servingSizeG.toString(),
       mealType: entry.mealType as MealType,
+      showMacroOverride: false,
+      totalCalories: Math.round(entry.totalCalories).toString(),
+      totalProteinG: Math.round(entry.totalProteinG).toString(),
+      totalCarbsG: Math.round(entry.totalCarbsG).toString(),
+      totalFatG: Math.round(entry.totalFatG).toString(),
+      totalFiberG: entry.totalFiberG != null ? Math.round(entry.totalFiberG).toString() : '',
+      totalSugarG: entry.totalSugarG != null ? Math.round(entry.totalSugarG).toString() : '',
     });
   }
 
@@ -86,14 +102,23 @@ export default function LogPage() {
 
   function saveEdit(entryId: string) {
     if (!editForm) return;
-    updateMutation.mutate({
-      id: entryId,
-      data: {
-        servingQty: parseFloat(editForm.servingQty) || 1,
-        servingSizeG: parseFloat(editForm.servingSizeG) || 100,
-        mealType: editForm.mealType,
-      },
-    });
+
+    const data: Record<string, unknown> = {
+      servingQty: parseFloat(editForm.servingQty) || 1,
+      servingSizeG: parseFloat(editForm.servingSizeG) || 100,
+      mealType: editForm.mealType,
+    };
+
+    if (editForm.showMacroOverride) {
+      data.totalCalories = parseFloat(editForm.totalCalories) || 0;
+      data.totalProteinG = parseFloat(editForm.totalProteinG) || 0;
+      data.totalCarbsG = parseFloat(editForm.totalCarbsG) || 0;
+      data.totalFatG = parseFloat(editForm.totalFatG) || 0;
+      data.totalFiberG = editForm.totalFiberG ? parseFloat(editForm.totalFiberG) : null;
+      data.totalSugarG = editForm.totalSugarG ? parseFloat(editForm.totalSugarG) : null;
+    }
+
+    updateMutation.mutate({ id: entryId, data });
   }
 
   function changeDate(offset: number) {
@@ -126,13 +151,13 @@ export default function LogPage() {
 
       {/* Date picker */}
       <div className="flex items-center justify-between">
-        <button onClick={() => changeDate(-1)} className="p-2 hover:bg-gray-100 rounded-lg">
+        <button onClick={() => changeDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
           <ChevronLeft className="h-5 w-5" />
         </button>
         <span className="font-medium">
           {isToday ? 'Today' : new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
         </span>
-        <button onClick={() => changeDate(1)} className="p-2 hover:bg-gray-100 rounded-lg" disabled={isToday}>
+        <button onClick={() => changeDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" disabled={isToday}>
           <ChevronRight className="h-5 w-5 disabled:opacity-30" />
         </button>
       </div>
@@ -148,18 +173,18 @@ export default function LogPage() {
           )}
 
           {Object.keys(groupedLogs).length === 0 ? (
-            <Card className="py-6 text-center text-gray-500">No food logged for this day.</Card>
+            <Card className="py-6 text-center text-gray-500 dark:text-gray-400">No food logged for this day.</Card>
           ) : (
             Object.entries(groupedLogs).map(([mealType, items]) => (
               <div key={mealType} className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
                   {MEAL_TYPE_LABELS[mealType as keyof typeof MEAL_TYPE_LABELS]}
                 </h3>
                 {items.map((entry) => {
                   const isEditing = editingId === entry.id;
 
                   if (isEditing && editForm) {
-                    // Compute preview macros
+                    // Compute preview macros (only shown when NOT in override mode)
                     const qty = parseFloat(editForm.servingQty) || 0;
                     const sizeG = parseFloat(editForm.servingSizeG) || 0;
                     const factor = (sizeG * qty) / 100;
@@ -198,7 +223,7 @@ export default function LogPage() {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Meal</label>
+                          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Meal</label>
                           <div className="flex gap-1.5 flex-wrap">
                             {MEAL_TYPES.map((type) => (
                               <button
@@ -208,7 +233,7 @@ export default function LogPage() {
                                 className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
                                   editForm.mealType === type
                                     ? 'bg-emerald-600 text-white'
-                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                                 }`}
                               >
                                 {MEAL_TYPE_LABELS[type]}
@@ -217,17 +242,78 @@ export default function LogPage() {
                           </div>
                         </div>
 
-                        {/* Preview macros */}
-                        {fi && (
-                          <div className="rounded-lg bg-gray-50 p-2 text-xs">
-                            <span className="font-medium">{Math.round((fi.caloriesPer100g ?? 0) * factor)} kcal</span>
-                            {' · '}
-                            <span className="text-blue-500">P:{Math.round((fi.proteinPer100g ?? 0) * factor)}g</span>
-                            {' '}
-                            <span className="text-amber-500">C:{Math.round((fi.carbsPer100g ?? 0) * factor)}g</span>
-                            {' '}
-                            <span className="text-red-500">F:{Math.round((fi.fatPer100g ?? 0) * factor)}g</span>
+                        {/* Toggle macro override */}
+                        <button
+                          type="button"
+                          onClick={() => setEditForm({ ...editForm, showMacroOverride: !editForm.showMacroOverride })}
+                          className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                        >
+                          {editForm.showMacroOverride ? '− Hide macro overrides' : '+ Edit Macros Directly'}
+                        </button>
+
+                        {editForm.showMacroOverride ? (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                label="Calories"
+                                type="number"
+                                min={0}
+                                value={editForm.totalCalories}
+                                onChange={(e) => setEditForm({ ...editForm, totalCalories: e.target.value })}
+                              />
+                              <Input
+                                label="Protein (g)"
+                                type="number"
+                                min={0}
+                                value={editForm.totalProteinG}
+                                onChange={(e) => setEditForm({ ...editForm, totalProteinG: e.target.value })}
+                              />
+                              <Input
+                                label="Carbs (g)"
+                                type="number"
+                                min={0}
+                                value={editForm.totalCarbsG}
+                                onChange={(e) => setEditForm({ ...editForm, totalCarbsG: e.target.value })}
+                              />
+                              <Input
+                                label="Fat (g)"
+                                type="number"
+                                min={0}
+                                value={editForm.totalFatG}
+                                onChange={(e) => setEditForm({ ...editForm, totalFatG: e.target.value })}
+                              />
+                              <Input
+                                label="Fiber (g)"
+                                type="number"
+                                min={0}
+                                placeholder="—"
+                                value={editForm.totalFiberG}
+                                onChange={(e) => setEditForm({ ...editForm, totalFiberG: e.target.value })}
+                              />
+                              <Input
+                                label="Sugar (g)"
+                                type="number"
+                                min={0}
+                                placeholder="—"
+                                value={editForm.totalSugarG}
+                                onChange={(e) => setEditForm({ ...editForm, totalSugarG: e.target.value })}
+                              />
+                            </div>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">Override values are used as-is (no recalculation).</p>
                           </div>
+                        ) : (
+                          /* Preview macros from serving calculation */
+                          fi && (
+                            <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-2 text-xs">
+                              <span className="font-medium">{Math.round((fi.caloriesPer100g ?? 0) * factor)} kcal</span>
+                              {' · '}
+                              <span className="text-blue-500">P:{Math.round((fi.proteinPer100g ?? 0) * factor)}g</span>
+                              {' '}
+                              <span className="text-amber-500">C:{Math.round((fi.carbsPer100g ?? 0) * factor)}g</span>
+                              {' '}
+                              <span className="text-red-500">F:{Math.round((fi.fatPer100g ?? 0) * factor)}g</span>
+                            </div>
+                          )
                         )}
 
                         <div className="flex gap-2">
@@ -256,7 +342,7 @@ export default function LogPage() {
                     <Card key={entry.id} className="flex items-center justify-between py-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{entry.foodItem?.name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           {entry.servingQty} x {entry.servingSizeG}g &middot;{' '}
                           {Math.round(entry.totalCalories)} kcal
                         </p>

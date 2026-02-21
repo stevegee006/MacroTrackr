@@ -90,7 +90,7 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
 
       <Button
         onClick={isScanning ? stopScanning : startScanning}
-        variant={isScanning ? 'secondary' : 'primary'}
+        variant="secondary"
         className="w-full"
       >
         {isScanning ? 'Stop Scanner' : 'Start Camera Scanner'}

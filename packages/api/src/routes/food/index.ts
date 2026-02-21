@@ -48,4 +48,19 @@ export default async function foodRoutes(fastify: FastifyInstance) {
       reply.code(201).send({ data: item });
     },
   });
+
+  fastify.post('/food/:id/scan-label', {
+    bodyLimit: 10 * 1024 * 1024, // 10MB for base64 images
+    handler: async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = scanLabelSchema.parse(request.body);
+      const item = await foodService.updateFoodFromLabel(
+        fastify,
+        request.user.sub,
+        id,
+        body.image,
+      );
+      return { data: item };
+    },
+  });
 }

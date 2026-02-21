@@ -7,12 +7,17 @@ import type { User } from '@macrotracker/shared';
 interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  mustChangePassword?: boolean;
+}
+
+interface LoginResult {
+  mustChangePassword: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   register: (email: string, password: string, displayName?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -60,14 +65,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, [refreshUser]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     const res = await apiFetch<{ data: AuthTokens }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
     setAccessToken(res.data.accessToken);
     setRefreshToken(res.data.refreshToken);
+
+    if (res.data.mustChangePassword) {
+      return { mustChangePassword: true };
+    }
+
     await refreshUser();
+    return { mustChangePassword: false };
   };
 
   const register = async (email: string, password: string, displayName?: string) => {

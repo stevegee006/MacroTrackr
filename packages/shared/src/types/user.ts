@@ -1,4 +1,4 @@
-export type AuthProvider = 'LOCAL' | 'GOOGLE';
+export type AuthProvider = 'LOCAL' | 'GOOGLE' | 'GITHUB' | 'SAML' | 'OIDC';
 export type Sex = 'MALE' | 'FEMALE' | 'OTHER';
 export type ActivityLevel =
   | 'SEDENTARY'
@@ -16,6 +16,7 @@ export interface User {
   avatarUrl: string | null;
   authProvider: AuthProvider;
   isAdmin: boolean;
+  mustChangePassword: boolean;
   createdAt: string;
 }
 
@@ -38,6 +39,7 @@ export interface UserSettings {
   id: string;
   userId: string;
   hasOpenaiKey: boolean;
+  hasMealieConfig: boolean;
   preferredUnits: Units;
   darkMode: boolean;
 }

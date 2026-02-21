@@ -9,19 +9,21 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@macrotracker/shared": "workspace:*",
     "@fastify/auth": "^5",
     "@fastify/cookie": "^11",
     "@fastify/cors": "^11",
     "@fastify/jwt": "^9",
     "@fastify/oauth2": "^8",
     "@fastify/rate-limit": "^10",
+    "@macrotracker/shared": "workspace:*",
+    "@node-saml/node-saml": "^5.1.0",
     "@prisma/client": "^6",
     "bcryptjs": "^2.4",
     "fastify": "^5",
     "fastify-plugin": "^5",
     "ioredis": "^5",
     "openai": "^4.85",
+    "openid-client": "^5.7.1",
     "pino": "^9",
     "pino-pretty": "^13",
     "zod": "^3.24"

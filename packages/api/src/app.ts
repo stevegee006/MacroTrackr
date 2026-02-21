@@ -13,6 +13,8 @@ import foodLogRoutes from './routes/food-log/index.js';
 import macroPlanRoutes from './routes/macro-plan/index.js';
 import mealPlanRoutes from './routes/meal-plan/index.js';
 import adminRoutes from './routes/admin/index.js';
+import oauthRoutes from './routes/auth/oauth.js';
+import ssoRoutes from './routes/auth/sso.js';
 import { AppError } from './utils/errors.js';
 import { logger } from './utils/logger.js';
 
@@ -65,6 +67,8 @@ export async function buildApp() {
   await app.register(
     async (api) => {
       await api.register(authRoutes);
+      await api.register(oauthRoutes);
+      await api.register(ssoRoutes);
       await api.register(userRoutes);
       await api.register(foodRoutes);
       await api.register(foodLogRoutes);

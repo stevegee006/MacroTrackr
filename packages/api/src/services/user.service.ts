@@ -13,6 +13,7 @@ export async function getUser(fastify: FastifyInstance, userId: string) {
       avatarUrl: true,
       authProvider: true,
       isAdmin: true,
+      mustChangePassword: true,
       createdAt: true,
     },
   });
@@ -35,6 +36,7 @@ export async function updateUser(
       avatarUrl: true,
       authProvider: true,
       isAdmin: true,
+      mustChangePassword: true,
       createdAt: true,
     },
   });
@@ -65,6 +67,7 @@ export async function getSettings(fastify: FastifyInstance, userId: string) {
     id: settings.id,
     userId: settings.userId,
     hasOpenaiKey: !!settings.openaiApiKey,
+    hasMealieConfig: !!(settings.mealieUrl && settings.mealieApiKey),
     preferredUnits: settings.preferredUnits,
     darkMode: settings.darkMode,
   };
@@ -81,6 +84,12 @@ export async function updateSettings(
   if (data.openaiApiKey !== undefined) {
     updateData.openaiApiKey = encrypt(data.openaiApiKey);
   }
+  if (data.mealieUrl !== undefined) {
+    updateData.mealieUrl = data.mealieUrl;
+  }
+  if (data.mealieApiKey !== undefined) {
+    updateData.mealieApiKey = encrypt(data.mealieApiKey);
+  }
 
   const settings = await fastify.prisma.userSettings.upsert({
     where: { userId },
@@ -92,6 +101,7 @@ export async function updateSettings(
     id: settings.id,
     userId: settings.userId,
     hasOpenaiKey: !!settings.openaiApiKey,
+    hasMealieConfig: !!(settings.mealieUrl && settings.mealieApiKey),
     preferredUnits: settings.preferredUnits,
     darkMode: settings.darkMode,
   };

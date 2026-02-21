@@ -1,9 +1,23 @@
 import type { FastifyInstance } from 'fastify';
-import { loginSchema, registerSchema } from '@macrotracker/shared';
+import { loginSchema, registerSchema, changePasswordSchema } from '@macrotracker/shared';
 import * as authService from '../../services/auth.service.js';
 import { AppError } from '../../utils/errors.js';
+import { env } from '../../config/env.js';
 
 export default async function authRoutes(fastify: FastifyInstance) {
+  // Public endpoint - no auth required
+  fastify.get('/auth/providers', async () => {
+    const providers: string[] = ['LOCAL'];
+    if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+      providers.push('GOOGLE');
+    }
+    const ssoProviders = await fastify.prisma.ssoProvider.findMany({
+      where: { enabled: true },
+      select: { id: true, name: true, type: true },
+    });
+    return { data: { providers, sso: ssoProviders } };
+  });
+
   fastify.post('/auth/register', async (request, reply) => {
     const body = registerSchema.parse(request.body);
     const tokens = await authService.registerUser(fastify, body.email, body.password, body.displayName);
@@ -12,8 +26,14 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
   fastify.post('/auth/login', async (request, reply) => {
     const body = loginSchema.parse(request.body);
-    const tokens = await authService.loginUser(fastify, body.email, body.password);
-    reply.send({ data: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken } });
+    const result = await authService.loginUser(fastify, body.email, body.password);
+    reply.send({
+      data: {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        mustChangePassword: result.mustChangePassword,
+      },
+    });
   });
 
   fastify.post('/auth/refresh', async (request, reply) => {
@@ -32,6 +52,13 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (refreshToken) {
       await authService.logoutUser(fastify, refreshToken);
     }
+    reply.send({ data: { success: true } });
+  });
+
+  fastify.post('/auth/change-password', async (request, reply) => {
+    await fastify.authenticate(request, reply);
+    const body = changePasswordSchema.parse(request.body);
+    await authService.changePassword(fastify, request.user.sub, body.currentPassword, body.newPassword);
     reply.send({ data: { success: true } });
   });
 }

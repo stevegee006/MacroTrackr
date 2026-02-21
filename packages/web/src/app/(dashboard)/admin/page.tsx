@@ -8,9 +8,17 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
-import { Trash2, Loader2, Users, UtensilsCrossed, BarChart3, Brain, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, Loader2, Users, UtensilsCrossed, BarChart3, Brain, ChevronLeft, ChevronRight, Shield, Pencil, Plus, X, KeyRound, Copy, Check } from 'lucide-react';
 
-type Tab = 'stats' | 'users' | 'food';
+type Tab = 'stats' | 'users' | 'food' | 'sso';
+
+interface SsoProviderListItem {
+  id: string;
+  name: string;
+  type: 'SAML' | 'OIDC';
+  enabled: boolean;
+  createdAt: string;
+}
 
 interface AdminStats {
   users: number;
@@ -82,6 +90,7 @@ export default function AdminPage() {
           { key: 'stats' as Tab, label: 'Stats', icon: BarChart3 },
           { key: 'users' as Tab, label: 'Users', icon: Users },
           { key: 'food' as Tab, label: 'Food Items', icon: UtensilsCrossed },
+          { key: 'sso' as Tab, label: 'SSO', icon: Shield },
         ]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -101,6 +110,7 @@ export default function AdminPage() {
       {tab === 'stats' && <StatsTab />}
       {tab === 'users' && <UsersTab />}
       {tab === 'food' && <FoodItemsTab />}
+      {tab === 'sso' && <SsoTab />}
     </div>
   );
 }
@@ -142,6 +152,10 @@ function UsersTab() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [tempPasswordEmail, setTempPasswordEmail] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-users', page, search],
@@ -172,6 +186,31 @@ function UsersTab() {
     onSettled: () => setDeletingId(null),
   });
 
+  const resetMutation = useMutation({
+    mutationFn: async ({ id, email }: { id: string; email: string }) => {
+      setResettingId(id);
+      const res = await apiFetch<{ data: { tempPassword: string } }>(`/admin/users/${id}/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      return { tempPassword: res.data.tempPassword, email };
+    },
+    onSuccess: (data) => {
+      setTempPassword(data.tempPassword);
+      setTempPasswordEmail(data.email);
+      setCopied(false);
+    },
+    onSettled: () => setResettingId(null),
+  });
+
+  function copyTempPassword() {
+    if (tempPassword) {
+      navigator.clipboard.writeText(tempPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <Input
@@ -179,6 +218,41 @@ function UsersTab() {
         value={search}
         onChange={(e) => { setSearch(e.target.value); setPage(1); }}
       />
+
+      {/* Temp password modal */}
+      {tempPassword && (
+        <Card className="border-2 border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/30">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              Temporary Password
+            </h3>
+            <button
+              onClick={() => { setTempPassword(null); setTempPasswordEmail(null); }}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+            For <span className="font-medium">{tempPasswordEmail}</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm font-mono select-all">
+              {tempPassword}
+            </code>
+            <button
+              onClick={copyTempPassword}
+              className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="Copy to clipboard"
+            >
+              {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-gray-500" />}
+            </button>
+          </div>
+          <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-2">
+            This password is shown only once. The user will be required to change it on next login.
+          </p>
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
@@ -205,23 +279,43 @@ function UsersTab() {
                   Logs: {u._count.foodLogs} &middot; Plans: {u._count.macroPlans} &middot; Meals: {u._count.mealPlans}
                 </p>
               </div>
-              {!u.isAdmin && (
-                <button
-                  onClick={() => {
-                    if (confirm(`Delete user ${u.email}? This cannot be undone.`)) {
-                      deleteMutation.mutate(u.id);
-                    }
-                  }}
-                  disabled={deletingId === u.id}
-                  className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950 shrink-0 ml-2"
-                >
-                  {deletingId === u.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </button>
-              )}
+              <div className="flex items-center shrink-0 ml-2">
+                {u.authProvider === 'LOCAL' && !u.isAdmin && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Reset password for ${u.email}? A temporary password will be generated.`)) {
+                        resetMutation.mutate({ id: u.id, email: u.email });
+                      }
+                    }}
+                    disabled={resettingId === u.id}
+                    className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-amber-500 active:text-amber-600 transition-colors rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950"
+                    title="Reset password"
+                  >
+                    {resettingId === u.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <KeyRound className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+                {!u.isAdmin && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Delete user ${u.email}? This cannot be undone.`)) {
+                        deleteMutation.mutate(u.id);
+                      }
+                    }}
+                    disabled={deletingId === u.id}
+                    className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
+                  >
+                    {deletingId === u.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+              </div>
             </Card>
           ))}
 
@@ -332,6 +426,340 @@ function FoodItemsTab() {
             />
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+function SsoTab() {
+  const queryClient = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formName, setFormName] = useState('');
+  const [formType, setFormType] = useState<'SAML' | 'OIDC'>('OIDC');
+  const [formEnabled, setFormEnabled] = useState(false);
+  // OIDC fields
+  const [formIssuerUrl, setFormIssuerUrl] = useState('');
+  const [formClientId, setFormClientId] = useState('');
+  const [formClientSecret, setFormClientSecret] = useState('');
+  // SAML fields
+  const [formEntryPoint, setFormEntryPoint] = useState('');
+  const [formSamlIssuer, setFormSamlIssuer] = useState('');
+  const [formCert, setFormCert] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-sso'],
+    queryFn: () => apiFetch<{ data: SsoProviderListItem[] }>('/admin/sso'),
+  });
+
+  const apiBaseUrl = getApiUrl();
+  const callbackUrlBase = typeof window !== 'undefined'
+    ? `${window.location.origin}/api/v1/auth/sso/`
+    : `${apiBaseUrl}/auth/sso/`;
+
+  function resetForm() {
+    setFormName('');
+    setFormType('OIDC');
+    setFormEnabled(false);
+    setFormIssuerUrl('');
+    setFormClientId('');
+    setFormClientSecret('');
+    setFormEntryPoint('');
+    setFormSamlIssuer('');
+    setFormCert('');
+    setEditingId(null);
+    setShowForm(false);
+  }
+
+  async function handleEdit(id: string) {
+    try {
+      const res = await apiFetch<{ data: any }>(`/admin/sso/${id}`);
+      const p = res.data;
+      setEditingId(id);
+      setFormName(p.name);
+      setFormType(p.type);
+      setFormEnabled(p.enabled);
+      if (p.type === 'OIDC') {
+        setFormIssuerUrl(p.config.issuerUrl || '');
+        setFormClientId(p.config.clientId || '');
+        setFormClientSecret(p.config.clientSecret || '');
+      } else {
+        setFormEntryPoint(p.config.entryPoint || '');
+        setFormSamlIssuer(p.config.issuer || '');
+        setFormCert(p.config.cert || '');
+      }
+      setShowForm(true);
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const callbackUrl = editingId
+        ? `${callbackUrlBase}${editingId}/callback`
+        : `${callbackUrlBase}placeholder/callback`;
+
+      const config = formType === 'OIDC'
+        ? { issuerUrl: formIssuerUrl, clientId: formClientId, clientSecret: formClientSecret, callbackUrl }
+        : { entryPoint: formEntryPoint, issuer: formSamlIssuer, cert: formCert, callbackUrl };
+
+      const body = { name: formName, type: formType, enabled: formEnabled, config };
+
+      if (editingId) {
+        await apiFetch(`/admin/sso/${editingId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        });
+      } else {
+        const res = await apiFetch<{ data: { id: string } }>('/admin/sso', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        // Update callbackUrl with the real ID
+        const newId = res.data.id;
+        await apiFetch(`/admin/sso/${newId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            config: { ...config, callbackUrl: `${callbackUrlBase}${newId}/callback` },
+          }),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['admin-sso'] });
+      resetForm();
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setDeletingId(id);
+      await apiFetch(`/admin/sso/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-sso'] });
+    },
+    onSettled: () => setDeletingId(null),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
+      await apiFetch(`/admin/sso/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ enabled }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-sso'] });
+    },
+  });
+
+  if (isLoading) return <div className="flex justify-center py-8"><Spinner /></div>;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Configure enterprise SSO providers (SAML / OIDC)
+        </p>
+        {!showForm && (
+          <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}>
+            <Plus className="h-4 w-4 mr-1" />
+            Add Provider
+          </Button>
+        )}
+      </div>
+
+      {showForm && (
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">
+              {editingId ? 'Edit SSO Provider' : 'New SSO Provider'}
+            </h3>
+            <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <Input
+            label="Name"
+            value={formName}
+            onChange={(e) => setFormName(e.target.value)}
+            placeholder="e.g. Okta, Azure AD"
+          />
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
+            <div className="flex gap-4">
+              {(['SAML', 'OIDC'] as const).map((t) => (
+                <label key={t} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sso-type"
+                    checked={formType === t}
+                    onChange={() => setFormType(t)}
+                    className="accent-emerald-600"
+                  />
+                  {t}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formEnabled}
+              onChange={(e) => setFormEnabled(e.target.checked)}
+              className="accent-emerald-600"
+            />
+            <span className="text-gray-700 dark:text-gray-300">Enabled</span>
+          </label>
+
+          {formType === 'OIDC' ? (
+            <>
+              <Input
+                label="Issuer URL"
+                value={formIssuerUrl}
+                onChange={(e) => setFormIssuerUrl(e.target.value)}
+                placeholder="https://accounts.google.com"
+              />
+              <Input
+                label="Client ID"
+                value={formClientId}
+                onChange={(e) => setFormClientId(e.target.value)}
+                placeholder="your-client-id"
+              />
+              <Input
+                label="Client Secret"
+                type="password"
+                value={formClientSecret}
+                onChange={(e) => setFormClientSecret(e.target.value)}
+                placeholder="your-client-secret"
+              />
+            </>
+          ) : (
+            <>
+              <Input
+                label="Entry Point URL"
+                value={formEntryPoint}
+                onChange={(e) => setFormEntryPoint(e.target.value)}
+                placeholder="https://idp.example.com/sso/saml"
+              />
+              <Input
+                label="Issuer"
+                value={formSamlIssuer}
+                onChange={(e) => setFormSamlIssuer(e.target.value)}
+                placeholder="urn:example:idp"
+              />
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Certificate
+                </label>
+                <textarea
+                  value={formCert}
+                  onChange={(e) => setFormCert(e.target.value)}
+                  placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                  rows={4}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder:text-gray-500 font-mono"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Callback URL
+            </label>
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 break-all font-mono">
+              {editingId
+                ? `${callbackUrlBase}${editingId}/callback`
+                : 'Will be generated after saving'}
+            </div>
+          </div>
+
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" size="sm" onClick={resetForm}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleSave} isLoading={saving} disabled={!formName}>
+              {editingId ? 'Update' : 'Create'}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {(!data?.data || data.data.length === 0) && !showForm ? (
+        <Card className="py-6 text-center text-gray-500 dark:text-gray-400">
+          No SSO providers configured
+        </Card>
+      ) : (
+        data?.data.map((p) => (
+          <Card key={p.id} className="flex items-center justify-between py-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium truncate">{p.name}</p>
+                <span className="text-[10px] font-semibold uppercase bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                  {p.type}
+                </span>
+                <span
+                  className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                    p.enabled
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500'
+                  }`}
+                >
+                  {p.enabled ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                Created {new Date(p.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0 ml-2">
+              <button
+                onClick={() => toggleMutation.mutate({ id: p.id, enabled: !p.enabled })}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  p.enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+                title={p.enabled ? 'Disable' : 'Enable'}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                    p.enabled ? 'translate-x-4' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+              <button
+                onClick={() => handleEdit(p.id)}
+                className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-blue-500 transition-colors rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm(`Delete SSO provider "${p.name}"? This cannot be undone.`)) {
+                    deleteMutation.mutate(p.id);
+                  }
+                }}
+                disabled={deletingId === p.id}
+                className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
+              >
+                {deletingId === p.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </Card>
+        ))
       )}
     </div>
   );

@@ -41,7 +41,7 @@ export async function registerUser(
 export async function loginUser(fastify: FastifyInstance, email: string, password: string) {
   const user = await fastify.prisma.user.findUnique({
     where: { email },
-    select: { id: true, email: true, passwordHash: true, authProvider: true, isAdmin: true },
+    select: { id: true, email: true, passwordHash: true, authProvider: true, isAdmin: true, mustChangePassword: true },
   });
 
   if (!user || user.authProvider !== 'LOCAL' || !user.passwordHash) {
@@ -66,7 +66,35 @@ export async function loginUser(fastify: FastifyInstance, email: string, passwor
     }
   }
 
-  return generateTokens(fastify, user.id, user.email, isAdmin);
+  const tokens = await generateTokens(fastify, user.id, user.email, isAdmin);
+  return { ...tokens, mustChangePassword: user.mustChangePassword ?? false };
+}
+
+export async function changePassword(
+  fastify: FastifyInstance,
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+) {
+  const user = await fastify.prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, passwordHash: true, authProvider: true },
+  });
+
+  if (!user || user.authProvider !== 'LOCAL' || !user.passwordHash) {
+    throw new UnauthorizedError('Cannot change password for this account');
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) {
+    throw new UnauthorizedError('Current password is incorrect');
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await fastify.prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash, mustChangePassword: false },
+  });
 }
 
 export async function refreshTokens(fastify: FastifyInstance, refreshToken: string) {
@@ -115,6 +143,7 @@ export async function findOrCreateOAuthUser(
   displayName: string | null,
   avatarUrl: string | null,
   oauthProviderId: string,
+  authProvider: 'GOOGLE' | 'GITHUB' | 'SAML' | 'OIDC' = 'GOOGLE',
 ) {
   let user = await fastify.prisma.user.findUnique({
     where: { email },
@@ -131,7 +160,7 @@ export async function findOrCreateOAuthUser(
         email,
         displayName,
         avatarUrl,
-        authProvider: 'GOOGLE',
+        authProvider,
         oauthProviderId,
         isAdmin,
         profile: { create: {} },

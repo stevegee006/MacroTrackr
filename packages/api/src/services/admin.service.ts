@@ -1,5 +1,7 @@
+import bcrypt from 'bcryptjs';
+import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import { NotFoundError, ForbiddenError } from '../utils/errors.js';
+import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 
 export async function getStats(fastify: FastifyInstance) {
   const [users, foodItems, foodLogs, macroPlans, mealPlans] = await Promise.all([
@@ -100,6 +102,34 @@ export async function listFoodItems(
     data: items,
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
+}
+
+export async function resetUserPassword(
+  fastify: FastifyInstance,
+  adminUserId: string,
+  targetUserId: string,
+) {
+  if (adminUserId === targetUserId) {
+    throw new ForbiddenError('Cannot reset your own password this way');
+  }
+
+  const user = await fastify.prisma.user.findUnique({ where: { id: targetUserId } });
+  if (!user) throw new NotFoundError('User');
+
+  if (user.authProvider !== 'LOCAL') {
+    throw new ValidationError('Cannot reset password for OAuth users');
+  }
+
+  // Generate a 12-char random temporary password
+  const tempPassword = crypto.randomBytes(9).toString('base64url');
+  const passwordHash = await bcrypt.hash(tempPassword, 12);
+
+  await fastify.prisma.user.update({
+    where: { id: targetUserId },
+    data: { passwordHash, mustChangePassword: true },
+  });
+
+  return { tempPassword };
 }
 
 export async function deleteFoodItem(fastify: FastifyInstance, foodItemId: string) {

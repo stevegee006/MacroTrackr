@@ -17,8 +17,9 @@ model User {
   avatarUrl       String?      @map("avatar_url") @db.Text
   authProvider    AuthProvider @default(LOCAL) @map("auth_provider")
   oauthProviderId String?      @map("oauth_provider_id") @db.VarChar(255)
-  isAdmin         Boolean      @default(false) @map("is_admin")
-  createdAt       DateTime     @default(now()) @map("created_at")
+  isAdmin             Boolean      @default(false) @map("is_admin")
+  mustChangePassword  Boolean      @default(false) @map("must_change_password")
+  createdAt           DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
   profile    UserProfile?
@@ -33,6 +34,9 @@ model User {
 enum AuthProvider {
   LOCAL
   GOOGLE
+  GITHUB
+  SAML
+  OIDC
 }
 
 model UserProfile {
@@ -81,6 +85,8 @@ model UserSettings {
   openaiApiKey   String?  @map("openai_api_key") @db.Text
   preferredUnits Units    @default(METRIC) @map("preferred_units")
   darkMode       Boolean  @default(false) @map("dark_mode")
+  mealieUrl      String?  @map("mealie_url") @db.Text
+  mealieApiKey   String?  @map("mealie_api_key") @db.Text
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -184,6 +190,25 @@ model MacroPlan {
 
   @@index([userId])
   @@map("macro_plans")
+}
+
+// ─── SSO Providers ──────────────────────────────────────────────
+
+model SsoProvider {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  type      SsoType
+  config    Json
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("sso_providers")
+}
+
+enum SsoType {
+  SAML
+  OIDC
 }
 
 // ─── AI Meal Plans ───────────────────────────────────────────────

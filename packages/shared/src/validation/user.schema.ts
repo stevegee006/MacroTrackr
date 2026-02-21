@@ -31,9 +31,17 @@ export const updateSettingsSchema = z.object({
   openaiApiKey: z.string().min(1).max(500).optional(),
   preferredUnits: z.enum(['METRIC', 'IMPERIAL']).optional(),
   darkMode: z.boolean().optional(),
+  mealieUrl: z.string().url().max(500).nullable().optional(),
+  mealieApiKey: z.string().min(1).max(500).optional(),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(128),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

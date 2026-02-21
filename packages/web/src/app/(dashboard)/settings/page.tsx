@@ -21,6 +21,8 @@ export default function SettingsPage() {
 
   const [apiKey, setApiKey] = useState('');
   const [preferredUnits, setPreferredUnits] = useState('METRIC');
+  const [mealieUrl, setMealieUrl] = useState('');
+  const [mealieApiKey, setMealieApiKey] = useState('');
 
   useEffect(() => {
     if (data?.data) {
@@ -60,6 +62,25 @@ export default function SettingsPage() {
     const newDark = !isDark;
     toggle();
     darkModeMutation.mutate(newDark);
+  }
+
+  const mealieMutation = useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      apiFetch('/users/me/settings', { method: 'PUT', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      setMealieApiKey('');
+    },
+  });
+
+  function handleSaveMealie(e: React.FormEvent) {
+    e.preventDefault();
+    const body: Record<string, unknown> = {};
+    if (mealieUrl.trim()) body.mealieUrl = mealieUrl.trim();
+    if (mealieApiKey.trim()) body.mealieApiKey = mealieApiKey.trim();
+    if (Object.keys(body).length > 0) {
+      mealieMutation.mutate(body);
+    }
   }
 
   if (isLoading) {
@@ -133,6 +154,49 @@ export default function SettingsPage() {
         <Button variant="outline" size="sm" onClick={handleSaveUnits}>
           Save Units
         </Button>
+      </Card>
+
+      <Card className="space-y-4">
+        <h2 className="font-semibold">Mealie Integration</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Connect your Mealie instance to import recipes into meal plans. Your API key is encrypted and stored securely.
+        </p>
+        {data?.data.hasMealieConfig ? (
+          <p className="text-sm text-emerald-600">Mealie is configured.</p>
+        ) : (
+          <p className="text-sm text-gray-400 dark:text-gray-500">Not configured.</p>
+        )}
+        <form onSubmit={handleSaveMealie} className="space-y-3">
+          <Input
+            label="Mealie URL"
+            placeholder="https://mealie.example.com"
+            type="url"
+            value={mealieUrl}
+            onChange={(e) => setMealieUrl(e.target.value)}
+          />
+          <Input
+            label="Mealie API Key"
+            placeholder={data?.data.hasMealieConfig ? 'Enter new key to replace' : 'API key from Mealie'}
+            type="password"
+            value={mealieApiKey}
+            onChange={(e) => setMealieApiKey(e.target.value)}
+          />
+          <Button
+            type="submit"
+            isLoading={mealieMutation.isPending}
+            disabled={!mealieUrl.trim() && !mealieApiKey.trim()}
+          >
+            Save Mealie Config
+          </Button>
+        </form>
+        {mealieMutation.isError && (
+          <p className="text-sm text-red-600">
+            {(mealieMutation.error as any)?.message || 'Failed to save Mealie configuration'}
+          </p>
+        )}
+        {mealieMutation.isSuccess && (
+          <p className="text-sm text-emerald-600">Mealie configuration saved!</p>
+        )}
       </Card>
 
       {mutation.isSuccess && (

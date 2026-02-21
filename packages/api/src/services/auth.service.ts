@@ -53,7 +53,20 @@ export async function loginUser(fastify: FastifyInstance, email: string, passwor
     throw new UnauthorizedError('Invalid email or password');
   }
 
-  return generateTokens(fastify, user.id, user.email, user.isAdmin);
+  // Retroactive admin promotion: if no admins exist, promote the first-created user
+  let { isAdmin } = user;
+  if (!isAdmin) {
+    const adminExists = await fastify.prisma.user.findFirst({ where: { isAdmin: true } });
+    if (!adminExists) {
+      const firstUser = await fastify.prisma.user.findFirst({ orderBy: { createdAt: 'asc' } });
+      if (firstUser && firstUser.id === user.id) {
+        await fastify.prisma.user.update({ where: { id: user.id }, data: { isAdmin: true } });
+        isAdmin = true;
+      }
+    }
+  }
+
+  return generateTokens(fastify, user.id, user.email, isAdmin);
 }
 
 export async function refreshTokens(fastify: FastifyInstance, refreshToken: string) {
@@ -75,7 +88,20 @@ export async function refreshTokens(fastify: FastifyInstance, refreshToken: stri
     throw new UnauthorizedError('User not found');
   }
 
-  return generateTokens(fastify, user.id, user.email, user.isAdmin);
+  // Retroactive admin promotion on token refresh
+  let { isAdmin } = user;
+  if (!isAdmin) {
+    const adminExists = await fastify.prisma.user.findFirst({ where: { isAdmin: true } });
+    if (!adminExists) {
+      const firstUser = await fastify.prisma.user.findFirst({ orderBy: { createdAt: 'asc' } });
+      if (firstUser && firstUser.id === user.id) {
+        await fastify.prisma.user.update({ where: { id: user.id }, data: { isAdmin: true } });
+        isAdmin = true;
+      }
+    }
+  }
+
+  return generateTokens(fastify, user.id, user.email, isAdmin);
 }
 
 export async function logoutUser(fastify: FastifyInstance, refreshToken: string) {

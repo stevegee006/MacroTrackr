@@ -36,5 +36,7 @@ COPY --from=build /app/packages/api/dist ./packages/api/dist
 COPY --from=build /app/packages/api/package.json ./packages/api/
 COPY --from=build /app/packages/api/prisma ./packages/api/prisma
 COPY --from=build /app/packages/api/node_modules ./packages/api/node_modules
+COPY packages/api/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 EXPOSE 4000
-CMD ["node", "packages/api/dist/index.js"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

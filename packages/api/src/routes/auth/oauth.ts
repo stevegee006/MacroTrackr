@@ -17,7 +17,7 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
       },
     },
     startRedirectPath: '/auth/google',
-    callbackUri: `${env.FRONTEND_URL}/api/v1/auth/google/callback`,
+    callbackUri: `${env.API_BASE_URL}/api/v1/auth/google/callback`,
     discovery: { issuer: 'https://accounts.google.com' },
   });
 

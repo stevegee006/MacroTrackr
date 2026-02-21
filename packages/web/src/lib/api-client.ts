@@ -2,11 +2,28 @@ let apiUrl: string | null = null;
 
 function deriveApiUrl(): string {
   if (typeof window === 'undefined') return 'http://localhost:4000/api/v1';
+
+  // Use the build-time env var if set (injected at build in Docker)
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl) return envUrl;
+
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
+
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    // Derive a single-level subdomain to stay within wildcard SSL certs.
+    // e.g. macros.geehive.com  →  macros-api.geehive.com
+    //      app.example.com     →  app-api.example.com
+    const parts = hostname.split('.');
+    if (parts.length >= 3) {
+      // Replace the first subdomain segment: "macros" → "macros-api"
+      parts[0] = `${parts[0]}-api`;
+      return `${protocol}//${parts.join('.')}/api/v1`;
+    }
+    // Two-part hostname (e.g. example.com) – prepend api-
     return `${protocol}//api.${hostname}/api/v1`;
   }
+
   return 'http://localhost:4000/api/v1';
 }
 

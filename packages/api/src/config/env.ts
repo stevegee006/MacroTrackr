@@ -11,6 +11,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   FRONTEND_URL: z.string().default('http://localhost:3000'),
+  API_BASE_URL: z.string().default('http://localhost:4000'),
 });
 
 export type Env = z.infer<typeof envSchema>;

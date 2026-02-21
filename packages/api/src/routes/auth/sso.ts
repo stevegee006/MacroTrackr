@@ -23,7 +23,7 @@ export default async function ssoRoutes(fastify: FastifyInstance) {
 
     if (provider.type === 'OIDC') {
       const issuer = await Issuer.discover(config.issuerUrl as string);
-      const callbackUrl = config.callbackUrl as string || `${env.FRONTEND_URL}/api/v1/auth/sso/${providerId}/callback`;
+      const callbackUrl = config.callbackUrl as string || `${env.API_BASE_URL}/api/v1/auth/sso/${providerId}/callback`;
       const client = new issuer.Client({
         client_id: config.clientId as string,
         client_secret: config.clientSecret as string,
@@ -55,7 +55,7 @@ export default async function ssoRoutes(fastify: FastifyInstance) {
         entryPoint: config.entryPoint as string,
         issuer: config.issuer as string,
         idpCert: config.cert as string,
-        callbackUrl: config.callbackUrl as string || `${env.FRONTEND_URL}/api/v1/auth/sso/${providerId}/callback`,
+        callbackUrl: config.callbackUrl as string || `${env.API_BASE_URL}/api/v1/auth/sso/${providerId}/callback`,
       });
 
       const authorizeUrl = await saml.getAuthorizeUrlAsync('', request.hostname, {});
@@ -85,7 +85,7 @@ export default async function ssoRoutes(fastify: FastifyInstance) {
     const { nonce } = JSON.parse(stateData);
 
     const issuer = await Issuer.discover(config.issuerUrl as string);
-    const callbackUrl = config.callbackUrl as string || `${env.FRONTEND_URL}/api/v1/auth/sso/${providerId}/callback`;
+    const callbackUrl = config.callbackUrl as string || `${env.API_BASE_URL}/api/v1/auth/sso/${providerId}/callback`;
     const client = new issuer.Client({
       client_id: config.clientId as string,
       client_secret: config.clientSecret as string,
@@ -131,7 +131,7 @@ export default async function ssoRoutes(fastify: FastifyInstance) {
       entryPoint: config.entryPoint as string,
       issuer: config.issuer as string,
       idpCert: config.cert as string,
-      callbackUrl: config.callbackUrl as string || `${env.FRONTEND_URL}/api/v1/auth/sso/${providerId}/callback`,
+      callbackUrl: config.callbackUrl as string || `${env.API_BASE_URL}/api/v1/auth/sso/${providerId}/callback`,
     });
 
     const body = request.body as Record<string, string>;

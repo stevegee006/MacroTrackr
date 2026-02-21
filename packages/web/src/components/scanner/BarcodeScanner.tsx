@@ -20,7 +20,15 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
     try {
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
 
-      const scanner = new Html5Qrcode('barcode-scanner');
+      const scanner = new Html5Qrcode('barcode-scanner', {
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+        ],
+        verbose: false,
+      });
       html5QrCodeRef.current = scanner;
 
       await scanner.start(
@@ -28,12 +36,6 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
         {
           fps: 10,
           qrbox: { width: 250, height: 150 },
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.UPC_A,
-            Html5QrcodeSupportedFormats.UPC_E,
-          ],
         },
         (decodedText) => {
           onScan(decodedText);

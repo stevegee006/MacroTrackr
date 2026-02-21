@@ -1,8 +1,5 @@
--- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
-
 -- CreateEnum
-CREATE TYPE "AuthProvider" AS ENUM ('LOCAL', 'GOOGLE');
+CREATE TYPE "AuthProvider" AS ENUM ('LOCAL', 'GOOGLE', 'GITHUB', 'SAML', 'OIDC');
 
 -- CreateEnum
 CREATE TYPE "Sex" AS ENUM ('MALE', 'FEMALE', 'OTHER');
@@ -17,20 +14,25 @@ CREATE TYPE "Goal" AS ENUM ('LOSE_WEIGHT', 'MAINTAIN', 'GAIN_MUSCLE');
 CREATE TYPE "Units" AS ENUM ('METRIC', 'IMPERIAL');
 
 -- CreateEnum
-CREATE TYPE "FoodSource" AS ENUM ('OPENFOODFACTS', 'MANUAL');
+CREATE TYPE "FoodSource" AS ENUM ('OPENFOODFACTS', 'MANUAL', 'LABEL_SCAN');
 
 -- CreateEnum
 CREATE TYPE "MealType" AS ENUM ('BREAKFAST', 'LUNCH', 'DINNER', 'SNACK');
 
+-- CreateEnum
+CREATE TYPE "SsoType" AS ENUM ('SAML', 'OIDC');
+
 -- CreateTable
 CREATE TABLE "users" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "email" VARCHAR(255) NOT NULL,
     "password_hash" VARCHAR(255),
     "display_name" VARCHAR(100),
     "avatar_url" TEXT,
     "auth_provider" "AuthProvider" NOT NULL DEFAULT 'LOCAL',
     "oauth_provider_id" VARCHAR(255),
+    "is_admin" BOOLEAN NOT NULL DEFAULT false,
+    "must_change_password" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -39,7 +41,7 @@ CREATE TABLE "users" (
 
 -- CreateTable
 CREATE TABLE "user_profiles" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "height_cm" DOUBLE PRECISION,
     "weight_kg" DOUBLE PRECISION,
@@ -58,11 +60,13 @@ CREATE TABLE "user_profiles" (
 
 -- CreateTable
 CREATE TABLE "user_settings" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "openai_api_key" TEXT,
     "preferred_units" "Units" NOT NULL DEFAULT 'METRIC',
     "dark_mode" BOOLEAN NOT NULL DEFAULT false,
+    "mealie_url" TEXT,
+    "mealie_api_key" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -71,7 +75,7 @@ CREATE TABLE "user_settings" (
 
 -- CreateTable
 CREATE TABLE "food_items" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "barcode" VARCHAR(50),
     "name" VARCHAR(255) NOT NULL,
     "brand" VARCHAR(255),
@@ -95,7 +99,7 @@ CREATE TABLE "food_items" (
 
 -- CreateTable
 CREATE TABLE "food_logs" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "food_item_id" UUID NOT NULL,
     "log_date" DATE NOT NULL,
@@ -106,6 +110,8 @@ CREATE TABLE "food_logs" (
     "total_protein_g" DOUBLE PRECISION NOT NULL,
     "total_carbs_g" DOUBLE PRECISION NOT NULL,
     "total_fat_g" DOUBLE PRECISION NOT NULL,
+    "total_fiber_g" DOUBLE PRECISION,
+    "total_sugar_g" DOUBLE PRECISION,
     "notes" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -114,7 +120,7 @@ CREATE TABLE "food_logs" (
 
 -- CreateTable
 CREATE TABLE "macro_plans" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "goal" "Goal" NOT NULL,
@@ -133,7 +139,7 @@ CREATE TABLE "macro_plans" (
 
 -- CreateTable
 CREATE TABLE "meal_plans" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "duration_days" INTEGER NOT NULL,
@@ -147,6 +153,19 @@ CREATE TABLE "meal_plans" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "meal_plans_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sso_providers" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "name" VARCHAR(255) NOT NULL,
+    "type" "SsoType" NOT NULL,
+    "config" JSONB NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "sso_providers_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -196,4 +215,3 @@ ALTER TABLE "macro_plans" ADD CONSTRAINT "macro_plans_user_id_fkey" FOREIGN KEY 
 
 -- AddForeignKey
 ALTER TABLE "meal_plans" ADD CONSTRAINT "meal_plans_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-

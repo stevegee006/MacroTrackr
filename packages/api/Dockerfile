@@ -27,11 +27,13 @@ RUN pnpm --filter @macrotracker/api build
 
 # Production
 FROM base AS production
+COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages/shared/dist ./packages/shared/dist
+COPY --from=build /app/packages/shared/package.json ./packages/shared/
 COPY --from=build /app/packages/api/dist ./packages/api/dist
+COPY --from=build /app/packages/api/package.json ./packages/api/
 COPY --from=build /app/packages/api/prisma ./packages/api/prisma
 COPY --from=build /app/packages/api/node_modules ./packages/api/node_modules
-COPY --from=build /app/packages/shared/dist ./packages/shared/dist
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./
 EXPOSE 4000
 CMD ["node", "packages/api/dist/index.js"]

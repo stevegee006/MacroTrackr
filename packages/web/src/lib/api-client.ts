@@ -10,20 +10,8 @@ function deriveApiUrl(): string {
   return 'http://localhost:4000/api/v1';
 }
 
-async function getApiUrl(): Promise<string> {
+function getApiUrl(): string {
   if (apiUrl) return apiUrl;
-  try {
-    const res = await fetch('/api/config');
-    if (res.ok) {
-      const config = await res.json();
-      if (config.apiUrl) {
-        apiUrl = config.apiUrl as string;
-        return apiUrl;
-      }
-    }
-  } catch {
-    // fallback below
-  }
   apiUrl = deriveApiUrl();
   return apiUrl;
 }
@@ -56,7 +44,7 @@ async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return null;
   try {
-    const baseUrl = await getApiUrl();
+    const baseUrl = getApiUrl();
     const res = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -79,7 +67,7 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const baseUrl = await getApiUrl();
+  const baseUrl = getApiUrl();
   const url = `${baseUrl}${path}`;
 
   const headers: Record<string, string> = {

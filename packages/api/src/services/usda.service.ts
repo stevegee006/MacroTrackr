@@ -69,16 +69,33 @@ export async function searchFoods(
 
   logger.debug({ query }, 'Searching USDA FDC');
 
-  const response = await fetch(url.toString(), {
-    signal: AbortSignal.timeout(10000),
-  });
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch (err) {
+    logger.error({ err }, 'USDA FDC API network error');
+    throw new Error('Could not reach USDA FoodData Central. Try again later.');
+  }
 
   if (!response.ok) {
-    logger.warn({ status: response.status }, 'USDA FDC API error');
-    return [];
+    const body = await response.text().catch(() => '');
+    logger.warn({ status: response.status, body: body.slice(0, 200) }, 'USDA FDC API error');
+    if (response.status === 403 || response.status === 401) {
+      throw new Error('Invalid USDA API key. Check your key in Admin > Settings.');
+    }
+    if (response.status === 429) {
+      throw new Error('USDA API rate limit exceeded. Try again in a moment.');
+    }
+    throw new Error(`USDA API returned status ${response.status}`);
   }
 
   const data = (await response.json()) as UsdaSearchResponse;
+
+  if (!data.foods) {
+    return [];
+  }
 
   return data.foods.map((food) => {
     const energy = getNutrientValue(food.foodNutrients, NUTRIENT_IDS.ENERGY) ?? 0;

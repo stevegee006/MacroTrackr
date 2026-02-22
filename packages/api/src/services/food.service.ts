@@ -334,10 +334,17 @@ export async function searchExternalFoods(
     return JSON.parse(cached) as UsdaParsedFood[];
   }
 
-  const results = await usdaSearchFoods(apiKey, query, limit);
+  let results: UsdaParsedFood[];
+  try {
+    results = await usdaSearchFoods(apiKey, query, limit);
+  } catch (err: any) {
+    throw new AppError(502, 'USDA_ERROR', err.message || 'USDA search failed');
+  }
 
-  // Cache for 24 hours
-  await fastify.redis.set(cacheKey, JSON.stringify(results), 'EX', 86400);
+  // Only cache non-empty results (don't cache empty so retries work)
+  if (results.length > 0) {
+    await fastify.redis.set(cacheKey, JSON.stringify(results), 'EX', 86400);
+  }
 
   return results;
 }

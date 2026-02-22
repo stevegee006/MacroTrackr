@@ -3,9 +3,9 @@ import type { CreateFoodItemInput } from '@macrotracker/shared';
 import { labelScanResponseSchema } from '@macrotracker/shared';
 import { lookupBarcode } from './openfoodfacts.service.js';
 import { searchFoods as usdaSearchFoods, type UsdaParsedFood } from './usda.service.js';
+import { getUsdaApiKey } from './app-config.service.js';
 import { getOpenAIClient, visionCompletion, chatCompletion } from './openai.service.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
-import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
 export async function getFoodByBarcode(fastify: FastifyInstance, barcode: string) {
@@ -322,9 +322,9 @@ export async function searchExternalFoods(
   query: string,
   limit: number,
 ) {
-  const apiKey = env.USDA_FDC_API_KEY;
+  const apiKey = await getUsdaApiKey(fastify);
   if (!apiKey) {
-    throw new AppError(503, 'USDA_NOT_CONFIGURED', 'USDA FoodData Central API key is not configured.');
+    throw new AppError(503, 'USDA_NOT_CONFIGURED', 'USDA FoodData Central API key is not configured. Set it in Admin > Settings.');
   }
 
   // Check Redis cache first

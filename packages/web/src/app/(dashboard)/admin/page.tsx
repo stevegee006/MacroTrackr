@@ -871,13 +871,15 @@ function SsoTab() {
 
 function SettingsTab() {
   const queryClient = useQueryClient();
+  const [usdaKey, setUsdaKey] = useState('');
+  const [usdaSaved, setUsdaSaved] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-settings'],
-    queryFn: () => apiFetch<{ data: { signupsEnabled: boolean } }>('/admin/settings'),
+    queryFn: () => apiFetch<{ data: { signupsEnabled: boolean; usdaApiKeySet: boolean; usdaApiKeyMasked: string | null } }>('/admin/settings'),
   });
 
-  const mutation = useMutation({
+  const toggleMutation = useMutation({
     mutationFn: async (settings: { signupsEnabled: boolean }) => {
       await apiFetch('/admin/settings', {
         method: 'PUT',
@@ -889,9 +891,26 @@ function SettingsTab() {
     },
   });
 
+  const usdaMutation = useMutation({
+    mutationFn: async (key: string) => {
+      await apiFetch('/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ usdaApiKey: key }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+      setUsdaKey('');
+      setUsdaSaved(true);
+      setTimeout(() => setUsdaSaved(false), 3000);
+    },
+  });
+
   if (isLoading) return <div className="flex justify-center py-8"><Spinner /></div>;
 
   const signupsEnabled = data?.data?.signupsEnabled ?? true;
+  const usdaApiKeySet = data?.data?.usdaApiKeySet ?? false;
+  const usdaApiKeyMasked = data?.data?.usdaApiKeyMasked ?? null;
 
   return (
     <div className="space-y-4">
@@ -907,8 +926,8 @@ function SettingsTab() {
             </p>
           </div>
           <button
-            onClick={() => mutation.mutate({ signupsEnabled: !signupsEnabled })}
-            disabled={mutation.isPending}
+            onClick={() => toggleMutation.mutate({ signupsEnabled: !signupsEnabled })}
+            disabled={toggleMutation.isPending}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
               signupsEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
             }`}
@@ -920,9 +939,64 @@ function SettingsTab() {
             />
           </button>
         </div>
-        {mutation.isSuccess && (
-          <p className="text-xs text-emerald-600">Settings saved!</p>
-        )}
+      </Card>
+
+      <Card className="space-y-4">
+        <h3 className="font-semibold">USDA FoodData Central</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Enables restaurant and branded food search. Get a free API key from{' '}
+          <a
+            href="https://fdc.nal.usda.gov/api-key-signup"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-emerald-600 hover:underline"
+          >
+            fdc.nal.usda.gov
+          </a>
+        </p>
+        <div className="space-y-2">
+          {usdaApiKeySet && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 px-1.5 py-0.5 rounded">
+                Configured
+              </span>
+              <code className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                {usdaApiKeyMasked}
+              </code>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Input
+              type="password"
+              placeholder={usdaApiKeySet ? 'Enter new key to replace...' : 'Paste your USDA API key...'}
+              value={usdaKey}
+              onChange={(e) => setUsdaKey(e.target.value)}
+            />
+            <Button
+              size="sm"
+              onClick={() => usdaMutation.mutate(usdaKey)}
+              disabled={!usdaKey.trim() || usdaMutation.isPending}
+              isLoading={usdaMutation.isPending}
+            >
+              Save
+            </Button>
+          </div>
+          {usdaApiKeySet && (
+            <button
+              onClick={() => {
+                if (confirm('Remove the USDA API key? Restaurant & USDA search will stop working.')) {
+                  usdaMutation.mutate('');
+                }
+              }}
+              className="text-xs text-red-500 hover:text-red-600 hover:underline"
+            >
+              Remove key
+            </button>
+          )}
+          {usdaSaved && (
+            <p className="text-xs text-emerald-600">USDA API key saved!</p>
+          )}
+        </div>
       </Card>
     </div>
   );

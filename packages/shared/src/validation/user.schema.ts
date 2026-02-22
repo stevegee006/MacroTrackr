@@ -47,7 +47,8 @@ export const adminCreateUserSchema = z.object({
 });
 
 export const appSettingsSchema = z.object({
-  signupsEnabled: z.boolean(),
+  signupsEnabled: z.boolean().optional(),
+  usdaApiKey: z.string().max(100).optional(),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

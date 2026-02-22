@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { loginSchema, registerSchema, changePasswordSchema } from '@macrotracker/shared';
 import * as authService from '../../services/auth.service.js';
-import { AppError } from '../../utils/errors.js';
+import * as appConfigService from '../../services/app-config.service.js';
+import { AppError, ForbiddenError } from '../../utils/errors.js';
 import { env } from '../../config/env.js';
 
 export default async function authRoutes(fastify: FastifyInstance) {
@@ -15,11 +16,22 @@ export default async function authRoutes(fastify: FastifyInstance) {
       where: { enabled: true },
       select: { id: true, name: true, type: true },
     });
-    return { data: { providers, sso: ssoProviders } };
+    const { signupsEnabled } = await appConfigService.getAppSettings(fastify);
+    return { data: { providers, sso: ssoProviders, signupsEnabled } };
   });
 
   fastify.post('/auth/register', async (request, reply) => {
     const body = registerSchema.parse(request.body);
+
+    // Check if signups are enabled (always allow first user = admin setup)
+    const userCount = await fastify.prisma.user.count();
+    if (userCount > 0) {
+      const { signupsEnabled } = await appConfigService.getAppSettings(fastify);
+      if (!signupsEnabled) {
+        throw new ForbiddenError('Registration is currently disabled. Contact your administrator.');
+      }
+    }
+
     const tokens = await authService.registerUser(fastify, body.email, body.password, body.displayName);
     reply.send({ data: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken } });
   });

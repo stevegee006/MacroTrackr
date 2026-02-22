@@ -134,6 +134,7 @@ enum FoodSource {
   MANUAL
   LABEL_SCAN
   AI_ESTIMATE
+  USDA
 }
 
 // ─── Food Log ────────────────────────────────────────────────────
@@ -210,6 +211,16 @@ model SsoProvider {
 enum SsoType {
   SAML
   OIDC
+}
+
+// ─── App Configuration ──────────────────────────────────────────
+
+model AppConfig {
+  key       String   @id @db.VarChar(100)
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_config")
 }
 
 // ─── AI Meal Plans ───────────────────────────────────────────────

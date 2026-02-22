@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/providers/AuthProvider';
+import { getApiUrl } from '@/lib/api-client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
+import { Spinner } from '@/components/ui/Spinner';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -16,6 +18,22 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [signupsEnabled, setSignupsEnabled] = useState<boolean | null>(null);
+  const [checkingProviders, setCheckingProviders] = useState(true);
+
+  useEffect(() => {
+    const apiUrl = getApiUrl();
+    fetch(`${apiUrl}/auth/providers`)
+      .then((res) => res.json())
+      .then((json) => {
+        setSignupsEnabled(json.data?.signupsEnabled ?? true);
+      })
+      .catch(() => {
+        // If we can't check, assume enabled
+        setSignupsEnabled(true);
+      })
+      .finally(() => setCheckingProviders(false));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,6 +47,30 @@ export default function RegisterPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (checkingProviders) {
+    return (
+      <Card className="p-8">
+        <div className="flex justify-center py-8"><Spinner /></div>
+      </Card>
+    );
+  }
+
+  if (signupsEnabled === false) {
+    return (
+      <Card className="p-8 text-center">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          Registration Disabled
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          New account registration is currently disabled. Contact your administrator for access.
+        </p>
+        <Link href="/login" className="text-emerald-600 hover:underline text-sm font-medium">
+          Go to Login
+        </Link>
+      </Card>
+    );
   }
 
   return (

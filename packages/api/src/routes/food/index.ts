@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createFoodItemSchema, updateFoodItemSchema, searchFoodSchema, scanLabelSchema, estimateFoodSchema } from '@macrotracker/shared';
+import { createFoodItemSchema, updateFoodItemSchema, searchFoodSchema, scanLabelSchema, estimateFoodSchema, externalFoodSearchSchema } from '@macrotracker/shared';
 import * as foodService from '../../services/food.service.js';
 
 export default async function foodRoutes(fastify: FastifyInstance) {
@@ -15,6 +15,20 @@ export default async function foodRoutes(fastify: FastifyInstance) {
     const query = searchFoodSchema.parse(request.query);
     const result = await foodService.searchFood(fastify, query.q, query.page, query.limit);
     return result;
+  });
+
+  // External search (USDA FoodData Central) — MUST be before /food/:id catch-all
+  fastify.get('/food/search/external', async (request) => {
+    const query = externalFoodSearchSchema.parse(request.query);
+    const results = await foodService.searchExternalFoods(fastify, query.q, query.limit);
+    return { data: results };
+  });
+
+  // Import a USDA food into local DB
+  fastify.post('/food/import/usda', async (request, reply) => {
+    const body = request.body as any;
+    const item = await foodService.importUsdaFood(fastify, body);
+    reply.code(201).send({ data: item });
   });
 
   fastify.get('/food/:id', async (request) => {

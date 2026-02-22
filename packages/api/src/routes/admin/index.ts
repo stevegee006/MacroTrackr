@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import { createSsoProviderSchema, updateSsoProviderSchema } from '@macrotracker/shared';
+import { createSsoProviderSchema, updateSsoProviderSchema, adminCreateUserSchema, appSettingsSchema } from '@macrotracker/shared';
 import * as adminService from '../../services/admin.service.js';
 import * as ssoService from '../../services/sso.service.js';
+import * as appConfigService from '../../services/app-config.service.js';
 import { ForbiddenError } from '../../utils/errors.js';
 
 export default async function adminRoutes(fastify: FastifyInstance) {
@@ -11,6 +12,25 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     if (!request.user.isAdmin) {
       throw new ForbiddenError('Admin access required');
     }
+  });
+
+  // App settings
+  fastify.get('/admin/settings', async () => {
+    const settings = await appConfigService.getAppSettings(fastify);
+    return { data: settings };
+  });
+
+  fastify.put('/admin/settings', async (request) => {
+    const body = appSettingsSchema.parse(request.body);
+    const settings = await appConfigService.updateAppSettings(fastify, body);
+    return { data: settings };
+  });
+
+  // Create user (admin-only)
+  fastify.post('/admin/users', async (request, reply) => {
+    const body = adminCreateUserSchema.parse(request.body);
+    const user = await adminService.createUser(fastify, body.email, body.password, body.displayName);
+    reply.code(201).send({ data: user });
   });
 
   fastify.get('/admin/stats', async () => {

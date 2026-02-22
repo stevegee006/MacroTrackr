@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import { ConflictError, UnauthorizedError } from '../utils/errors.js';
+import { ConflictError, UnauthorizedError, ForbiddenError } from '../utils/errors.js';
+import { getAppSettings } from './app-config.service.js';
 import { env } from '../config/env.js';
 
 const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
@@ -154,6 +155,14 @@ export async function findOrCreateOAuthUser(
     // First user becomes admin
     const userCount = await fastify.prisma.user.count();
     const isAdmin = userCount === 0;
+
+    // Guard: if signups are disabled and users exist, reject new OAuth registrations
+    if (!isAdmin) {
+      const { signupsEnabled } = await getAppSettings(fastify);
+      if (!signupsEnabled) {
+        throw new ForbiddenError('Registration is currently disabled. Contact your administrator.');
+      }
+    }
 
     user = await fastify.prisma.user.create({
       data: {

@@ -10,6 +10,7 @@ const envSchema = z.object({
   ENCRYPTION_KEY: z.string().min(64),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  USDA_FDC_API_KEY: z.string().optional(),
   FRONTEND_URL: z.string().default('http://localhost:3000'),
   API_BASE_URL: z.string().default('http://localhost:4000'),
 });

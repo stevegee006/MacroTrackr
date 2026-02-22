@@ -45,9 +45,15 @@ export const estimateFoodSchema = z.object({
   weightG: z.number().positive(),
 });
 
+export const externalFoodSearchSchema = z.object({
+  q: z.string().min(1).max(200),
+  limit: z.coerce.number().int().positive().max(25).default(10),
+});
+
 export type CreateFoodItemInput = z.infer<typeof createFoodItemSchema>;
 export type UpdateFoodItemInput = z.infer<typeof updateFoodItemSchema>;
 export type ScanLabelInput = z.infer<typeof scanLabelSchema>;
 export type LabelScanResponse = z.infer<typeof labelScanResponseSchema>;
 export type SearchFoodInput = z.infer<typeof searchFoodSchema>;
 export type EstimateFoodInput = z.infer<typeof estimateFoodSchema>;
+export type ExternalFoodSearchInput = z.infer<typeof externalFoodSearchSchema>;

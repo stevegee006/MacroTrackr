@@ -40,8 +40,20 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8).max(128),
 });
 
+export const adminCreateUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8).max(128),
+  displayName: z.string().min(1).max(100).optional(),
+});
+
+export const appSettingsSchema = z.object({
+  signupsEnabled: z.boolean(),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
+export type AppSettingsInput = z.infer<typeof appSettingsSchema>;

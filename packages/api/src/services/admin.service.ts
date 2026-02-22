@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
+import { NotFoundError, ForbiddenError, ValidationError, ConflictError } from '../utils/errors.js';
 
 export async function getStats(fastify: FastifyInstance) {
   const [users, foodItems, foodLogs, macroPlans, mealPlans] = await Promise.all([
@@ -130,6 +130,35 @@ export async function resetUserPassword(
   });
 
   return { tempPassword };
+}
+
+export async function createUser(
+  fastify: FastifyInstance,
+  email: string,
+  password: string,
+  displayName?: string,
+) {
+  const existing = await fastify.prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    throw new ConflictError('A user with this email already exists');
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const user = await fastify.prisma.user.create({
+    data: {
+      email,
+      passwordHash,
+      displayName: displayName ?? null,
+      authProvider: 'LOCAL',
+      isAdmin: false,
+      mustChangePassword: true,
+      profile: { create: {} },
+      settings: { create: {} },
+    },
+    select: { id: true, email: true, displayName: true, isAdmin: true, createdAt: true },
+  });
+
+  return user;
 }
 
 export async function deleteFoodItem(fastify: FastifyInstance, foodItemId: string) {

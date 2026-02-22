@@ -8,9 +8,9 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
-import { Trash2, Loader2, Users, UtensilsCrossed, BarChart3, Brain, ChevronLeft, ChevronRight, Shield, Pencil, Plus, X, KeyRound, Copy, Check } from 'lucide-react';
+import { Trash2, Loader2, Users, UtensilsCrossed, BarChart3, Brain, ChevronLeft, ChevronRight, Shield, Pencil, Plus, X, KeyRound, Copy, Check, Settings, UserPlus } from 'lucide-react';
 
-type Tab = 'stats' | 'users' | 'food' | 'sso';
+type Tab = 'stats' | 'users' | 'food' | 'sso' | 'settings';
 
 interface SsoProviderListItem {
   id: string;
@@ -89,8 +89,9 @@ export default function AdminPage() {
         {([
           { key: 'stats' as Tab, label: 'Stats', icon: BarChart3 },
           { key: 'users' as Tab, label: 'Users', icon: Users },
-          { key: 'food' as Tab, label: 'Food Items', icon: UtensilsCrossed },
+          { key: 'food' as Tab, label: 'Food', icon: UtensilsCrossed },
           { key: 'sso' as Tab, label: 'SSO', icon: Shield },
+          { key: 'settings' as Tab, label: 'Settings', icon: Settings },
         ]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -111,6 +112,7 @@ export default function AdminPage() {
       {tab === 'users' && <UsersTab />}
       {tab === 'food' && <FoodItemsTab />}
       {tab === 'sso' && <SsoTab />}
+      {tab === 'settings' && <SettingsTab />}
     </div>
   );
 }
@@ -156,6 +158,11 @@ function UsersTab() {
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [tempPasswordEmail, setTempPasswordEmail] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createEmail, setCreateEmail] = useState('');
+  const [createPassword, setCreatePassword] = useState('');
+  const [createDisplayName, setCreateDisplayName] = useState('');
+  const [createError, setCreateError] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-users', page, search],
@@ -203,6 +210,41 @@ function UsersTab() {
     onSettled: () => setResettingId(null),
   });
 
+  const createMutation = useMutation({
+    mutationFn: async (body: { email: string; password: string; displayName?: string }) => {
+      const res = await apiFetch<{ data: AdminUser }>('/admin/users', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      return res.data;
+    },
+    onSuccess: (newUser) => {
+      setTempPassword(createPassword);
+      setTempPasswordEmail(newUser.email);
+      setCopied(false);
+      setShowCreateForm(false);
+      setCreateEmail('');
+      setCreatePassword('');
+      setCreateDisplayName('');
+      setCreateError('');
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+    },
+    onError: (err: any) => {
+      setCreateError(err.message || 'Failed to create user');
+    },
+  });
+
+  function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    setCreateError('');
+    createMutation.mutate({
+      email: createEmail,
+      password: createPassword,
+      displayName: createDisplayName || undefined,
+    });
+  }
+
   function copyTempPassword() {
     if (tempPassword) {
       navigator.clipboard.writeText(tempPassword);
@@ -213,11 +255,73 @@ function UsersTab() {
 
   return (
     <div className="space-y-3">
-      <Input
-        placeholder="Search users..."
-        value={search}
-        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-      />
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <Input
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
+        </div>
+        {!showCreateForm && (
+          <Button size="sm" onClick={() => setShowCreateForm(true)}>
+            <UserPlus className="h-4 w-4 mr-1" />
+            Create
+          </Button>
+        )}
+      </div>
+
+      {/* Create user form */}
+      {showCreateForm && (
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Create User</h3>
+            <button
+              onClick={() => { setShowCreateForm(false); setCreateError(''); }}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <form onSubmit={handleCreateUser} className="space-y-3">
+            <Input
+              label="Email"
+              type="email"
+              value={createEmail}
+              onChange={(e) => setCreateEmail(e.target.value)}
+              placeholder="user@example.com"
+              required
+            />
+            <Input
+              label="Password"
+              type="password"
+              value={createPassword}
+              onChange={(e) => setCreatePassword(e.target.value)}
+              placeholder="Min 8 characters"
+              required
+              minLength={8}
+            />
+            <Input
+              label="Display Name (optional)"
+              value={createDisplayName}
+              onChange={(e) => setCreateDisplayName(e.target.value)}
+              placeholder="User's name"
+            />
+            {createError && <p className="text-sm text-red-600">{createError}</p>}
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" size="sm" onClick={() => { setShowCreateForm(false); setCreateError(''); }}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" isLoading={createMutation.isPending}>
+                Create User
+              </Button>
+            </div>
+          </form>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            The user will be required to change their password on first login.
+          </p>
+        </Card>
+      )}
 
       {/* Temp password modal */}
       {tempPassword && (
@@ -761,6 +865,65 @@ function SsoTab() {
           </Card>
         ))
       )}
+    </div>
+  );
+}
+
+function SettingsTab() {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-settings'],
+    queryFn: () => apiFetch<{ data: { signupsEnabled: boolean } }>('/admin/settings'),
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (settings: { signupsEnabled: boolean }) => {
+      await apiFetch('/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify(settings),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+    },
+  });
+
+  if (isLoading) return <div className="flex justify-center py-8"><Spinner /></div>;
+
+  const signupsEnabled = data?.data?.signupsEnabled ?? true;
+
+  return (
+    <div className="space-y-4">
+      <Card className="space-y-4">
+        <h3 className="font-semibold">Registration</h3>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Allow New Signups</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {signupsEnabled
+                ? 'Anyone can create an account via the registration page.'
+                : 'Registration is disabled. Only admins can create new users.'}
+            </p>
+          </div>
+          <button
+            onClick={() => mutation.mutate({ signupsEnabled: !signupsEnabled })}
+            disabled={mutation.isPending}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              signupsEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                signupsEnabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+        {mutation.isSuccess && (
+          <p className="text-xs text-emerald-600">Settings saved!</p>
+        )}
+      </Card>
     </div>
   );
 }

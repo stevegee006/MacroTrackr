@@ -19,6 +19,7 @@ interface ProvidersResponse {
   data: {
     providers: string[];
     sso: SsoProviderInfo[];
+    signupsEnabled?: boolean;
   };
 }
 
@@ -31,6 +32,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [authProviders, setAuthProviders] = useState<string[]>(['LOCAL']);
   const [ssoProviders, setSsoProviders] = useState<SsoProviderInfo[]>([]);
+  const [signupsEnabled, setSignupsEnabled] = useState(true);
 
   useEffect(() => {
     const apiBaseUrl = getApiUrl();
@@ -39,6 +41,7 @@ export default function LoginPage() {
       .then((data: ProvidersResponse) => {
         setAuthProviders(data.data.providers);
         setSsoProviders(data.data.sso);
+        setSignupsEnabled(data.data.signupsEnabled ?? true);
       })
       .catch(() => {
         // Default to LOCAL only if fetch fails
@@ -157,12 +160,14 @@ export default function LoginPage() {
         </div>
       )}
 
-      <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
-        Don&apos;t have an account?{' '}
-        <Link href="/register" className="text-emerald-600 hover:underline">
-          Sign up
-        </Link>
-      </p>
+      {signupsEnabled && (
+        <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+          Don&apos;t have an account?{' '}
+          <Link href="/register" className="text-emerald-600 hover:underline">
+            Sign up
+          </Link>
+        </p>
+      )}
     </Card>
   );
 }

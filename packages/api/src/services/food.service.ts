@@ -2,8 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import type { CreateFoodItemInput } from '@macrotracker/shared';
 import { labelScanResponseSchema } from '@macrotracker/shared';
 import { lookupBarcode } from './openfoodfacts.service.js';
+import { searchFoods as usdaSearchFoods, type UsdaParsedFood } from './usda.service.js';
 import { getOpenAIClient, visionCompletion, chatCompletion } from './openai.service.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
+import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
 export async function getFoodByBarcode(fastify: FastifyInstance, barcode: string) {
@@ -311,6 +313,59 @@ export async function estimateFoodMacros(
       sugarPer100g: parsed.data.sugarPer100g ?? null,
       sodiumPer100g: parsed.data.sodiumPer100g ?? null,
       source: 'AI_ESTIMATE',
+    },
+  });
+}
+
+export async function searchExternalFoods(
+  fastify: FastifyInstance,
+  query: string,
+  limit: number,
+) {
+  const apiKey = env.USDA_FDC_API_KEY;
+  if (!apiKey) {
+    throw new AppError(503, 'USDA_NOT_CONFIGURED', 'USDA FoodData Central API key is not configured.');
+  }
+
+  // Check Redis cache first
+  const cacheKey = `usda:search:${query.toLowerCase().trim()}:${limit}`;
+  const cached = await fastify.redis.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached) as UsdaParsedFood[];
+  }
+
+  const results = await usdaSearchFoods(apiKey, query, limit);
+
+  // Cache for 24 hours
+  await fastify.redis.set(cacheKey, JSON.stringify(results), 'EX', 86400);
+
+  return results;
+}
+
+export async function importUsdaFood(
+  fastify: FastifyInstance,
+  food: UsdaParsedFood,
+) {
+  const barcode = `usda:${food.fdcId}`;
+
+  // Check if already imported (dedup by barcode)
+  const existing = await fastify.prisma.foodItem.findUnique({ where: { barcode } });
+  if (existing) return existing;
+
+  return fastify.prisma.foodItem.create({
+    data: {
+      barcode,
+      name: food.name,
+      brand: food.brand,
+      servingSizeG: food.servingSizeG,
+      caloriesPer100g: food.caloriesPer100g,
+      proteinPer100g: food.proteinPer100g,
+      carbsPer100g: food.carbsPer100g,
+      fatPer100g: food.fatPer100g,
+      fiberPer100g: food.fiberPer100g,
+      sugarPer100g: food.sugarPer100g,
+      sodiumPer100g: food.sodiumPer100g,
+      source: 'USDA',
     },
   });
 }

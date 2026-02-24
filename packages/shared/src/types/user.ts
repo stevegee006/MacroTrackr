@@ -42,4 +42,6 @@ export interface UserSettings {
   hasMealieConfig: boolean;
   preferredUnits: Units;
   darkMode: boolean;
+  timezone: string | null;
+  location: string | null;
 }

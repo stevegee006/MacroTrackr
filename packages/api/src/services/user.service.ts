@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { UpdateProfileInput, UpdateSettingsInput } from '@macrotracker/shared';
-import { NotFoundError } from '../utils/errors.js';
+import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { encrypt, decrypt } from '../utils/encryption.js';
 
 export async function getUser(fastify: FastifyInstance, userId: string) {
@@ -70,6 +70,8 @@ export async function getSettings(fastify: FastifyInstance, userId: string) {
     hasMealieConfig: !!(settings.mealieUrl && settings.mealieApiKey),
     preferredUnits: settings.preferredUnits,
     darkMode: settings.darkMode,
+    timezone: settings.timezone,
+    location: settings.location,
   };
 }
 
@@ -83,6 +85,19 @@ export async function updateSettings(
   if (data.darkMode !== undefined) updateData.darkMode = data.darkMode;
   if (data.openaiApiKey !== undefined) {
     updateData.openaiApiKey = encrypt(data.openaiApiKey);
+  }
+  if (data.timezone !== undefined) {
+    if (data.timezone !== null) {
+      try {
+        Intl.DateTimeFormat(undefined, { timeZone: data.timezone });
+      } catch {
+        throw new ValidationError('Invalid timezone identifier');
+      }
+    }
+    updateData.timezone = data.timezone;
+  }
+  if (data.location !== undefined) {
+    updateData.location = data.location?.trim() || null;
   }
   if (data.mealieUrl !== undefined) {
     updateData.mealieUrl = data.mealieUrl;
@@ -104,6 +119,8 @@ export async function updateSettings(
     hasMealieConfig: !!(settings.mealieUrl && settings.mealieApiKey),
     preferredUnits: settings.preferredUnits,
     darkMode: settings.darkMode,
+    timezone: settings.timezone,
+    location: settings.location,
   };
 }
 

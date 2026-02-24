@@ -31,6 +31,8 @@ export const updateSettingsSchema = z.object({
   openaiApiKey: z.string().min(1).max(500).optional(),
   preferredUnits: z.enum(['METRIC', 'IMPERIAL']).optional(),
   darkMode: z.boolean().optional(),
+  timezone: z.string().min(1).max(100).nullable().optional(),
+  location: z.string().max(255).nullable().optional(),
   mealieUrl: z.string().url().max(500).nullable().optional(),
   mealieApiKey: z.string().min(1).max(500).optional(),
 });

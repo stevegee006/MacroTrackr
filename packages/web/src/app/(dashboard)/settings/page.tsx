@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { useTheme } from '@/providers/ThemeProvider';
+import { TimezoneCombobox } from '@/components/ui/TimezoneCombobox';
+import { getBrowserTimezone, formatTimezoneLabel } from '@/lib/timezones';
 import type { UserSettings } from '@macrotracker/shared';
 
 export default function SettingsPage() {
@@ -21,14 +23,30 @@ export default function SettingsPage() {
 
   const [apiKey, setApiKey] = useState('');
   const [preferredUnits, setPreferredUnits] = useState('METRIC');
+  const [timezone, setTimezone] = useState<string | null>(null);
+  const [location, setLocation] = useState('');
   const [mealieUrl, setMealieUrl] = useState('');
   const [mealieApiKey, setMealieApiKey] = useState('');
+  const [tzAutoDetected, setTzAutoDetected] = useState(false);
 
   useEffect(() => {
     if (data?.data) {
       setPreferredUnits(data.data.preferredUnits);
+      setTimezone(data.data.timezone);
+      setLocation(data.data.location ?? '');
     }
   }, [data]);
+
+  // Auto-detect timezone on first load if not set
+  useEffect(() => {
+    if (data?.data && data.data.timezone === null && !tzAutoDetected) {
+      const detected = getBrowserTimezone();
+      setTimezone(detected);
+      setTzAutoDetected(true);
+      mutation.mutate({ timezone: detected });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, tzAutoDetected]);
 
   const mutation = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
@@ -153,6 +171,44 @@ export default function SettingsPage() {
         </div>
         <Button variant="outline" size="sm" onClick={handleSaveUnits}>
           Save Units
+        </Button>
+      </Card>
+
+      <Card className="space-y-4">
+        <h2 className="font-semibold">Timezone & Location</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Set your timezone for accurate date handling. Location is optional.
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Timezone
+            </label>
+            <TimezoneCombobox value={timezone} onChange={setTimezone} />
+            {timezone && (
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                Current: {formatTimezoneLabel(timezone)}
+              </p>
+            )}
+          </div>
+          <Input
+            label="Location"
+            placeholder="e.g. New York, NY"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const body: Record<string, unknown> = {};
+            if (timezone) body.timezone = timezone;
+            body.location = location.trim() || null;
+            mutation.mutate(body);
+          }}
+        >
+          Save Timezone & Location
         </Button>
       </Card>
 

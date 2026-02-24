@@ -85,6 +85,8 @@ model UserSettings {
   openaiApiKey   String?  @map("openai_api_key") @db.Text
   preferredUnits Units    @default(METRIC) @map("preferred_units")
   darkMode       Boolean  @default(false) @map("dark_mode")
+  timezone       String?  @db.VarChar(100)
+  location       String?  @db.VarChar(255)
   mealieUrl      String?  @map("mealie_url") @db.Text
   mealieApiKey   String?  @map("mealie_api_key") @db.Text
   createdAt      DateTime @default(now()) @map("created_at")

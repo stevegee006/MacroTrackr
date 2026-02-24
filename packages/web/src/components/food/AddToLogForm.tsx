@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
-import { todayString } from '@/lib/utils';
+import { todayString, parseDateLocal } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { FoodItem, MealType } from '@macrotracker/shared';
@@ -11,16 +11,20 @@ import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@macrotracker/shared';
 
 interface AddToLogFormProps {
   food: FoodItem;
+  /** Date to log to (YYYY-MM-DD). Defaults to today. User can change via date picker. */
+  logDate?: string;
   onSuccess?: () => void;
 }
 
-export function AddToLogForm({ food, onSuccess }: AddToLogFormProps) {
+export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLogFormProps) {
   const [servingQty, setServingQty] = useState(1);
   const [servingSizeG, setServingSizeG] = useState(food.servingSizeG);
   const [mealType, setMealType] = useState<MealType>('LUNCH');
+  const [logDate, setLogDate] = useState(initialDate ?? todayString());
   const queryClient = useQueryClient();
 
   const factor = (servingSizeG * servingQty) / 100;
+  const isToday = logDate === todayString();
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -28,7 +32,7 @@ export function AddToLogForm({ food, onSuccess }: AddToLogFormProps) {
         method: 'POST',
         body: JSON.stringify({
           foodItemId: food.id,
-          logDate: todayString(),
+          logDate,
           mealType,
           servingQty,
           servingSizeG,
@@ -43,6 +47,23 @@ export function AddToLogForm({ food, onSuccess }: AddToLogFormProps) {
 
   return (
     <div className="space-y-4">
+      {/* Date picker */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+        <input
+          type="date"
+          value={logDate}
+          max={todayString()}
+          onChange={(e) => setLogDate(e.target.value)}
+          className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+        />
+        {!isToday && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+            Logging for {parseDateLocal(logDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          </p>
+        )}
+      </div>
+
       <div className="flex gap-4">
         <Input
           label="Servings"
@@ -108,7 +129,7 @@ export function AddToLogForm({ food, onSuccess }: AddToLogFormProps) {
         isLoading={mutation.isPending}
         className="w-full"
       >
-        Add to Log
+        {isToday ? 'Add to Log' : `Add to ${parseDateLocal(logDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} Log`}
       </Button>
 
       {mutation.isError && (

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, getApiUrl, getAccessToken } from '@/lib/api-client';
-import { todayString } from '@/lib/utils';
+import { todayString, addDays, parseDateLocal } from '@/lib/utils';
 import { MacroRings } from '@/components/log/MacroRings';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -122,9 +122,7 @@ export default function LogPage() {
   }
 
   function changeDate(offset: number) {
-    const d = new Date(date);
-    d.setDate(d.getDate() + offset);
-    setDate(d.toISOString().split('T')[0]);
+    setDate(addDays(date, offset));
     cancelEditing();
   }
 
@@ -144,7 +142,7 @@ export default function LogPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Food Log</h1>
-        <Link href="/scan" className="text-sm text-emerald-600 hover:underline">
+        <Link href={isToday ? '/scan' : `/scan?date=${date}`} className="text-sm text-emerald-600 hover:underline">
           + Add Food
         </Link>
       </div>
@@ -155,7 +153,7 @@ export default function LogPage() {
           <ChevronLeft className="h-5 w-5" />
         </button>
         <span className="font-medium">
-          {isToday ? 'Today' : new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          {isToday ? 'Today' : parseDateLocal(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
         </span>
         <button onClick={() => changeDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" disabled={isToday}>
           <ChevronRight className="h-5 w-5 disabled:opacity-30" />

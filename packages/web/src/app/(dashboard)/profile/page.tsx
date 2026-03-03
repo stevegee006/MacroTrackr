@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/providers/AuthProvider';
+import { todayString, addDays } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
-import { ACTIVITY_LABELS, GOAL_LABELS } from '@macrotracker/shared';
-import type { UserProfile, UserSettings, ActivityLevel, Goal, Sex } from '@macrotracker/shared';
+import { ACTIVITY_LABELS, GOAL_LABELS, MEAL_TYPE_LABELS } from '@macrotracker/shared';
+import type { UserProfile, UserSettings, MealType } from '@macrotracker/shared';
 import Link from 'next/link';
 
 // Conversion helpers
@@ -277,9 +278,128 @@ export default function ProfilePage() {
         </Card>
       )}
 
+      <ExportCard />
+
       <Button variant="outline" onClick={logout} className="w-full">
         Sign Out
       </Button>
     </div>
+  );
+}
+
+interface ExportEntry {
+  logDate: string;
+  mealType: MealType;
+  servingQty: number;
+  servingSizeG: number;
+  totalCalories: number;
+  totalProteinG: number;
+  totalCarbsG: number;
+  totalFatG: number;
+  totalFiberG: number | null;
+  totalSugarG: number | null;
+  notes: string | null;
+  foodItem?: { name: string; brand: string | null } | null;
+}
+
+function ExportCard() {
+  const [from, setFrom] = useState(addDays(todayString(), -30));
+  const [to, setTo] = useState(todayString());
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleExport() {
+    setExporting(true);
+    setError('');
+    try {
+      const res = await apiFetch<{ data: ExportEntry[] }>(
+        `/food-log/export?from=${from}&to=${to}`,
+      );
+      const entries = res.data;
+      if (entries.length === 0) {
+        setError('No entries found for this date range.');
+        return;
+      }
+
+      const headers = ['Date', 'Meal', 'Food', 'Brand', 'Servings', 'Serving Size (g)', 'Calories', 'Protein (g)', 'Carbs (g)', 'Fat (g)', 'Fiber (g)', 'Sugar (g)', 'Notes'];
+      const rows = entries.map((e) => [
+        e.logDate.split('T')[0],
+        MEAL_TYPE_LABELS[e.mealType] ?? e.mealType,
+        e.foodItem?.name ?? '',
+        e.foodItem?.brand ?? '',
+        e.servingQty,
+        e.servingSizeG,
+        Math.round(e.totalCalories),
+        Math.round(e.totalProteinG * 10) / 10,
+        Math.round(e.totalCarbsG * 10) / 10,
+        Math.round(e.totalFatG * 10) / 10,
+        e.totalFiberG != null ? Math.round(e.totalFiberG * 10) / 10 : '',
+        e.totalSugarG != null ? Math.round(e.totalSugarG * 10) / 10 : '',
+        e.notes ?? '',
+      ]);
+
+      const csvContent = [headers, ...rows]
+        .map((row) =>
+          row.map((cell) => {
+            const str = String(cell);
+            return str.includes(',') || str.includes('"') || str.includes('\n')
+              ? `"${str.replace(/"/g, '""')}"`
+              : str;
+          }).join(','),
+        )
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `food-log-${from}-to-${to}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.message || 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-4">
+      <h3 className="font-semibold">Export Food Log</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Download your food log entries as a CSV file.
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">From</label>
+          <input
+            type="date"
+            value={from}
+            max={to}
+            onChange={(e) => setFrom(e.target.value)}
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">To</label>
+          <input
+            type="date"
+            value={to}
+            max={todayString()}
+            onChange={(e) => setTo(e.target.value)}
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+          />
+        </div>
+      </div>
+      <Button
+        variant="outline"
+        onClick={handleExport}
+        isLoading={exporting}
+        className="w-full"
+      >
+        Export to CSV
+      </Button>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+    </Card>
   );
 }

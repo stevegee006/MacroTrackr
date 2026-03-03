@@ -174,10 +174,10 @@ export function FoodSearchForm({ onResult }: FoodSearchFormProps) {
                   </div>
                   <div className="ml-3 text-right shrink-0">
                     <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                      {food.caloriesPer100g} kcal
+                      {Math.round(food.caloriesPer100g)} kcal
                     </p>
                     <p className="text-[10px] text-gray-400">
-                      P {food.proteinPer100g}g · C {food.carbsPer100g}g · F {food.fatPer100g}g
+                      P {Math.round(food.proteinPer100g)}g · C {Math.round(food.carbsPer100g)}g · F {Math.round(food.fatPer100g)}g
                     </p>
                   </div>
                 </div>
@@ -229,10 +229,10 @@ export function FoodSearchForm({ onResult }: FoodSearchFormProps) {
                     ) : (
                       <>
                         <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          {food.caloriesPer100g} kcal
+                          {Math.round(food.caloriesPer100g)} kcal
                         </p>
                         <p className="text-[10px] text-gray-400">
-                          P {food.proteinPer100g}g · C {food.carbsPer100g}g · F {food.fatPer100g}g
+                          P {Math.round(food.proteinPer100g)}g · C {Math.round(food.carbsPer100g)}g · F {Math.round(food.fatPer100g)}g
                         </p>
                       </>
                     )}

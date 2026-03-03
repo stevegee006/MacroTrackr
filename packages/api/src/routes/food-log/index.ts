@@ -28,6 +28,12 @@ export default async function foodLogRoutes(fastify: FastifyInstance) {
     return { data: range };
   });
 
+  fastify.get('/food-log/export', async (request) => {
+    const { from, to } = foodLogRangeSchema.parse(request.query);
+    const entries = await foodLogService.getLogEntriesForExport(fastify, request.user.sub, from, to);
+    return { data: entries };
+  });
+
   fastify.post('/food-log', async (request, reply) => {
     const body = createFoodLogSchema.parse(request.body);
     const entry = await foodLogService.createLogEntry(fastify, request.user.sub, body);

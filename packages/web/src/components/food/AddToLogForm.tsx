@@ -16,14 +16,24 @@ interface AddToLogFormProps {
   onSuccess?: () => void;
 }
 
+function getMealTypeForTime(): MealType {
+  const hour = new Date().getHours();
+  if (hour < 11) return 'BREAKFAST';
+  if (hour < 15) return 'LUNCH';
+  if (hour < 20) return 'DINNER';
+  return 'SNACK';
+}
+
 export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLogFormProps) {
-  const [servingQty, setServingQty] = useState(1);
-  const [servingSizeG, setServingSizeG] = useState(food.servingSizeG);
-  const [mealType, setMealType] = useState<MealType>('LUNCH');
+  const [servingQty, setServingQty] = useState('1');
+  const [servingSizeG, setServingSizeG] = useState(String(food.servingSizeG));
+  const [mealType, setMealType] = useState<MealType>(getMealTypeForTime);
   const [logDate, setLogDate] = useState(initialDate ?? todayString());
   const queryClient = useQueryClient();
 
-  const factor = (servingSizeG * servingQty) / 100;
+  const qtyNum = parseFloat(servingQty) || 0;
+  const sizeNum = parseFloat(servingSizeG) || 0;
+  const factor = (sizeNum * qtyNum) / 100;
   const isToday = logDate === todayString();
 
   const mutation = useMutation({
@@ -34,8 +44,8 @@ export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLog
           foodItemId: food.id,
           logDate,
           mealType,
-          servingQty,
-          servingSizeG,
+          servingQty: qtyNum || 1,
+          servingSizeG: sizeNum || 100,
         }),
       }),
     onSuccess: () => {
@@ -71,7 +81,7 @@ export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLog
           min={0.1}
           step={0.1}
           value={servingQty}
-          onChange={(e) => setServingQty(parseFloat(e.target.value) || 0)}
+          onChange={(e) => setServingQty(e.target.value)}
           className="w-24"
         />
         <Input
@@ -79,7 +89,7 @@ export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLog
           type="number"
           min={1}
           value={servingSizeG}
-          onChange={(e) => setServingSizeG(parseFloat(e.target.value) || 0)}
+          onChange={(e) => setServingSizeG(e.target.value)}
           className="w-32"
         />
       </div>

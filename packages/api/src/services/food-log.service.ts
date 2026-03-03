@@ -86,6 +86,22 @@ export async function getLogRange(
   }));
 }
 
+export async function getLogEntriesForExport(
+  fastify: FastifyInstance,
+  userId: string,
+  from: string,
+  to: string,
+) {
+  return fastify.prisma.foodLog.findMany({
+    where: {
+      userId,
+      logDate: { gte: new Date(from), lte: new Date(to) },
+    },
+    include: { foodItem: { select: { name: true, brand: true } } },
+    orderBy: [{ logDate: 'asc' }, { mealType: 'asc' }, { createdAt: 'asc' }],
+  });
+}
+
 export async function createLogEntry(
   fastify: FastifyInstance,
   userId: string,

@@ -161,6 +161,32 @@ export async function createUser(
   return user;
 }
 
+export async function updateFoodItem(
+  fastify: FastifyInstance,
+  foodItemId: string,
+  data: {
+    name?: string;
+    brand?: string;
+    barcode?: string;
+    servingSizeG?: number;
+    caloriesPer100g?: number;
+    proteinPer100g?: number;
+    carbsPer100g?: number;
+    fatPer100g?: number;
+    fiberPer100g?: number | null;
+    sugarPer100g?: number | null;
+    sodiumPer100g?: number | null;
+  },
+) {
+  const item = await fastify.prisma.foodItem.findUnique({ where: { id: foodItemId } });
+  if (!item) throw new NotFoundError('Food item');
+
+  return fastify.prisma.foodItem.update({
+    where: { id: foodItemId },
+    data,
+  });
+}
+
 export async function deleteFoodItem(fastify: FastifyInstance, foodItemId: string) {
   const item = await fastify.prisma.foodItem.findUnique({ where: { id: foodItemId } });
   if (!item) throw new NotFoundError('Food item');

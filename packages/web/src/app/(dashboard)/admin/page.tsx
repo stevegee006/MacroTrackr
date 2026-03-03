@@ -441,6 +441,7 @@ function FoodItemsTab() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<AdminFoodItem | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-food-items', page, search],
@@ -479,6 +480,13 @@ function FoodItemsTab() {
         onChange={(e) => { setSearch(e.target.value); setPage(1); }}
       />
 
+      {editingItem && (
+        <FoodItemEditForm
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+        />
+      )}
+
       {isLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : data?.data.length === 0 ? (
@@ -504,21 +512,30 @@ function FoodItemsTab() {
                   <span className="text-gray-400 dark:text-gray-500"> /100g</span>
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  if (confirm(`Delete "${item.name}"? All associated log entries will also be removed.`)) {
-                    deleteMutation.mutate(item.id);
-                  }
-                }}
-                disabled={deletingId === item.id}
-                className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950 shrink-0 ml-2"
-              >
-                {deletingId === item.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-              </button>
+              <div className="flex items-center shrink-0 ml-2">
+                <button
+                  onClick={() => setEditingItem(item)}
+                  className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-blue-500 active:text-blue-600 transition-colors rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950"
+                  title="Edit food item"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Delete "${item.name}"? All associated log entries will also be removed.`)) {
+                      deleteMutation.mutate(item.id);
+                    }
+                  }}
+                  disabled={deletingId === item.id}
+                  className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
+                >
+                  {deletingId === item.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </Card>
           ))}
 
@@ -532,6 +549,115 @@ function FoodItemsTab() {
         </>
       )}
     </div>
+  );
+}
+
+function FoodItemEditForm({ item, onClose }: { item: AdminFoodItem; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    name: item.name,
+    brand: item.brand || '',
+    barcode: item.barcode || '',
+    caloriesPer100g: String(item.caloriesPer100g),
+    proteinPer100g: String(item.proteinPer100g),
+    carbsPer100g: String(item.carbsPer100g),
+    fatPer100g: String(item.fatPer100g),
+  });
+  const [error, setError] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      apiFetch(`/admin/food-items/${item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-food-items'] });
+      queryClient.invalidateQueries({ queryKey: ['foodSearch'] });
+      onClose();
+    },
+    onError: (err: any) => setError(err.message || 'Failed to update'),
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    mutation.mutate({
+      name: form.name,
+      brand: form.brand || undefined,
+      barcode: form.barcode || undefined,
+      caloriesPer100g: parseFloat(form.caloriesPer100g) || 0,
+      proteinPer100g: parseFloat(form.proteinPer100g) || 0,
+      carbsPer100g: parseFloat(form.carbsPer100g) || 0,
+      fatPer100g: parseFloat(form.fatPer100g) || 0,
+    });
+  }
+
+  return (
+    <Card className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Edit Food Item</h3>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <Input
+          label="Name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          required
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Brand"
+            value={form.brand}
+            onChange={(e) => setForm({ ...form, brand: e.target.value })}
+          />
+          <Input
+            label="Barcode"
+            value={form.barcode}
+            onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+          />
+        </div>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Macros per 100g</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Calories"
+            type="number"
+            step="0.1"
+            value={form.caloriesPer100g}
+            onChange={(e) => setForm({ ...form, caloriesPer100g: e.target.value })}
+          />
+          <Input
+            label="Protein (g)"
+            type="number"
+            step="0.1"
+            value={form.proteinPer100g}
+            onChange={(e) => setForm({ ...form, proteinPer100g: e.target.value })}
+          />
+          <Input
+            label="Carbs (g)"
+            type="number"
+            step="0.1"
+            value={form.carbsPer100g}
+            onChange={(e) => setForm({ ...form, carbsPer100g: e.target.value })}
+          />
+          <Input
+            label="Fat (g)"
+            type="number"
+            step="0.1"
+            value={form.fatPer100g}
+            onChange={(e) => setForm({ ...form, fatPer100g: e.target.value })}
+          />
+        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex gap-2 justify-end">
+          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button type="submit" size="sm" isLoading={mutation.isPending}>Save Changes</Button>
+        </div>
+      </form>
+    </Card>
   );
 }
 

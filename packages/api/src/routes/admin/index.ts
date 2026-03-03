@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createSsoProviderSchema, updateSsoProviderSchema, adminCreateUserSchema, appSettingsSchema } from '@macrotracker/shared';
+import { createSsoProviderSchema, updateSsoProviderSchema, adminCreateUserSchema, appSettingsSchema, updateFoodItemSchema } from '@macrotracker/shared';
 import * as adminService from '../../services/admin.service.js';
 import * as ssoService from '../../services/sso.service.js';
 import * as appConfigService from '../../services/app-config.service.js';
@@ -59,6 +59,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   fastify.get('/admin/food-items', async (request) => {
     const { page = 1, limit = 20, q } = request.query as { page?: number; limit?: number; q?: string };
     return adminService.listFoodItems(fastify, Number(page), Number(limit), q);
+  });
+
+  fastify.patch('/admin/food-items/:id', async (request) => {
+    const { id } = request.params as { id: string };
+    const body = updateFoodItemSchema.parse(request.body);
+    const item = await adminService.updateFoodItem(fastify, id, body);
+    return { data: item };
   });
 
   fastify.delete('/admin/food-items/:id', async (request, reply) => {

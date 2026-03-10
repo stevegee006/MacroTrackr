@@ -672,6 +672,7 @@ function SsoTab() {
   const [formIssuerUrl, setFormIssuerUrl] = useState('');
   const [formClientId, setFormClientId] = useState('');
   const [formClientSecret, setFormClientSecret] = useState('');
+  const [formScopes, setFormScopes] = useState('');
   const [formAuthEndpoint, setFormAuthEndpoint] = useState('');
   const [formTokenEndpoint, setFormTokenEndpoint] = useState('');
   const [formUserinfoEndpoint, setFormUserinfoEndpoint] = useState('');
@@ -697,6 +698,7 @@ function SsoTab() {
     setFormIssuerUrl('');
     setFormClientId('');
     setFormClientSecret('');
+    setFormScopes('');
     setFormAuthEndpoint('');
     setFormTokenEndpoint('');
     setFormUserinfoEndpoint('');
@@ -719,6 +721,7 @@ function SsoTab() {
         setFormIssuerUrl(p.config.issuerUrl || '');
         setFormClientId(p.config.clientId || '');
         setFormClientSecret(p.config.clientSecret || '');
+        setFormScopes(Array.isArray(p.config.scopes) ? p.config.scopes.join(', ') : '');
         setFormAuthEndpoint(p.config.authorizationEndpoint || '');
         setFormTokenEndpoint(p.config.tokenEndpoint || '');
         setFormUserinfoEndpoint(p.config.userinfoEndpoint || '');
@@ -743,6 +746,9 @@ function SsoTab() {
       const oidcConfig: Record<string, unknown> = {
         issuerUrl: formIssuerUrl, clientId: formClientId, clientSecret: formClientSecret, callbackUrl,
       };
+      if (formScopes.trim()) {
+        oidcConfig.scopes = formScopes.split(',').map((s: string) => s.trim()).filter(Boolean);
+      }
       if (formAuthEndpoint.trim()) oidcConfig.authorizationEndpoint = formAuthEndpoint.trim();
       if (formTokenEndpoint.trim()) oidcConfig.tokenEndpoint = formTokenEndpoint.trim();
       if (formUserinfoEndpoint.trim()) oidcConfig.userinfoEndpoint = formUserinfoEndpoint.trim();
@@ -887,6 +893,15 @@ function SsoTab() {
                 onChange={(e) => setFormClientSecret(e.target.value)}
                 placeholder="your-client-secret"
               />
+              <Input
+                label="Scopes"
+                value={formScopes}
+                onChange={(e) => setFormScopes(e.target.value)}
+                placeholder="openid, profile, email"
+              />
+              <p className="-mt-2 text-xs text-gray-400 dark:text-gray-500">
+                Comma-separated. Defaults to <code className="text-[11px]">openid, profile, email</code> if left blank.
+              </p>
               <details className="text-sm">
                 <summary className="cursor-pointer text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                   Advanced: Override discovery endpoints

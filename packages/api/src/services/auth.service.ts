@@ -156,8 +156,9 @@ export async function findOrCreateOAuthUser(
     const userCount = await fastify.prisma.user.count();
     const isAdmin = userCount === 0;
 
-    // Guard: if signups are disabled and users exist, reject new OAuth registrations
-    if (!isAdmin) {
+    // Guard: if signups are disabled and users exist, reject new registrations
+    // SSO (SAML/OIDC) users bypass this check — they are authenticated by a trusted identity provider
+    if (!isAdmin && authProvider !== 'SAML' && authProvider !== 'OIDC') {
       const { signupsEnabled } = await getAppSettings(fastify);
       if (!signupsEnabled) {
         throw new ForbiddenError('Registration is currently disabled. Contact your administrator.');

@@ -72,7 +72,7 @@ export default function LoginPage() {
   return (
     <Card className="p-8">
       <div className="mb-6 text-center">
-        <img src="/logo.svg" alt="MacroTracker" className="h-24 w-24 mx-auto mb-3 rounded-2xl" />
+        <img src="/logo.svg" alt="MacroTracker" className="h-28 mx-auto mb-1" />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome Back</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Sign in to MacroTracker</p>
       </div>

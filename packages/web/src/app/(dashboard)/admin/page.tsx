@@ -688,9 +688,7 @@ function SsoTab() {
   });
 
   const apiBaseUrl = getApiUrl();
-  const callbackUrlBase = typeof window !== 'undefined'
-    ? `${window.location.origin}/api/v1/auth/sso/`
-    : `${apiBaseUrl}/auth/sso/`;
+  const callbackUrlBase = `${apiBaseUrl}/auth/sso/`;
 
   function resetForm() {
     setFormName('');

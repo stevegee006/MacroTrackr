@@ -9,6 +9,30 @@ import { NotFoundError, AppError } from '../../utils/errors.js';
 
 const SSO_STATE_TTL = 300; // 5 minutes
 
+/**
+ * Build an OIDC Issuer. If explicit endpoints are provided in config,
+ * construct the Issuer manually; otherwise auto-discover from issuerUrl.
+ */
+async function resolveOidcIssuer(config: Record<string, unknown>): Promise<InstanceType<typeof Issuer>> {
+  const issuerUrl = config.issuerUrl as string;
+  const authEndpoint = config.authorizationEndpoint as string | undefined;
+  const tokenEndpoint = config.tokenEndpoint as string | undefined;
+  const userinfoEndpoint = config.userinfoEndpoint as string | undefined;
+
+  if (authEndpoint && tokenEndpoint) {
+    // Manual construction — skip discovery
+    return new Issuer({
+      issuer: issuerUrl,
+      authorization_endpoint: authEndpoint,
+      token_endpoint: tokenEndpoint,
+      userinfo_endpoint: userinfoEndpoint,
+    });
+  }
+
+  // Auto-discover via .well-known/openid-configuration
+  return Issuer.discover(issuerUrl);
+}
+
 export default async function ssoRoutes(fastify: FastifyInstance) {
   // Initiate SSO login
   fastify.get('/auth/sso/:providerId', async (request, reply) => {
@@ -22,7 +46,7 @@ export default async function ssoRoutes(fastify: FastifyInstance) {
     const config = provider.config as Record<string, unknown>;
 
     if (provider.type === 'OIDC') {
-      const issuer = await Issuer.discover(config.issuerUrl as string);
+      const issuer = await resolveOidcIssuer(config);
       const callbackUrl = config.callbackUrl as string || `${env.API_BASE_URL}/api/v1/auth/sso/${providerId}/callback`;
       const client = new issuer.Client({
         client_id: config.clientId as string,
@@ -84,7 +108,7 @@ export default async function ssoRoutes(fastify: FastifyInstance) {
 
     const { nonce } = JSON.parse(stateData);
 
-    const issuer = await Issuer.discover(config.issuerUrl as string);
+    const issuer = await resolveOidcIssuer(config);
     const callbackUrl = config.callbackUrl as string || `${env.API_BASE_URL}/api/v1/auth/sso/${providerId}/callback`;
     const client = new issuer.Client({
       client_id: config.clientId as string,

@@ -672,6 +672,9 @@ function SsoTab() {
   const [formIssuerUrl, setFormIssuerUrl] = useState('');
   const [formClientId, setFormClientId] = useState('');
   const [formClientSecret, setFormClientSecret] = useState('');
+  const [formAuthEndpoint, setFormAuthEndpoint] = useState('');
+  const [formTokenEndpoint, setFormTokenEndpoint] = useState('');
+  const [formUserinfoEndpoint, setFormUserinfoEndpoint] = useState('');
   // SAML fields
   const [formEntryPoint, setFormEntryPoint] = useState('');
   const [formSamlIssuer, setFormSamlIssuer] = useState('');
@@ -696,6 +699,9 @@ function SsoTab() {
     setFormIssuerUrl('');
     setFormClientId('');
     setFormClientSecret('');
+    setFormAuthEndpoint('');
+    setFormTokenEndpoint('');
+    setFormUserinfoEndpoint('');
     setFormEntryPoint('');
     setFormSamlIssuer('');
     setFormCert('');
@@ -715,6 +721,9 @@ function SsoTab() {
         setFormIssuerUrl(p.config.issuerUrl || '');
         setFormClientId(p.config.clientId || '');
         setFormClientSecret(p.config.clientSecret || '');
+        setFormAuthEndpoint(p.config.authorizationEndpoint || '');
+        setFormTokenEndpoint(p.config.tokenEndpoint || '');
+        setFormUserinfoEndpoint(p.config.userinfoEndpoint || '');
       } else {
         setFormEntryPoint(p.config.entryPoint || '');
         setFormSamlIssuer(p.config.issuer || '');
@@ -733,8 +742,15 @@ function SsoTab() {
         ? `${callbackUrlBase}${editingId}/callback`
         : `${callbackUrlBase}placeholder/callback`;
 
+      const oidcConfig: Record<string, unknown> = {
+        issuerUrl: formIssuerUrl, clientId: formClientId, clientSecret: formClientSecret, callbackUrl,
+      };
+      if (formAuthEndpoint.trim()) oidcConfig.authorizationEndpoint = formAuthEndpoint.trim();
+      if (formTokenEndpoint.trim()) oidcConfig.tokenEndpoint = formTokenEndpoint.trim();
+      if (formUserinfoEndpoint.trim()) oidcConfig.userinfoEndpoint = formUserinfoEndpoint.trim();
+
       const config = formType === 'OIDC'
-        ? { issuerUrl: formIssuerUrl, clientId: formClientId, clientSecret: formClientSecret, callbackUrl }
+        ? oidcConfig
         : { entryPoint: formEntryPoint, issuer: formSamlIssuer, cert: formCert, callbackUrl };
 
       const body = { name: formName, type: formType, enabled: formEnabled, config };
@@ -873,6 +889,34 @@ function SsoTab() {
                 onChange={(e) => setFormClientSecret(e.target.value)}
                 placeholder="your-client-secret"
               />
+              <details className="text-sm">
+                <summary className="cursor-pointer text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                  Advanced: Override discovery endpoints
+                </summary>
+                <div className="mt-2 space-y-3 pl-1 border-l-2 border-gray-200 dark:border-gray-700 ml-1">
+                  <Input
+                    label="Authorization Endpoint"
+                    value={formAuthEndpoint}
+                    onChange={(e) => setFormAuthEndpoint(e.target.value)}
+                    placeholder="https://idp.example.com/o/authorize/"
+                  />
+                  <Input
+                    label="Token Endpoint"
+                    value={formTokenEndpoint}
+                    onChange={(e) => setFormTokenEndpoint(e.target.value)}
+                    placeholder="https://idp.example.com/o/token/"
+                  />
+                  <Input
+                    label="Userinfo Endpoint"
+                    value={formUserinfoEndpoint}
+                    onChange={(e) => setFormUserinfoEndpoint(e.target.value)}
+                    placeholder="https://idp.example.com/o/userinfo/"
+                  />
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    Leave blank to auto-discover from Issuer URL. Use these if your provider does not support standard OIDC discovery.
+                  </p>
+                </div>
+              </details>
             </>
           ) : (
             <>

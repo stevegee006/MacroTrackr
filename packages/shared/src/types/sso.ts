@@ -25,4 +25,8 @@ export interface OidcConfig {
   clientSecret: string;
   callbackUrl: string;
   scopes?: string[];
+  // Optional explicit endpoints (override auto-discovery)
+  authorizationEndpoint?: string;
+  tokenEndpoint?: string;
+  userinfoEndpoint?: string;
 }

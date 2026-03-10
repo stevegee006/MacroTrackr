@@ -13,6 +13,10 @@ const oidcConfigSchema = z.object({
   clientSecret: z.string().min(1),
   callbackUrl: z.string().url(),
   scopes: z.array(z.string()).optional(),
+  // Optional explicit endpoints (override auto-discovery)
+  authorizationEndpoint: z.string().url().optional(),
+  tokenEndpoint: z.string().url().optional(),
+  userinfoEndpoint: z.string().url().optional(),
 });
 
 export const createSsoProviderSchema = z.object({

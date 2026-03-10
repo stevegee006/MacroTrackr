@@ -73,8 +73,10 @@ export default function LoginPage() {
     <Card className="p-8">
       <div className="mb-6 text-center">
         <img src="/logo.svg" alt="MacroTracker" className="h-28 mx-auto mb-1" />
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome Back</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Sign in to MacroTracker</p>
+        <h1 className="text-2xl font-bold">
+          <span className="text-gray-900 dark:text-gray-100">macro</span>
+          <span className="text-gray-400 dark:text-gray-500 font-light">tracker</span>
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

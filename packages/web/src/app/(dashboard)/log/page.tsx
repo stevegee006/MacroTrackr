@@ -173,7 +173,8 @@ export default function LogPage() {
           {Object.keys(groupedLogs).length === 0 ? (
             <Card className="py-6 text-center text-gray-500 dark:text-gray-400">No food logged for this day.</Card>
           ) : (
-            Object.entries(groupedLogs).map(([mealType, items]) => (
+            <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
+            {Object.entries(groupedLogs).map(([mealType, items]) => (
               <div key={mealType} className="space-y-2">
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
                   {MEAL_TYPE_LABELS[mealType as keyof typeof MEAL_TYPE_LABELS]}
@@ -381,7 +382,8 @@ export default function LogPage() {
                   );
                 })}
               </div>
-            ))
+            ))}
+            </div>
           )}
         </>
       )}

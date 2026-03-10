@@ -8,6 +8,7 @@ export type ActivityLevel =
   | 'EXTREMELY_ACTIVE';
 export type Goal = 'LOSE_WEIGHT' | 'MAINTAIN' | 'GAIN_MUSCLE';
 export type Units = 'METRIC' | 'IMPERIAL';
+export type AiProvider = 'OPENAI' | 'ANTHROPIC' | 'GEMINI';
 
 export interface User {
   id: string;
@@ -39,6 +40,9 @@ export interface UserSettings {
   id: string;
   userId: string;
   hasOpenaiKey: boolean;
+  hasAnthropicKey: boolean;
+  hasGeminiKey: boolean;
+  aiProvider: AiProvider;
   hasMealieConfig: boolean;
   preferredUnits: Units;
   darkMode: boolean;

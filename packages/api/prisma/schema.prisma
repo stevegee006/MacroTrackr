@@ -80,21 +80,30 @@ enum Goal {
 }
 
 model UserSettings {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @unique @map("user_id") @db.Uuid
-  openaiApiKey   String?  @map("openai_api_key") @db.Text
-  preferredUnits Units    @default(METRIC) @map("preferred_units")
-  darkMode       Boolean  @default(false) @map("dark_mode")
-  timezone       String?  @db.VarChar(100)
-  location       String?  @db.VarChar(255)
-  mealieUrl      String?  @map("mealie_url") @db.Text
-  mealieApiKey   String?  @map("mealie_api_key") @db.Text
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id              String     @id @default(uuid()) @db.Uuid
+  userId          String     @unique @map("user_id") @db.Uuid
+  openaiApiKey    String?    @map("openai_api_key") @db.Text
+  anthropicApiKey String?    @map("anthropic_api_key") @db.Text
+  geminiApiKey    String?    @map("gemini_api_key") @db.Text
+  aiProvider      AiProvider @default(OPENAI) @map("ai_provider")
+  preferredUnits  Units      @default(METRIC) @map("preferred_units")
+  darkMode        Boolean    @default(false) @map("dark_mode")
+  timezone        String?    @db.VarChar(100)
+  location        String?    @db.VarChar(255)
+  mealieUrl       String?    @map("mealie_url") @db.Text
+  mealieApiKey    String?    @map("mealie_api_key") @db.Text
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
+}
+
+enum AiProvider {
+  OPENAI
+  ANTHROPIC
+  GEMINI
 }
 
 enum Units {

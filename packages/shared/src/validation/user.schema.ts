@@ -29,6 +29,9 @@ export const updateProfileSchema = z.object({
 
 export const updateSettingsSchema = z.object({
   openaiApiKey: z.string().min(1).max(500).optional(),
+  anthropicApiKey: z.string().min(1).max(500).optional(),
+  geminiApiKey: z.string().min(1).max(500).optional(),
+  aiProvider: z.enum(['OPENAI', 'ANTHROPIC', 'GEMINI']).optional(),
   preferredUnits: z.enum(['METRIC', 'IMPERIAL']).optional(),
   darkMode: z.boolean().optional(),
   timezone: z.string().min(1).max(100).nullable().optional(),

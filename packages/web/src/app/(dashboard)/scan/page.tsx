@@ -125,18 +125,22 @@ export default function ScanPage() {
 
       {/* Result area — shown for all input methods */}
       {scannedFood && !added && (
-        <div className="space-y-4">
-          <NutritionLabel food={scannedFood} onUpdated={(updated) => setScannedFood(updated)} />
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 lg:space-y-0">
+          <div className="space-y-4">
+            <NutritionLabel food={scannedFood} onUpdated={(updated) => setScannedFood(updated)} />
 
-          {/* Allow label rescan for barcode/label methods */}
-          {(method === 'barcode' || method === 'label') && (
-            <LabelScanner
-              existingFoodId={scannedFood.id}
-              onResult={(updated) => setScannedFood(updated)}
-            />
-          )}
+            {/* Allow label rescan for barcode/label methods */}
+            {(method === 'barcode' || method === 'label') && (
+              <LabelScanner
+                existingFoodId={scannedFood.id}
+                onResult={(updated) => setScannedFood(updated)}
+              />
+            )}
+          </div>
 
-          <AddToLogForm food={scannedFood} logDate={dateParam} onSuccess={() => setAdded(true)} />
+          <div>
+            <AddToLogForm food={scannedFood} logDate={dateParam} onSuccess={() => setAdded(true)} />
+          </div>
         </div>
       )}
 

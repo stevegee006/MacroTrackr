@@ -2,23 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, PlusCircle, UtensilsCrossed, Brain, ChefHat, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const navItems = [
-  { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { href: '/scan', label: 'Add', icon: PlusCircle },
-  { href: '/log', label: 'Log', icon: UtensilsCrossed },
-  { href: '/macro-plan', label: 'Macros', icon: Brain },
-  { href: '/meal-plan', label: 'Meals', icon: ChefHat },
-  { href: '/profile', label: 'Profile', icon: User },
-];
+import { navItems } from './nav-items';
 
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white pb-safe dark:border-gray-700 dark:bg-gray-900">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white pb-safe dark:border-gray-700 dark:bg-gray-900 lg:hidden">
       <div className="flex items-center justify-around">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(href + '/');

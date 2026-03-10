@@ -4,7 +4,7 @@ import { labelScanResponseSchema } from '@macrotracker/shared';
 import { lookupBarcode } from './openfoodfacts.service.js';
 import { searchFoods as usdaSearchFoods, type UsdaParsedFood } from './usda.service.js';
 import { getUsdaApiKey } from './app-config.service.js';
-import { getOpenAIClient, visionCompletion, chatCompletion } from './openai.service.js';
+import { aiVisionCompletion, aiChatCompletion } from './ai-provider.service.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 
@@ -133,15 +133,14 @@ export async function extractNutritionFromLabel(
   userId: string,
   imageBase64: string,
 ) {
-  const client = await getOpenAIClient(fastify, userId);
-
-  const result = await visionCompletion(
-    client,
+  const result = await aiVisionCompletion(
+    fastify,
+    userId,
     LABEL_SCAN_SYSTEM_PROMPT,
     'Extract the nutrition information from this label. Return JSON only.',
     imageBase64,
     {
-      model: 'gpt-4o',
+      tier: 'vision',
       temperature: 0.1,
       maxTokens: 1000,
     },
@@ -190,15 +189,14 @@ export async function updateFoodFromLabel(
   const existing = await fastify.prisma.foodItem.findUnique({ where: { id: foodId } });
   if (!existing) throw new NotFoundError('Food item');
 
-  const client = await getOpenAIClient(fastify, userId);
-
-  const result = await visionCompletion(
-    client,
+  const result = await aiVisionCompletion(
+    fastify,
+    userId,
     LABEL_SCAN_SYSTEM_PROMPT,
     'Extract the nutrition information from this label. Return JSON only.',
     imageBase64,
     {
-      model: 'gpt-4o',
+      tier: 'vision',
       temperature: 0.1,
       maxTokens: 1000,
     },
@@ -270,16 +268,15 @@ export async function estimateFoodMacros(
   description: string,
   weightG: number,
 ) {
-  const client = await getOpenAIClient(fastify, userId);
-
   const userPrompt = `Estimate the nutrition per 100g for: "${description}" (weighed at ${weightG}g). Return JSON only.`;
 
-  const result = await chatCompletion(
-    client,
+  const result = await aiChatCompletion(
+    fastify,
+    userId,
     FOOD_ESTIMATE_SYSTEM_PROMPT,
     userPrompt,
     {
-      model: 'gpt-4o-mini',
+      tier: 'light',
       temperature: 0.2,
       maxTokens: 500,
     },

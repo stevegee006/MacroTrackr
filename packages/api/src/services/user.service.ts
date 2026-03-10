@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { UpdateProfileInput, UpdateSettingsInput } from '@macrotracker/shared';
 import { NotFoundError, ValidationError } from '../utils/errors.js';
-import { encrypt, decrypt } from '../utils/encryption.js';
+import { encrypt } from '../utils/encryption.js';
 
 export async function getUser(fastify: FastifyInstance, userId: string) {
   const user = await fastify.prisma.user.findUnique({
@@ -67,6 +67,9 @@ export async function getSettings(fastify: FastifyInstance, userId: string) {
     id: settings.id,
     userId: settings.userId,
     hasOpenaiKey: !!settings.openaiApiKey,
+    hasAnthropicKey: !!settings.anthropicApiKey,
+    hasGeminiKey: !!settings.geminiApiKey,
+    aiProvider: settings.aiProvider,
     hasMealieConfig: !!(settings.mealieUrl && settings.mealieApiKey),
     preferredUnits: settings.preferredUnits,
     darkMode: settings.darkMode,
@@ -85,6 +88,15 @@ export async function updateSettings(
   if (data.darkMode !== undefined) updateData.darkMode = data.darkMode;
   if (data.openaiApiKey !== undefined) {
     updateData.openaiApiKey = encrypt(data.openaiApiKey);
+  }
+  if (data.anthropicApiKey !== undefined) {
+    updateData.anthropicApiKey = encrypt(data.anthropicApiKey);
+  }
+  if (data.geminiApiKey !== undefined) {
+    updateData.geminiApiKey = encrypt(data.geminiApiKey);
+  }
+  if (data.aiProvider !== undefined) {
+    updateData.aiProvider = data.aiProvider;
   }
   if (data.timezone !== undefined) {
     if (data.timezone !== null) {
@@ -116,19 +128,13 @@ export async function updateSettings(
     id: settings.id,
     userId: settings.userId,
     hasOpenaiKey: !!settings.openaiApiKey,
+    hasAnthropicKey: !!settings.anthropicApiKey,
+    hasGeminiKey: !!settings.geminiApiKey,
+    aiProvider: settings.aiProvider,
     hasMealieConfig: !!(settings.mealieUrl && settings.mealieApiKey),
     preferredUnits: settings.preferredUnits,
     darkMode: settings.darkMode,
     timezone: settings.timezone,
     location: settings.location,
   };
-}
-
-export async function getDecryptedApiKey(
-  fastify: FastifyInstance,
-  userId: string,
-): Promise<string | null> {
-  const settings = await fastify.prisma.userSettings.findUnique({ where: { userId } });
-  if (!settings?.openaiApiKey) return null;
-  return decrypt(settings.openaiApiKey);
 }

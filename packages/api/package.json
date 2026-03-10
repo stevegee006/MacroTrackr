@@ -9,12 +9,14 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@fastify/auth": "^5",
     "@fastify/cookie": "^11",
     "@fastify/cors": "^11",
     "@fastify/jwt": "^9",
     "@fastify/oauth2": "^8",
     "@fastify/rate-limit": "^10",
+    "@google/generative-ai": "^0.24.1",
     "@macrotracker/shared": "workspace:*",
     "@node-saml/node-saml": "^5.1.0",
     "@prisma/client": "^6",

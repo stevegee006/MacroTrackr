@@ -10,7 +10,13 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useTheme } from '@/providers/ThemeProvider';
 import { TimezoneCombobox } from '@/components/ui/TimezoneCombobox';
 import { getBrowserTimezone, formatTimezoneLabel } from '@/lib/timezones';
-import type { UserSettings } from '@macrotracker/shared';
+import type { UserSettings, AiProvider } from '@macrotracker/shared';
+
+const AI_PROVIDERS: { value: AiProvider; label: string }[] = [
+  { value: 'OPENAI', label: 'OpenAI' },
+  { value: 'ANTHROPIC', label: 'Anthropic' },
+  { value: 'GEMINI', label: 'Google Gemini' },
+];
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
@@ -21,7 +27,10 @@ export default function SettingsPage() {
     queryFn: () => apiFetch<{ data: UserSettings }>('/users/me/settings'),
   });
 
-  const [apiKey, setApiKey] = useState('');
+  const [aiProvider, setAiProvider] = useState<AiProvider>('OPENAI');
+  const [openaiKey, setOpenaiKey] = useState('');
+  const [anthropicKey, setAnthropicKey] = useState('');
+  const [geminiKey, setGeminiKey] = useState('');
   const [preferredUnits, setPreferredUnits] = useState('METRIC');
   const [timezone, setTimezone] = useState<string | null>(null);
   const [location, setLocation] = useState('');
@@ -34,6 +43,7 @@ export default function SettingsPage() {
       setPreferredUnits(data.data.preferredUnits);
       setTimezone(data.data.timezone);
       setLocation(data.data.location ?? '');
+      setAiProvider(data.data.aiProvider ?? 'OPENAI');
     }
   }, [data]);
 
@@ -53,7 +63,6 @@ export default function SettingsPage() {
       apiFetch('/users/me/settings', { method: 'PUT', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
-      setApiKey('');
     },
   });
 
@@ -65,11 +74,22 @@ export default function SettingsPage() {
     },
   });
 
-  function handleSaveApiKey(e: React.FormEvent) {
-    e.preventDefault();
-    if (apiKey.trim()) {
-      mutation.mutate({ openaiApiKey: apiKey.trim() });
-    }
+  function handleSaveAiKey(provider: AiProvider, key: string) {
+    if (!key.trim()) return;
+    const keyMap: Record<AiProvider, string> = {
+      OPENAI: 'openaiApiKey',
+      ANTHROPIC: 'anthropicApiKey',
+      GEMINI: 'geminiApiKey',
+    };
+    mutation.mutate({ [keyMap[provider]]: key.trim() });
+    if (provider === 'OPENAI') setOpenaiKey('');
+    if (provider === 'ANTHROPIC') setAnthropicKey('');
+    if (provider === 'GEMINI') setGeminiKey('');
+  }
+
+  function handleSwitchProvider(provider: AiProvider) {
+    setAiProvider(provider);
+    mutation.mutate({ aiProvider: provider });
   }
 
   function handleSaveUnits() {
@@ -109,6 +129,8 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-bold">Settings</h1>
 
+      <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
+
       <Card className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -130,26 +152,89 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      <Card className="space-y-4">
-        <h2 className="font-semibold">OpenAI API Key</h2>
+      <Card className="space-y-4 lg:col-span-2">
+        <h2 className="font-semibold">AI Provider</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Required for AI-powered macro plans and meal plans. Your key is encrypted and stored securely.
+          Choose your AI provider for macro plans, meal plans, and label scanning. Keys are encrypted and stored securely.
         </p>
-        {data?.data.hasOpenaiKey && (
-          <p className="text-sm text-emerald-600">API key is configured.</p>
-        )}
-        <form onSubmit={handleSaveApiKey} className="flex gap-2">
-          <Input
-            placeholder={data?.data.hasOpenaiKey ? 'Enter new key to replace' : 'sk-...'}
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            className="flex-1"
-          />
-          <Button type="submit" isLoading={mutation.isPending} disabled={!apiKey.trim()}>
-            Save
-          </Button>
-        </form>
+
+        <div className="flex gap-1.5 flex-wrap">
+          {AI_PROVIDERS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => handleSwitchProvider(value)}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                aiProvider === value
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          {/* OpenAI */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">OpenAI</span>
+              {data?.data.hasOpenaiKey && <span className="text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded">Configured</span>}
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveAiKey('OPENAI', openaiKey); }} className="flex gap-2">
+              <Input
+                placeholder={data?.data.hasOpenaiKey ? 'Enter new key to replace' : 'sk-...'}
+                type="password"
+                value={openaiKey}
+                onChange={(e) => setOpenaiKey(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" size="sm" isLoading={mutation.isPending} disabled={!openaiKey.trim()}>
+                Save
+              </Button>
+            </form>
+          </div>
+
+          {/* Anthropic */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Anthropic</span>
+              {data?.data.hasAnthropicKey && <span className="text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded">Configured</span>}
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveAiKey('ANTHROPIC', anthropicKey); }} className="flex gap-2">
+              <Input
+                placeholder={data?.data.hasAnthropicKey ? 'Enter new key to replace' : 'sk-ant-...'}
+                type="password"
+                value={anthropicKey}
+                onChange={(e) => setAnthropicKey(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" size="sm" isLoading={mutation.isPending} disabled={!anthropicKey.trim()}>
+                Save
+              </Button>
+            </form>
+          </div>
+
+          {/* Gemini */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Google Gemini</span>
+              {data?.data.hasGeminiKey && <span className="text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded">Configured</span>}
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveAiKey('GEMINI', geminiKey); }} className="flex gap-2">
+              <Input
+                placeholder={data?.data.hasGeminiKey ? 'Enter new key to replace' : 'AI...'}
+                type="password"
+                value={geminiKey}
+                onChange={(e) => setGeminiKey(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" size="sm" isLoading={mutation.isPending} disabled={!geminiKey.trim()}>
+                Save
+              </Button>
+            </form>
+          </div>
+        </div>
       </Card>
 
       <Card className="space-y-4">
@@ -254,6 +339,8 @@ export default function SettingsPage() {
           <p className="text-sm text-emerald-600">Mealie configuration saved!</p>
         )}
       </Card>
+
+      </div>
 
       {mutation.isSuccess && (
         <p className="text-sm text-emerald-600 text-center">Settings saved!</p>

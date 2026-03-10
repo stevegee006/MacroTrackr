@@ -134,19 +134,21 @@ export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLog
         )}
       </div>
 
-      <Button
-        onClick={() => mutation.mutate()}
-        isLoading={mutation.isPending}
-        className="w-full"
-      >
-        {isToday ? 'Add to Log' : `Add to ${parseDateLocal(logDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} Log`}
-      </Button>
+      <div className="sticky bottom-20 z-40 -mx-4 bg-white px-4 py-3 border-t border-gray-200 dark:bg-gray-900 dark:border-gray-700 lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:py-0 lg:border-0">
+        <Button
+          onClick={() => mutation.mutate()}
+          isLoading={mutation.isPending}
+          className="w-full"
+        >
+          {isToday ? 'Add to Log' : `Add to ${parseDateLocal(logDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} Log`}
+        </Button>
 
-      {mutation.isError && (
-        <p className="text-sm text-red-600">
-          {(mutation.error as any)?.message || 'Failed to add to log'}
-        </p>
-      )}
+        {mutation.isError && (
+          <p className="text-sm text-red-600 mt-2">
+            {(mutation.error as any)?.message || 'Failed to add to log'}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

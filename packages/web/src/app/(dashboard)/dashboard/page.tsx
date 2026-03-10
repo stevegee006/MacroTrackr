@@ -45,49 +45,53 @@ export default function DashboardPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400">Today&apos;s Progress</p>
       </div>
 
-      {s && (
-        <Card>
-          <MacroRings totals={s.totals} targets={s.targets} />
-          <div className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
-            {s.totals.calories} / {s.targets.calories} kcal
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
+        {s && (
+          <Card>
+            <MacroRings totals={s.totals} targets={s.targets} />
+            <div className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
+              {s.totals.calories} / {s.targets.calories} kcal
+            </div>
+          </Card>
+        )}
+
+        <div className="space-y-4 mt-6 lg:mt-0">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Today&apos;s Log</h2>
+            <Link href="/scan" className="text-sm text-emerald-600 hover:underline">
+              + Add Food
+            </Link>
           </div>
-        </Card>
-      )}
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Today&apos;s Log</h2>
-        <Link href="/scan" className="text-sm text-emerald-600 hover:underline">
-          + Add Food
-        </Link>
-      </div>
-
-      {logs.length === 0 ? (
-        <Card className="py-8 text-center text-gray-500 dark:text-gray-400">
-          <p>No food logged today.</p>
-          <Link href="/scan" className="mt-2 inline-block text-emerald-600 hover:underline">
-            Scan a barcode to get started
-          </Link>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {logs.map((entry) => (
-            <Card key={entry.id} className="flex items-center justify-between py-3">
-              <div>
-                <p className="text-sm font-medium">{entry.foodItem?.name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {MEAL_TYPE_LABELS[entry.mealType]} &middot; {entry.servingQty} x {entry.servingSizeG}g
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold">{Math.round(entry.totalCalories)} kcal</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  P:{Math.round(entry.totalProteinG)} C:{Math.round(entry.totalCarbsG)} F:{Math.round(entry.totalFatG)}
-                </p>
-              </div>
+          {logs.length === 0 ? (
+            <Card className="py-8 text-center text-gray-500 dark:text-gray-400">
+              <p>No food logged today.</p>
+              <Link href="/scan" className="mt-2 inline-block text-emerald-600 hover:underline">
+                Scan a barcode to get started
+              </Link>
             </Card>
-          ))}
+          ) : (
+            <div className="space-y-2">
+              {logs.map((entry) => (
+                <Card key={entry.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-sm font-medium">{entry.foodItem?.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {MEAL_TYPE_LABELS[entry.mealType]} &middot; {entry.servingQty} x {entry.servingSizeG}g
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold">{Math.round(entry.totalCalories)} kcal</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      P:{Math.round(entry.totalProteinG)} C:{Math.round(entry.totalCarbsG)} F:{Math.round(entry.totalFatG)}
+                    </p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

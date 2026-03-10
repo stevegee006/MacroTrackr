@@ -150,6 +150,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
       <Card>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -277,6 +278,8 @@ export default function ProfilePage() {
           </div>
         </Card>
       )}
+
+      </div>
 
       <ExportCard />
 

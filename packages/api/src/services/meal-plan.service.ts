@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { mealPlanDataSchema, type GenerateMealPlanInput, type UpdateMealPlanInput, type CreateManualMealPlanInput } from '@macrotracker/shared';
-import { getOpenAIClient, chatCompletion } from './openai.service.js';
+import { aiChatCompletion } from './ai-provider.service.js';
 import { getProfile } from './user.service.js';
 import { ValidationError, NotFoundError, ForbiddenError, AppError } from '../utils/errors.js';
 
@@ -32,7 +32,6 @@ export async function generateMealPlan(
     );
   }
 
-  const client = await getOpenAIClient(fastify, userId);
   const prefs = input.preferences ?? {};
 
   const mealsPerDay = prefs.mealsPerDay ?? 4;
@@ -82,8 +81,8 @@ Provide your response as JSON with this structure:
   ]
 }`;
 
-  const result = await chatCompletion(client, SYSTEM_PROMPT, userPrompt, {
-    model: 'gpt-4o',
+  const result = await aiChatCompletion(fastify, userId, SYSTEM_PROMPT, userPrompt, {
+    tier: 'heavy',
     temperature: 0.7,
     maxTokens: 16000,
   });
@@ -164,7 +163,6 @@ export async function regenerateMeal(
   const otherMealNames = otherMeals.map((m: any) => m.name);
 
   const profile = await getProfile(fastify, userId);
-  const client = await getOpenAIClient(fastify, userId);
 
   const prefs = plan.preferences as any ?? {};
 
@@ -200,8 +198,8 @@ Respond with a single meal object as JSON:
   "instructions": "Brief cooking instructions"
 }`;
 
-  const result = await chatCompletion(client, SYSTEM_PROMPT, userPrompt, {
-    model: 'gpt-4o',
+  const result = await aiChatCompletion(fastify, userId, SYSTEM_PROMPT, userPrompt, {
+    tier: 'heavy',
     temperature: 0.9,
     maxTokens: 2000,
   });

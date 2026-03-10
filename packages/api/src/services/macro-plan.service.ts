@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { macroPlanResponseSchema, type GenerateMacroPlanInput, type UpdateMacroPlanInput } from '@macrotracker/shared';
-import { getOpenAIClient, chatCompletion } from './openai.service.js';
+import { aiChatCompletion } from './ai-provider.service.js';
 import { getProfile } from './user.service.js';
 import { ValidationError, NotFoundError, ForbiddenError, AppError } from '../utils/errors.js';
 
@@ -45,8 +45,6 @@ export async function generateMacroPlan(
     );
   }
 
-  const client = await getOpenAIClient(fastify, userId);
-
   const userPrompt = `Generate a macro plan for the following user:
 
 - Height: ${profile.heightCm} cm
@@ -66,8 +64,8 @@ Provide your response as JSON with this structure:
   "reasoning": "<step-by-step explanation of calculations>"
 }`;
 
-  const result = await chatCompletion(client, SYSTEM_PROMPT, userPrompt, {
-    model: 'gpt-4o-mini',
+  const result = await aiChatCompletion(fastify, userId, SYSTEM_PROMPT, userPrompt, {
+    tier: 'light',
     temperature: 0.3,
     maxTokens: 1000,
   });

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { generateMealPlanSchema, updateMealPlanSchema, createManualMealPlanSchema, mealPlanDataSchema } from '@macrotracker/shared';
+import { generateMealPlanSchema, updateMealPlanSchema, createManualMealPlanSchema, mealPlanDataSchema, regenerateMealSchema, convertRecipeSchema } from '@macrotracker/shared';
 import * as mealPlanService from '../../services/meal-plan.service.js';
 import * as mealieService from '../../services/mealie.service.js';
 
@@ -60,18 +60,15 @@ export default async function mealPlanRoutes(fastify: FastifyInstance) {
 
   fastify.post('/mealie/recipes/:slug/convert', async (request) => {
     const { slug } = request.params as { slug: string };
-    const { mealType } = request.body as { mealType: string };
+    const { mealType } = convertRecipeSchema.parse(request.body);
     const recipe = await mealieService.getMealieRecipe(fastify, request.user.sub, slug);
-    const meal = mealieService.mealieRecipeToMeal(recipe, mealType || 'DINNER');
+    const meal = mealieService.mealieRecipeToMeal(recipe, mealType);
     return { data: meal };
   });
 
   fastify.post('/meal-plan/:id/regenerate-meal', async (request) => {
     const { id } = request.params as { id: string };
-    const { dayNumber, mealIndex } = request.body as { dayNumber: number; mealIndex: number };
-    if (typeof dayNumber !== 'number' || typeof mealIndex !== 'number') {
-      throw new Error('dayNumber and mealIndex are required');
-    }
+    const { dayNumber, mealIndex } = regenerateMealSchema.parse(request.body);
     const plan = await mealPlanService.regenerateMeal(fastify, request.user.sub, id, dayNumber, mealIndex);
     return { data: plan };
   });

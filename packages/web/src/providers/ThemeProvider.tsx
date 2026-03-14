@@ -21,10 +21,15 @@ export function useTheme() {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDark, setIsDark] = useState(false);
 
-  // Read from localStorage on mount
+  // Read from localStorage on mount, fall back to system preference
   useEffect(() => {
     const stored = localStorage.getItem('macrotracker-dark-mode');
-    if (stored === 'true') {
+    if (stored !== null) {
+      if (stored === 'true') {
+        setIsDark(true);
+        document.documentElement.classList.add('dark');
+      }
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
       setIsDark(true);
       document.documentElement.classList.add('dark');
     }

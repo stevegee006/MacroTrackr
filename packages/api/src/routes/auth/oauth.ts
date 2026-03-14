@@ -39,11 +39,8 @@ export default async function oauthRoutes(fastify: FastifyInstance) {
       'GOOGLE',
     );
 
-    // Redirect to frontend with tokens as query params
-    const params = new URLSearchParams({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    });
-    reply.redirect(`${env.FRONTEND_URL}/oauth-callback?${params}`);
+    // Redirect with a short-lived auth code (not raw tokens)
+    const code = await authService.createAuthCode(fastify, tokens);
+    reply.redirect(`${env.FRONTEND_URL}/oauth-callback?code=${code}`);
   });
 }

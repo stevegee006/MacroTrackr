@@ -6,7 +6,8 @@ import { env } from '../config/env.js';
 export default fp(async (fastify: FastifyInstance) => {
   fastify.register(fastifyJwt, {
     secret: env.JWT_SECRET,
-    sign: { expiresIn: '15m' },
+    sign: { algorithm: 'HS256', expiresIn: '15m' },
+    verify: { algorithms: ['HS256'] },
   });
 
   fastify.decorate('authenticate', async function (request: any, reply: any) {

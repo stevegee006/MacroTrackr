@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { setAccessToken, setRefreshToken } from '@/lib/api-client';
+import { setAccessToken, setRefreshToken, getApiUrl } from '@/lib/api-client';
 import { useAuth } from '@/providers/AuthProvider';
 import { Spinner } from '@/components/ui/Spinner';
 
@@ -16,22 +16,34 @@ function OAuthCallbackInner() {
     if (processed.current) return;
     processed.current = true;
 
-    const accessToken = searchParams.get('accessToken');
-    const refreshToken = searchParams.get('refreshToken');
+    const code = searchParams.get('code');
 
-    if (!accessToken || !refreshToken) {
+    if (!code) {
       router.replace('/login');
       return;
     }
 
-    setAccessToken(accessToken);
-    setRefreshToken(refreshToken);
-
-    refreshUser().then(() => {
-      router.replace('/dashboard');
-    }).catch(() => {
-      router.replace('/login');
-    });
+    // Exchange the short-lived auth code for tokens via POST
+    fetch(`${getApiUrl()}/auth/exchange-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Code exchange failed');
+        return res.json();
+      })
+      .then((data) => {
+        setAccessToken(data.data.accessToken);
+        setRefreshToken(data.data.refreshToken);
+        return refreshUser();
+      })
+      .then(() => {
+        router.replace('/dashboard');
+      })
+      .catch(() => {
+        router.replace('/login');
+      });
   }, [searchParams, refreshUser, router]);
 
   return (

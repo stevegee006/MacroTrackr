@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createSsoProviderSchema, updateSsoProviderSchema, adminCreateUserSchema, appSettingsSchema, updateFoodItemSchema } from '@macrotracker/shared';
+import { createSsoProviderSchema, updateSsoProviderSchema, adminCreateUserSchema, appSettingsSchema, updateFoodItemSchema, adminListQuerySchema } from '@macrotracker/shared';
 import * as adminService from '../../services/admin.service.js';
 import * as ssoService from '../../services/sso.service.js';
 import * as appConfigService from '../../services/app-config.service.js';
@@ -39,8 +39,8 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   });
 
   fastify.get('/admin/users', async (request) => {
-    const { page = 1, limit = 20, q } = request.query as { page?: number; limit?: number; q?: string };
-    return adminService.listUsers(fastify, Number(page), Number(limit), q);
+    const { page, limit, q } = adminListQuerySchema.parse(request.query);
+    return adminService.listUsers(fastify, page, limit, q);
   });
 
   fastify.delete('/admin/users/:id', async (request, reply) => {
@@ -57,8 +57,8 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   });
 
   fastify.get('/admin/food-items', async (request) => {
-    const { page = 1, limit = 20, q } = request.query as { page?: number; limit?: number; q?: string };
-    return adminService.listFoodItems(fastify, Number(page), Number(limit), q);
+    const { page, limit, q } = adminListQuerySchema.parse(request.query);
+    return adminService.listFoodItems(fastify, page, limit, q);
   });
 
   fastify.patch('/admin/food-items/:id', async (request) => {

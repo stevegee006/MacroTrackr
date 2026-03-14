@@ -5,6 +5,8 @@ import * as appConfigService from '../../services/app-config.service.js';
 import { AppError, ForbiddenError } from '../../utils/errors.js';
 import { env } from '../../config/env.js';
 
+const authRateLimit = { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } };
+
 export default async function authRoutes(fastify: FastifyInstance) {
   // Public endpoint - no auth required
   fastify.get('/auth/providers', async () => {
@@ -20,7 +22,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     return { data: { providers, sso: ssoProviders, signupsEnabled } };
   });
 
-  fastify.post('/auth/register', async (request, reply) => {
+  fastify.post('/auth/register', { ...authRateLimit }, async (request, reply) => {
     const body = registerSchema.parse(request.body);
 
     // Check if signups are enabled (always allow first user = admin setup)
@@ -36,7 +38,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     reply.send({ data: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken } });
   });
 
-  fastify.post('/auth/login', async (request, reply) => {
+  fastify.post('/auth/login', { ...authRateLimit }, async (request, reply) => {
     const body = loginSchema.parse(request.body);
     const result = await authService.loginUser(fastify, body.email, body.password);
     reply.send({
@@ -58,6 +60,15 @@ export default async function authRoutes(fastify: FastifyInstance) {
     reply.send({ data: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken } });
   });
 
+  fastify.post('/auth/exchange-code', async (request, reply) => {
+    const body = request.body as { code?: string };
+    if (!body?.code || typeof body.code !== 'string') {
+      throw new AppError(400, 'BAD_REQUEST', 'Authorization code is required');
+    }
+    const tokens = await authService.exchangeAuthCode(fastify, body.code);
+    reply.send({ data: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken } });
+  });
+
   fastify.post('/auth/logout', async (request, reply) => {
     const body = request.body as { refreshToken?: string };
     const refreshToken = body?.refreshToken;
@@ -67,7 +78,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     reply.send({ data: { success: true } });
   });
 
-  fastify.post('/auth/change-password', async (request, reply) => {
+  fastify.post('/auth/change-password', { ...authRateLimit }, async (request, reply) => {
     await fastify.authenticate(request, reply);
     const body = changePasswordSchema.parse(request.body);
     await authService.changePassword(fastify, request.user.sub, body.currentPassword, body.newPassword);

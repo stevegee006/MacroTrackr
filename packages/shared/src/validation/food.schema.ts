@@ -56,4 +56,20 @@ export type ScanLabelInput = z.infer<typeof scanLabelSchema>;
 export type LabelScanResponse = z.infer<typeof labelScanResponseSchema>;
 export type SearchFoodInput = z.infer<typeof searchFoodSchema>;
 export type EstimateFoodInput = z.infer<typeof estimateFoodSchema>;
+export const importUsdaFoodSchema = z.object({
+  fdcId: z.number().int().positive(),
+  name: z.string().min(1).max(255),
+  brand: z.string().max(255).nullable(),
+  servingSizeG: z.number().positive(),
+  caloriesPer100g: z.number().nonnegative(),
+  proteinPer100g: z.number().nonnegative(),
+  carbsPer100g: z.number().nonnegative(),
+  fatPer100g: z.number().nonnegative(),
+  fiberPer100g: z.number().nonnegative().nullable(),
+  sugarPer100g: z.number().nonnegative().nullable(),
+  sodiumPer100g: z.number().nonnegative().nullable(),
+  dataType: z.string().max(50),
+});
+
 export type ExternalFoodSearchInput = z.infer<typeof externalFoodSearchSchema>;
+export type ImportUsdaFoodInput = z.infer<typeof importUsdaFoodSchema>;

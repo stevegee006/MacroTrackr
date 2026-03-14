@@ -7,11 +7,40 @@ interface MealieConfig {
   apiKey: string;
 }
 
+function validateMealieUrl(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new ValidationError('Invalid Mealie URL.');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new ValidationError('Mealie URL must use http or https.');
+  }
+  const hostname = parsed.hostname.toLowerCase();
+  // Block internal/metadata IPs
+  if (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    hostname === '0.0.0.0' ||
+    hostname.startsWith('169.254.') ||
+    hostname.startsWith('10.') ||
+    hostname.startsWith('192.168.') ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+    hostname === 'metadata.google.internal'
+  ) {
+    throw new ValidationError('Mealie URL cannot point to internal or private network addresses.');
+  }
+}
+
 async function getMealieConfig(fastify: FastifyInstance, userId: string): Promise<MealieConfig> {
   const settings = await fastify.prisma.userSettings.findUnique({ where: { userId } });
   if (!settings?.mealieUrl || !settings?.mealieApiKey) {
     throw new ValidationError('Mealie is not configured. Please add your Mealie URL and API key in Settings.');
   }
+
+  validateMealieUrl(settings.mealieUrl);
 
   const apiKey = decrypt(settings.mealieApiKey);
   // Ensure base URL has no trailing slash

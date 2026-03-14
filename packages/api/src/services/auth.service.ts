@@ -196,3 +196,21 @@ async function generateTokens(fastify: FastifyInstance, userId: string, email: s
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
+
+const AUTH_CODE_TTL = 60; // 1 minute
+
+export async function createAuthCode(fastify: FastifyInstance, tokens: { accessToken: string; refreshToken: string }): Promise<string> {
+  const code = crypto.randomBytes(32).toString('hex');
+  await fastify.redis.set(`authcode:${code}`, JSON.stringify(tokens), 'EX', AUTH_CODE_TTL);
+  return code;
+}
+
+export async function exchangeAuthCode(fastify: FastifyInstance, code: string) {
+  const key = `authcode:${code}`;
+  const data = await fastify.redis.get(key);
+  if (!data) {
+    throw new UnauthorizedError('Invalid or expired authorization code');
+  }
+  await fastify.redis.del(key);
+  return JSON.parse(data) as { accessToken: string; refreshToken: string };
+}

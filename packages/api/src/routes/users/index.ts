@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { updateProfileSchema, updateSettingsSchema } from '@macrotracker/shared';
+import { updateProfileSchema, updateSettingsSchema, updateUserSchema } from '@macrotracker/shared';
 import * as userService from '../../services/user.service.js';
 
 export default async function userRoutes(fastify: FastifyInstance) {
@@ -11,7 +11,7 @@ export default async function userRoutes(fastify: FastifyInstance) {
   });
 
   fastify.patch('/users/me', async (request) => {
-    const body = request.body as { displayName?: string; avatarUrl?: string };
+    const body = updateUserSchema.parse(request.body);
     const user = await userService.updateUser(fastify, request.user.sub, body);
     return { data: user };
   });

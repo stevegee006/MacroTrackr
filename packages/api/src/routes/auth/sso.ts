@@ -134,11 +134,8 @@ export default async function ssoRoutes(fastify: FastifyInstance) {
       'OIDC',
     );
 
-    const params = new URLSearchParams({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    });
-    reply.redirect(`${env.FRONTEND_URL}/oauth-callback?${params}`);
+    const code = await authService.createAuthCode(fastify, tokens);
+    reply.redirect(`${env.FRONTEND_URL}/oauth-callback?code=${code}`);
   });
 
   // SAML callback (POST)
@@ -185,10 +182,7 @@ export default async function ssoRoutes(fastify: FastifyInstance) {
       'SAML',
     );
 
-    const params = new URLSearchParams({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    });
-    reply.redirect(`${env.FRONTEND_URL}/oauth-callback?${params}`);
+    const code = await authService.createAuthCode(fastify, tokens);
+    reply.redirect(`${env.FRONTEND_URL}/oauth-callback?code=${code}`);
   });
 }

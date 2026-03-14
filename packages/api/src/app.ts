@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { ZodError } from 'zod';
 import { corsOptions } from './config/cors.js';
 import prismaPlugin from './plugins/prisma.js';
@@ -27,6 +29,12 @@ export async function buildApp() {
   // Plugins
   await app.register(cors, corsOptions);
   await app.register(cookie);
+  await app.register(helmet, { contentSecurityPolicy: false }); // CSP managed by Next.js
+  await app.register(rateLimit, {
+    global: true,
+    max: 100,
+    timeWindow: '1 minute',
+  });
   await app.register(prismaPlugin);
   await app.register(redisPlugin);
   await app.register(authPlugin);

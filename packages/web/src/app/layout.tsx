@@ -10,6 +10,18 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.svg',
+    apple: '/apple-touch-icon.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'MacroTracker',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  other: {
+    'color-scheme': 'light dark',
   },
 };
 
@@ -17,7 +29,7 @@ export const viewport: Viewport = {
   themeColor: '#10b981',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
   viewportFit: 'cover',
 };
 

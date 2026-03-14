@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createFoodItemSchema, updateFoodItemSchema, searchFoodSchema, scanLabelSchema, estimateFoodSchema, externalFoodSearchSchema } from '@macrotracker/shared';
+import { createFoodItemSchema, updateFoodItemSchema, searchFoodSchema, scanLabelSchema, estimateFoodSchema, externalFoodSearchSchema, importUsdaFoodSchema } from '@macrotracker/shared';
 import * as foodService from '../../services/food.service.js';
 
 export default async function foodRoutes(fastify: FastifyInstance) {
@@ -26,7 +26,7 @@ export default async function foodRoutes(fastify: FastifyInstance) {
 
   // Import a USDA food into local DB
   fastify.post('/food/import/usda', async (request, reply) => {
-    const body = request.body as any;
+    const body = importUsdaFoodSchema.parse(request.body);
     const item = await foodService.importUsdaFood(fastify, body);
     reply.code(201).send({ data: item });
   });

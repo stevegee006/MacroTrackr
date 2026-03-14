@@ -61,5 +61,31 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export const updateUserSchema = z.object({
+  displayName: z.string().min(1).max(100).optional(),
+  avatarUrl: z.string().url().max(2000).optional(),
+});
+
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(1).max(200),
+});
+
+export const adminListQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  q: z.string().max(200).optional(),
+});
+
+export const regenerateMealSchema = z.object({
+  dayNumber: z.number().int().nonnegative(),
+  mealIndex: z.number().int().nonnegative(),
+});
+
+export const convertRecipeSchema = z.object({
+  mealType: z.enum(['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK']).default('DINNER'),
+});
+
 export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
 export type AppSettingsInput = z.infer<typeof appSettingsSchema>;
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+export type RegenerateMealInput = z.infer<typeof regenerateMealSchema>;

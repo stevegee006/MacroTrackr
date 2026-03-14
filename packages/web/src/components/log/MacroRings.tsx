@@ -31,30 +31,43 @@ function Ring({
   const progress = max > 0 ? Math.min(value / max, 1) : 0;
   const offset = circumference * (1 - progress);
   const isOver = value > max && max > 0;
+  const remaining = Math.max(0, Math.round(max - value));
 
   return (
     <div className="flex flex-col items-center gap-0.5 min-w-0">
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={bgStroke}
-          strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={isOver ? '#ef4444' : color}
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          className="transition-all duration-500"
-        />
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={bgStroke}
+            strokeWidth={strokeWidth}
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={isOver ? '#ef4444' : color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            className="transition-all duration-500"
+          />
+        </g>
+        <text
+          x={size / 2}
+          y={size / 2}
+          textAnchor="middle"
+          dominantBaseline="central"
+          className={`fill-current font-semibold ${isOver ? 'text-red-500' : 'text-gray-700 dark:text-gray-200'}`}
+          fontSize={size * 0.18}
+        >
+          {isOver ? `+${Math.round(value - max)}` : remaining}
+        </text>
       </svg>
       <div className="text-center min-w-0 w-full">
         <p className={`font-semibold leading-tight ${unit ? 'text-xs' : 'text-[11px]'}`}>

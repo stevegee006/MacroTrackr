@@ -16,3 +16,12 @@
 @utility pr-safe {
   padding-right: env(safe-area-inset-right, 0px);
 }
+
+/* Prevent iOS Safari from zooming on input focus (requires font-size >= 16px) */
+@media screen and (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

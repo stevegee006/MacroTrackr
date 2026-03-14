@@ -51,7 +51,126 @@ MacroTracker/
 └── turbo.json
 ```
 
-## Getting Started
+## Quick Start (Docker Compose)
+
+The fastest way to get MacroTracker running. Pre-built images are pulled from Docker Hub — no build step required.
+
+### 1. Create a project directory
+
+```bash
+mkdir macrotracker && cd macrotracker
+```
+
+### 2. Create `docker-compose.yml`
+
+```yaml
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: macrotracker
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: macrotracker
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U macrotracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: geaves006/macrotrackr-api:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://macrotracker:${POSTGRES_PASSWORD:-changeme}@db:5432/macrotracker
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:4000}
+      API_PORT: 4000
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      USDA_FDC_API_KEY: ${USDA_FDC_API_KEY:-}
+    ports:
+      - "${API_PORT:-4000}:4000"
+
+  web:
+    image: geaves006/macrotrackr-web:latest
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api/v1}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+volumes:
+  pg_data:
+  redis_data:
+```
+
+### 3. Create `.env`
+
+```env
+# Required — generate random secrets (e.g. openssl rand -hex 32)
+JWT_SECRET=<random-string-at-least-32-chars>
+JWT_REFRESH_SECRET=<another-random-string>
+ENCRYPTION_KEY=<64-hex-char-string-for-aes-256>
+POSTGRES_PASSWORD=<strong-db-password>
+
+# URLs — change if deploying behind a reverse proxy
+FRONTEND_URL=http://localhost:3000
+API_BASE_URL=http://localhost:4000
+NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+
+# Optional — Google OAuth
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Optional — USDA food database
+USDA_FDC_API_KEY=
+```
+
+### 4. Start
+
+```bash
+docker compose up -d
+```
+
+The web app is at `http://localhost:3000` and the API at `http://localhost:4000`.
+
+To update to the latest version:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+---
+
+## Development Setup
+
+For contributing or local development, clone the repo and build from source.
 
 ### Prerequisites
 
@@ -59,60 +178,28 @@ MacroTracker/
 - [pnpm 10+](https://pnpm.io/)
 - [Docker & Docker Compose](https://docs.docker.com/get-docker/)
 
-### 1. Clone and install
+### Clone and install
 
 ```bash
 git clone https://github.com/stevegee006/MacroTrackr.git
 cd MacroTrackr
 pnpm install
+cp .env.example .env   # Edit .env with your secrets
 ```
 
-### 2. Set up environment variables
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and set real values for secrets:
-
-```env
-# Required - generate random strings for these
-JWT_SECRET=<random-string-at-least-32-chars>
-JWT_REFRESH_SECRET=<another-random-string>
-ENCRYPTION_KEY=<64-hex-char-string-for-aes-256>
-
-# Database (defaults work with Docker Compose)
-DATABASE_URL=postgresql://macrotracker:changeme@localhost:5432/macrotracker
-
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# Frontend URL for CORS
-FRONTEND_URL=http://localhost:3000
-NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
-
-# Optional - Google OAuth
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-```
-
-### 3. Start with Docker Compose
-
-**Production:**
+### Run with Docker (build from source)
 
 ```bash
 docker compose up --build
 ```
 
-**Development (with hot reload):**
+### Run with hot reload
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
 
-The API runs on `http://localhost:4000` and the web app on `http://localhost:3000`.
-
-### 4. Or run locally without Docker
+### Run without Docker
 
 Start PostgreSQL and Redis separately, then:
 

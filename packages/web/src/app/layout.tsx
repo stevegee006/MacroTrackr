@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: 'MacroTracker',
   description: 'Track your macros, scan barcodes, and get AI-powered nutrition plans',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export const viewport: Viewport = {
@@ -15,6 +18,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

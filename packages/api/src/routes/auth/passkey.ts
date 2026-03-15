@@ -1,15 +1,37 @@
 import type { FastifyInstance } from 'fastify';
 import * as passkeyService from '../../services/passkey.service.js';
 import * as authService from '../../services/auth.service.js';
+import { env } from '../../config/env.js';
 
 const authRateLimit = { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } };
+
+/**
+ * Extract the client origin from the request's Origin or Referer header,
+ * falling back to FRONTEND_URL. This ensures the rpID matches how the
+ * user actually accessed the app (IP, domain, localhost, etc.)
+ */
+function getClientOrigin(request: { headers: Record<string, string | string[] | undefined> }): string {
+  const origin = request.headers['origin'];
+  if (origin && typeof origin === 'string') return origin;
+
+  const referer = request.headers['referer'];
+  if (referer && typeof referer === 'string') {
+    try {
+      const url = new URL(referer);
+      return url.origin;
+    } catch { /* ignore */ }
+  }
+
+  return env.FRONTEND_URL;
+}
 
 export default async function passkeyRoutes(fastify: FastifyInstance) {
   // ── Registration (authenticated users adding a passkey) ──
 
   fastify.post('/auth/passkey/register/options', async (request, reply) => {
     await fastify.authenticate(request, reply);
-    const options = await passkeyService.generateRegOptions(fastify, request.user.sub);
+    const clientOrigin = getClientOrigin(request);
+    const options = await passkeyService.generateRegOptions(fastify, request.user.sub, clientOrigin);
     reply.send({ data: options });
   });
 
@@ -32,7 +54,8 @@ export default async function passkeyRoutes(fastify: FastifyInstance) {
 
   fastify.post('/auth/passkey/authenticate/options', { ...authRateLimit }, async (request, reply) => {
     const { email } = (request.body as { email?: string }) || {};
-    const options = await passkeyService.generateAuthOptions(fastify, email);
+    const clientOrigin = getClientOrigin(request);
+    const options = await passkeyService.generateAuthOptions(fastify, clientOrigin, email);
     reply.send({ data: options });
   });
 

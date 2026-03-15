@@ -9,24 +9,30 @@ import type {
   AuthenticationResponseJSON,
 } from '@simplewebauthn/server';
 import type { FastifyInstance } from 'fastify';
-import { env } from '../config/env.js';
 import { AppError, UnauthorizedError } from '../utils/errors.js';
 
 const CHALLENGE_TTL = 300; // 5 minutes
 
-function getRpConfig() {
-  const url = new URL(env.FRONTEND_URL);
+type AuthenticatorTransport = 'ble' | 'cable' | 'hybrid' | 'internal' | 'nfc' | 'smart-card' | 'usb';
+
+/**
+ * Derive rpID and origin from the client's Origin or Referer header.
+ * This ensures passkeys work regardless of how the user accesses the app
+ * (localhost, LAN IP, domain name, etc.)
+ */
+function getRpConfigFromOrigin(origin: string) {
+  const url = new URL(origin);
   return {
     rpName: 'MacroTracker',
     rpID: url.hostname,
-    origin: env.FRONTEND_URL,
+    origin: url.origin,
   };
 }
 
 /**
  * Generate registration options for an authenticated user adding a passkey
  */
-export async function generateRegOptions(fastify: FastifyInstance, userId: string) {
+export async function generateRegOptions(fastify: FastifyInstance, userId: string, clientOrigin: string) {
   const user = await fastify.prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, displayName: true, passkeys: true },
@@ -34,7 +40,7 @@ export async function generateRegOptions(fastify: FastifyInstance, userId: strin
 
   if (!user) throw new UnauthorizedError('User not found');
 
-  const { rpName, rpID } = getRpConfig();
+  const { rpName, rpID } = getRpConfigFromOrigin(clientOrigin);
 
   const existingCredentials = user.passkeys.map((pk) => ({
     id: pk.credentialId,
@@ -54,18 +60,16 @@ export async function generateRegOptions(fastify: FastifyInstance, userId: strin
     attestationType: 'none',
   });
 
-  // Store challenge in Redis
+  // Store challenge + origin in Redis so verify can use the same rpID/origin
   await fastify.redis.set(
     `webauthn:reg:${userId}`,
-    options.challenge,
+    JSON.stringify({ challenge: options.challenge, origin: clientOrigin }),
     'EX',
     CHALLENGE_TTL,
   );
 
   return options;
 }
-
-type AuthenticatorTransport = 'ble' | 'cable' | 'hybrid' | 'internal' | 'nfc' | 'smart-card' | 'usb';
 
 /**
  * Verify registration and store the new passkey
@@ -76,10 +80,11 @@ export async function verifyRegistration(
   response: RegistrationResponseJSON,
   friendlyName?: string,
 ) {
-  const challenge = await fastify.redis.get(`webauthn:reg:${userId}`);
-  if (!challenge) throw new AppError(400, 'BAD_REQUEST', 'Registration challenge expired');
+  const stored = await fastify.redis.get(`webauthn:reg:${userId}`);
+  if (!stored) throw new AppError(400, 'BAD_REQUEST', 'Registration challenge expired');
 
-  const { rpID, origin } = getRpConfig();
+  const { challenge, origin: storedOrigin } = JSON.parse(stored);
+  const { rpID, origin } = getRpConfigFromOrigin(storedOrigin);
 
   const verification = await verifyRegistrationResponse({
     response,
@@ -117,8 +122,8 @@ export async function verifyRegistration(
 /**
  * Generate authentication options (for login — no user ID needed yet)
  */
-export async function generateAuthOptions(fastify: FastifyInstance, email?: string) {
-  const { rpID } = getRpConfig();
+export async function generateAuthOptions(fastify: FastifyInstance, clientOrigin: string, email?: string) {
+  const { rpID } = getRpConfigFromOrigin(clientOrigin);
 
   let allowCredentials: { id: string; transports?: AuthenticatorTransport[] }[] | undefined;
 
@@ -143,10 +148,10 @@ export async function generateAuthOptions(fastify: FastifyInstance, email?: stri
     userVerification: 'preferred',
   });
 
-  // Store challenge keyed by the challenge itself (since we don't know the user yet)
+  // Store challenge + origin keyed by the challenge itself
   await fastify.redis.set(
     `webauthn:auth:${options.challenge}`,
-    'pending',
+    JSON.stringify({ origin: clientOrigin }),
     'EX',
     CHALLENGE_TTL,
   );
@@ -166,6 +171,9 @@ export async function verifyAuthentication(
   const stored = await fastify.redis.get(`webauthn:auth:${challenge}`);
   if (!stored) throw new UnauthorizedError('Authentication challenge expired');
 
+  const { origin: storedOrigin } = JSON.parse(stored);
+  const { rpID, origin } = getRpConfigFromOrigin(storedOrigin);
+
   // Look up the passkey by credential ID
   const passkey = await fastify.prisma.passkey.findUnique({
     where: { credentialId: response.id },
@@ -173,8 +181,6 @@ export async function verifyAuthentication(
   });
 
   if (!passkey) throw new UnauthorizedError('Passkey not recognized');
-
-  const { rpID, origin } = getRpConfig();
 
   const verification = await verifyAuthenticationResponse({
     response,

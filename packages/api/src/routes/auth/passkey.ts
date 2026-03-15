@@ -32,20 +32,27 @@ export default async function passkeyRoutes(fastify: FastifyInstance) {
   fastify.post('/auth/passkey/register/options', async (request, reply) => {
     try {
       await fastify.authenticate(request, reply);
+      if (reply.sent) return; // Auth failed, 401 already sent
       const clientOrigin = getClientOrigin(request);
       request.log.info({ clientOrigin, userId: request.user.sub }, 'passkey register/options');
       const options = await passkeyService.generateRegOptions(fastify, request.user.sub, clientOrigin);
-      reply.send({ data: options });
+      return reply.send({ data: options });
     } catch (err: any) {
-      request.log.error({ err, stack: err.stack }, 'passkey register/options failed');
-      if (err instanceof AppError) throw err;
-      throw new AppError(500, 'PASSKEY_ERROR', `Passkey options failed: ${err.message}`);
+      request.log.error({ err, message: err.message, stack: err.stack, name: err.name }, 'passkey register/options failed');
+      if (reply.sent) return;
+      return reply.code(err.statusCode || 500).send({
+        error: {
+          code: err.code || 'PASSKEY_ERROR',
+          message: err.message || 'Passkey registration options failed',
+        },
+      });
     }
   });
 
   fastify.post('/auth/passkey/register/verify', async (request, reply) => {
     try {
       await fastify.authenticate(request, reply);
+      if (reply.sent) return;
       const { response, friendlyName } = request.body as {
         response: any;
         friendlyName?: string;
@@ -57,11 +64,16 @@ export default async function passkeyRoutes(fastify: FastifyInstance) {
         response,
         friendlyName,
       );
-      reply.send({ data: result });
+      return reply.send({ data: result });
     } catch (err: any) {
-      request.log.error({ err, stack: err.stack }, 'passkey register/verify failed');
-      if (err instanceof AppError) throw err;
-      throw new AppError(500, 'PASSKEY_ERROR', `Passkey verify failed: ${err.message}`);
+      request.log.error({ err, message: err.message, stack: err.stack }, 'passkey register/verify failed');
+      if (reply.sent) return;
+      return reply.code(err.statusCode || 500).send({
+        error: {
+          code: err.code || 'PASSKEY_ERROR',
+          message: err.message || 'Passkey verification failed',
+        },
+      });
     }
   });
 
@@ -72,11 +84,16 @@ export default async function passkeyRoutes(fastify: FastifyInstance) {
       const { email } = (request.body as { email?: string }) || {};
       const clientOrigin = getClientOrigin(request);
       const options = await passkeyService.generateAuthOptions(fastify, clientOrigin, email);
-      reply.send({ data: options });
+      return reply.send({ data: options });
     } catch (err: any) {
-      request.log.error({ err, stack: err.stack }, 'passkey authenticate/options failed');
-      if (err instanceof AppError) throw err;
-      throw new AppError(500, 'PASSKEY_ERROR', `Passkey auth options failed: ${err.message}`);
+      request.log.error({ err, message: err.message, stack: err.stack }, 'passkey authenticate/options failed');
+      if (reply.sent) return;
+      return reply.code(err.statusCode || 500).send({
+        error: {
+          code: err.code || 'PASSKEY_ERROR',
+          message: err.message || 'Passkey auth options failed',
+        },
+      });
     }
   });
 
@@ -88,11 +105,16 @@ export default async function passkeyRoutes(fastify: FastifyInstance) {
       };
       const user = await passkeyService.verifyAuthentication(fastify, response, challenge);
       const tokens = await authService.generateTokensForPasskey(fastify, user.id, user.email, user.isAdmin);
-      reply.send({ data: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken } });
+      return reply.send({ data: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken } });
     } catch (err: any) {
-      request.log.error({ err, stack: err.stack }, 'passkey authenticate/verify failed');
-      if (err instanceof AppError) throw err;
-      throw new AppError(500, 'PASSKEY_ERROR', `Passkey auth failed: ${err.message}`);
+      request.log.error({ err, message: err.message, stack: err.stack }, 'passkey authenticate/verify failed');
+      if (reply.sent) return;
+      return reply.code(err.statusCode || 500).send({
+        error: {
+          code: err.code || 'PASSKEY_ERROR',
+          message: err.message || 'Passkey authentication failed',
+        },
+      });
     }
   });
 
@@ -100,12 +122,14 @@ export default async function passkeyRoutes(fastify: FastifyInstance) {
 
   fastify.get('/auth/passkey/list', async (request, reply) => {
     await fastify.authenticate(request, reply);
+    if (reply.sent) return;
     const passkeys = await passkeyService.listPasskeys(fastify, request.user.sub);
     reply.send({ data: passkeys });
   });
 
   fastify.delete('/auth/passkey/:id', async (request, reply) => {
     await fastify.authenticate(request, reply);
+    if (reply.sent) return;
     const { id } = request.params as { id: string };
     await passkeyService.deletePasskey(fastify, request.user.sub, id);
     reply.send({ data: { success: true } });

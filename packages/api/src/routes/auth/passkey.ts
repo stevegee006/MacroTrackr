@@ -31,6 +31,7 @@ export default async function passkeyRoutes(fastify: FastifyInstance) {
   fastify.post('/auth/passkey/register/options', async (request, reply) => {
     await fastify.authenticate(request, reply);
     const clientOrigin = getClientOrigin(request);
+    request.log.info({ clientOrigin, userId: request.user.sub }, 'passkey register/options');
     const options = await passkeyService.generateRegOptions(fastify, request.user.sub, clientOrigin);
     reply.send({ data: options });
   });
@@ -41,6 +42,7 @@ export default async function passkeyRoutes(fastify: FastifyInstance) {
       response: any;
       friendlyName?: string;
     };
+    request.log.info({ userId: request.user.sub }, 'passkey register/verify');
     const result = await passkeyService.verifyRegistration(
       fastify,
       request.user.sub,

@@ -17,14 +17,32 @@ type AuthenticatorTransport = 'ble' | 'cable' | 'hybrid' | 'internal' | 'nfc' | 
 
 /**
  * Derive rpID and origin from the client's Origin or Referer header.
- * This ensures passkeys work regardless of how the user accesses the app
- * (localhost, LAN IP, domain name, etc.)
+ * Uses the registrable domain (eTLD+1) as rpID so passkeys work across
+ * subdomains and on iOS Safari which is strict about rpID matching.
+ *
+ * Examples:
+ *   macros.geehive.com  → rpID = geehive.com
+ *   localhost            → rpID = localhost
+ *   192.168.1.50         → rpID = 192.168.1.50
  */
+function getRegistrableDomain(hostname: string): string {
+  // IP addresses and localhost: use as-is
+  if (hostname === 'localhost' || /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) || hostname.startsWith('[')) {
+    return hostname;
+  }
+  // For domain names with 3+ labels, use the last 2 (eTLD+1 for standard TLDs)
+  const parts = hostname.split('.');
+  if (parts.length > 2) {
+    return parts.slice(-2).join('.');
+  }
+  return hostname;
+}
+
 function getRpConfigFromOrigin(origin: string) {
   const url = new URL(origin);
   return {
     rpName: 'MacroTracker',
-    rpID: url.hostname,
+    rpID: getRegistrableDomain(url.hostname),
     origin: url.origin,
   };
 }

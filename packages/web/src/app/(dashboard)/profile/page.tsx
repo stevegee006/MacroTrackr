@@ -4,16 +4,21 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/providers/AuthProvider';
+import { useTheme } from '@/providers/ThemeProvider';
 import { todayString, addDays } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
+import { TimezoneCombobox } from '@/components/ui/TimezoneCombobox';
+import { getBrowserTimezone, formatTimezoneLabel } from '@/lib/timezones';
 import { ACTIVITY_LABELS, GOAL_LABELS, MEAL_TYPE_LABELS } from '@macrotracker/shared';
-import type { UserProfile, UserSettings, MealType } from '@macrotracker/shared';
+import type { UserProfile, UserSettings, MealType, AiProvider } from '@macrotracker/shared';
 import Link from 'next/link';
 import { startRegistration } from '@simplewebauthn/browser';
-import { Trash2 } from 'lucide-react';
+import { Activity, Shield, Settings, Trash2 } from 'lucide-react';
+
+type Tab = 'biometrics' | 'security' | 'settings';
 
 // Conversion helpers
 const CM_PER_INCH = 2.54;
@@ -37,12 +42,66 @@ function kgToLbs(kg: number): number {
 }
 
 function lbsToKg(lbs: number): number {
-  // Round to 2dp to preserve enough precision for accurate round-trip
   return Math.round(lbs * KG_PER_LB * 100) / 100;
 }
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
+  const [tab, setTab] = useState<Tab>('biometrics');
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">Profile</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
+        </div>
+        {user?.isAdmin && (
+          <Link href="/admin" className="text-sm text-purple-600 hover:underline">
+            Admin
+          </Link>
+        )}
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+        {([
+          { key: 'biometrics' as Tab, label: 'Biometrics', icon: Activity },
+          { key: 'security' as Tab, label: 'Security', icon: Shield },
+          { key: 'settings' as Tab, label: 'Settings', icon: Settings },
+        ]).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors ${
+              tab === key
+                ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'biometrics' && <BiometricsTab />}
+      {tab === 'security' && <SecurityTab />}
+      {tab === 'settings' && <SettingsTab />}
+
+      {/* Always visible below tabs */}
+      <ExportCard />
+
+      <Button variant="outline" onClick={logout} className="w-full">
+        Sign Out
+      </Button>
+    </div>
+  );
+}
+
+// ─── Biometrics Tab ────────────────────────────────────────────
+
+function BiometricsTab() {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -57,8 +116,6 @@ export default function ProfilePage() {
 
   const isImperial = settingsData?.data?.preferredUnits === 'IMPERIAL';
 
-  // For metric: heightCm, weightKg
-  // For imperial: feet, inches, weightLbs
   const [form, setForm] = useState({
     heightCm: '',
     weightKg: '',
@@ -105,7 +162,6 @@ export default function ProfilePage() {
     let weightKg: number | null = null;
 
     if (isImperial) {
-      // Convert imperial inputs to metric for storage
       const feet = form.feet ? parseInt(form.feet) : 0;
       const inches = form.inches ? parseInt(form.inches) : 0;
       if (feet || inches) {
@@ -134,31 +190,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">Profile</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
-        </div>
-        <div className="flex gap-3">
-          {user?.isAdmin && (
-            <Link href="/admin" className="text-sm text-purple-600 hover:underline">
-              Admin
-            </Link>
-          )}
-          <Link href="/settings" className="text-sm text-emerald-600 hover:underline">
-            Settings
-          </Link>
-        </div>
-      </div>
-
-      <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
+    <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
       <Card>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             {isImperial ? (
               <>
-                {/* Imperial height: feet + inches */}
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Height</label>
                   <div className="flex gap-2">
@@ -194,7 +231,6 @@ export default function ProfilePage() {
               </>
             ) : (
               <>
-                {/* Metric height + weight */}
                 <Input
                   label="Height (cm)"
                   type="number"
@@ -280,16 +316,17 @@ export default function ProfilePage() {
           </div>
         </Card>
       )}
+    </div>
+  );
+}
 
-      </div>
+// ─── Security Tab ──────────────────────────────────────────────
 
+function SecurityTab() {
+  return (
+    <div className="space-y-6">
       <PasskeyCard />
-
-      <ExportCard />
-
-      <Button variant="outline" onClick={logout} className="w-full">
-        Sign Out
-      </Button>
+      <ChangePasswordCard />
     </div>
   );
 }
@@ -325,15 +362,10 @@ function PasskeyCard() {
     setSuccess('');
     setRegistering(true);
     try {
-      // Get registration options
       const optionsRes = await apiFetch<{ data: any }>('/auth/passkey/register/options', {
         method: 'POST',
       });
-
-      // Trigger browser passkey creation
       const regResponse = await startRegistration({ optionsJSON: optionsRes.data });
-
-      // Verify with server
       await apiFetch('/auth/passkey/register/verify', {
         method: 'POST',
         body: JSON.stringify({
@@ -421,6 +453,428 @@ function PasskeyCard() {
     </Card>
   );
 }
+
+function ChangePasswordCard() {
+  const { user } = useAuth();
+
+  // Only show for LOCAL auth users
+  if (user?.authProvider !== 'LOCAL') return null;
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: (body: { currentPassword: string; newPassword: string }) =>
+      apiFetch('/auth/change-password', { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      setSuccess('Password changed successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setError('');
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Failed to change password');
+      setSuccess('');
+    },
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    mutation.mutate({ currentPassword, newPassword });
+  }
+
+  return (
+    <Card className="space-y-4">
+      <div>
+        <h3 className="font-semibold">Change Password</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Update your account password.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <Input
+          label="Current Password"
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          required
+        />
+        <Input
+          label="New Password"
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          required
+        />
+        <Input
+          label="Confirm New Password"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+        />
+        <Button type="submit" isLoading={mutation.isPending} className="w-full">
+          Change Password
+        </Button>
+      </form>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {success && <p className="text-sm text-emerald-600">{success}</p>}
+    </Card>
+  );
+}
+
+// ─── Settings Tab ──────────────────────────────────────────────
+
+const AI_PROVIDERS: { value: AiProvider; label: string }[] = [
+  { value: 'OPENAI', label: 'OpenAI' },
+  { value: 'ANTHROPIC', label: 'Anthropic' },
+  { value: 'GEMINI', label: 'Google Gemini' },
+];
+
+function SettingsTab() {
+  const queryClient = useQueryClient();
+  const { isDark, toggle } = useTheme();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => apiFetch<{ data: UserSettings }>('/users/me/settings'),
+  });
+
+  const [aiProvider, setAiProvider] = useState<AiProvider>('OPENAI');
+  const [openaiKey, setOpenaiKey] = useState('');
+  const [anthropicKey, setAnthropicKey] = useState('');
+  const [geminiKey, setGeminiKey] = useState('');
+  const [preferredUnits, setPreferredUnits] = useState('METRIC');
+  const [timezone, setTimezone] = useState<string | null>(null);
+  const [location, setLocation] = useState('');
+  const [mealieUrl, setMealieUrl] = useState('');
+  const [mealieApiKey, setMealieApiKey] = useState('');
+  const [tzAutoDetected, setTzAutoDetected] = useState(false);
+
+  useEffect(() => {
+    if (data?.data) {
+      setPreferredUnits(data.data.preferredUnits);
+      setTimezone(data.data.timezone);
+      setLocation(data.data.location ?? '');
+      setAiProvider(data.data.aiProvider ?? 'OPENAI');
+    }
+  }, [data]);
+
+  // Auto-detect timezone on first load if not set
+  useEffect(() => {
+    if (data?.data && data.data.timezone === null && !tzAutoDetected) {
+      const detected = getBrowserTimezone();
+      setTimezone(detected);
+      setTzAutoDetected(true);
+      mutation.mutate({ timezone: detected });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, tzAutoDetected]);
+
+  const mutation = useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      apiFetch('/users/me/settings', { method: 'PUT', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
+  });
+
+  const darkModeMutation = useMutation({
+    mutationFn: (dark: boolean) =>
+      apiFetch('/users/me/settings', { method: 'PUT', body: JSON.stringify({ darkMode: dark }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
+  });
+
+  function handleSaveAiKey(provider: AiProvider, key: string) {
+    if (!key.trim()) return;
+    const keyMap: Record<AiProvider, string> = {
+      OPENAI: 'openaiApiKey',
+      ANTHROPIC: 'anthropicApiKey',
+      GEMINI: 'geminiApiKey',
+    };
+    mutation.mutate({ [keyMap[provider]]: key.trim() });
+    if (provider === 'OPENAI') setOpenaiKey('');
+    if (provider === 'ANTHROPIC') setAnthropicKey('');
+    if (provider === 'GEMINI') setGeminiKey('');
+  }
+
+  function handleSwitchProvider(provider: AiProvider) {
+    setAiProvider(provider);
+    mutation.mutate({ aiProvider: provider });
+  }
+
+  function handleSaveUnits() {
+    mutation.mutate({ preferredUnits });
+  }
+
+  function handleToggleDarkMode() {
+    const newDark = !isDark;
+    toggle();
+    darkModeMutation.mutate(newDark);
+  }
+
+  const mealieMutation = useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      apiFetch('/users/me/settings', { method: 'PUT', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      setMealieApiKey('');
+    },
+  });
+
+  function handleSaveMealie(e: React.FormEvent) {
+    e.preventDefault();
+    const body: Record<string, unknown> = {};
+    if (mealieUrl.trim()) body.mealieUrl = mealieUrl.trim();
+    if (mealieApiKey.trim()) body.mealieApiKey = mealieApiKey.trim();
+    if (Object.keys(body).length > 0) {
+      mealieMutation.mutate(body);
+    }
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center py-12"><Spinner /></div>;
+  }
+
+  return (
+    <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
+      <Card className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold">Dark Mode</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Switch between light and dark theme</p>
+          </div>
+          <button
+            onClick={handleToggleDarkMode}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              isDark ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                isDark ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </Card>
+
+      <Card className="space-y-4 lg:col-span-2">
+        <h2 className="font-semibold">AI Provider</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Choose your AI provider for macro plans, meal plans, and label scanning. Keys are encrypted and stored securely.
+        </p>
+
+        <div className="flex gap-1.5 flex-wrap">
+          {AI_PROVIDERS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => handleSwitchProvider(value)}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                aiProvider === value
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          {/* OpenAI */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">OpenAI</span>
+              {data?.data.hasOpenaiKey && <span className="text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded">Configured</span>}
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveAiKey('OPENAI', openaiKey); }} className="flex gap-2">
+              <Input
+                placeholder={data?.data.hasOpenaiKey ? 'Enter new key to replace' : 'sk-...'}
+                type="password"
+                value={openaiKey}
+                onChange={(e) => setOpenaiKey(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" size="sm" isLoading={mutation.isPending} disabled={!openaiKey.trim()}>
+                Save
+              </Button>
+            </form>
+          </div>
+
+          {/* Anthropic */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Anthropic</span>
+              {data?.data.hasAnthropicKey && <span className="text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded">Configured</span>}
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveAiKey('ANTHROPIC', anthropicKey); }} className="flex gap-2">
+              <Input
+                placeholder={data?.data.hasAnthropicKey ? 'Enter new key to replace' : 'sk-ant-...'}
+                type="password"
+                value={anthropicKey}
+                onChange={(e) => setAnthropicKey(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" size="sm" isLoading={mutation.isPending} disabled={!anthropicKey.trim()}>
+                Save
+              </Button>
+            </form>
+          </div>
+
+          {/* Gemini */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Google Gemini</span>
+              {data?.data.hasGeminiKey && <span className="text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded">Configured</span>}
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveAiKey('GEMINI', geminiKey); }} className="flex gap-2">
+              <Input
+                placeholder={data?.data.hasGeminiKey ? 'Enter new key to replace' : 'AI...'}
+                type="password"
+                value={geminiKey}
+                onChange={(e) => setGeminiKey(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" size="sm" isLoading={mutation.isPending} disabled={!geminiKey.trim()}>
+                Save
+              </Button>
+            </form>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="space-y-4">
+        <h2 className="font-semibold">Units</h2>
+        <div className="flex gap-2">
+          {(['METRIC', 'IMPERIAL'] as const).map((unit) => (
+            <button
+              key={unit}
+              onClick={() => setPreferredUnits(unit)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                preferredUnits === unit
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              {unit === 'METRIC' ? 'Metric (kg, cm)' : 'Imperial (lbs, in)'}
+            </button>
+          ))}
+        </div>
+        <Button variant="outline" size="sm" onClick={handleSaveUnits}>
+          Save Units
+        </Button>
+      </Card>
+
+      <Card className="space-y-4">
+        <h2 className="font-semibold">Timezone & Location</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Set your timezone for accurate date handling. Location is optional.
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Timezone
+            </label>
+            <TimezoneCombobox value={timezone} onChange={setTimezone} />
+            {timezone && (
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                Current: {formatTimezoneLabel(timezone)}
+              </p>
+            )}
+          </div>
+          <Input
+            label="Location"
+            placeholder="e.g. New York, NY"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const body: Record<string, unknown> = {};
+            if (timezone) body.timezone = timezone;
+            body.location = location.trim() || null;
+            mutation.mutate(body);
+          }}
+        >
+          Save Timezone & Location
+        </Button>
+      </Card>
+
+      <Card className="space-y-4">
+        <h2 className="font-semibold">Mealie Integration</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Connect your Mealie instance to import recipes into meal plans. Your API key is encrypted and stored securely.
+        </p>
+        {data?.data.hasMealieConfig ? (
+          <p className="text-sm text-emerald-600">Mealie is configured.</p>
+        ) : (
+          <p className="text-sm text-gray-400 dark:text-gray-500">Not configured.</p>
+        )}
+        <form onSubmit={handleSaveMealie} className="space-y-3">
+          <Input
+            label="Mealie URL"
+            placeholder="https://mealie.example.com"
+            type="url"
+            value={mealieUrl}
+            onChange={(e) => setMealieUrl(e.target.value)}
+          />
+          <Input
+            label="Mealie API Key"
+            placeholder={data?.data.hasMealieConfig ? 'Enter new key to replace' : 'API key from Mealie'}
+            type="password"
+            value={mealieApiKey}
+            onChange={(e) => setMealieApiKey(e.target.value)}
+          />
+          <Button
+            type="submit"
+            isLoading={mealieMutation.isPending}
+            disabled={!mealieUrl.trim() && !mealieApiKey.trim()}
+          >
+            Save Mealie Config
+          </Button>
+        </form>
+        {mealieMutation.isError && (
+          <p className="text-sm text-red-600">
+            {(mealieMutation.error as any)?.message || 'Failed to save Mealie configuration'}
+          </p>
+        )}
+        {mealieMutation.isSuccess && (
+          <p className="text-sm text-emerald-600">Mealie configuration saved!</p>
+        )}
+      </Card>
+
+      {mutation.isSuccess && (
+        <p className="text-sm text-emerald-600 text-center lg:col-span-2">Settings saved!</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Export Card (always visible) ──────────────────────────────
 
 interface ExportEntry {
   logDate: string;

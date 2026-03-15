@@ -89,9 +89,6 @@ export default function ProfilePage() {
       {tab === 'security' && <SecurityTab />}
       {tab === 'settings' && <SettingsTab />}
 
-      {/* Always visible below tabs */}
-      <ExportCard />
-
       <Button variant="outline" onClick={logout} className="w-full">
         Sign Out
       </Button>
@@ -870,11 +867,15 @@ function SettingsTab() {
       {mutation.isSuccess && (
         <p className="text-sm text-emerald-600 text-center lg:col-span-2">Settings saved!</p>
       )}
+
+      <div className="lg:col-span-2">
+        <ExportCard />
+      </div>
     </div>
   );
 }
 
-// ─── Export Card (always visible) ──────────────────────────────
+// ─── Export Card ───────────────────────────────────────────────
 
 interface ExportEntry {
   logDate: string;

@@ -88,9 +88,14 @@ export async function apiFetch<T>(
   const url = `${baseUrl}${path}`;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
+
+  // Only set Content-Type for requests that have a body (avoids Fastify
+  // JSON parse errors when POST/PUT is sent with an empty body)
+  if (options.body) {
+    headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
+  }
 
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;

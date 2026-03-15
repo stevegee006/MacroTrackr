@@ -14,6 +14,7 @@ function Ring({
   label,
   unit,
   color,
+  targetColor,
   size = 72,
   bgStroke,
 }: {
@@ -22,6 +23,7 @@ function Ring({
   label: string;
   unit: string;
   color: string;
+  targetColor?: string;
   size?: number;
   bgStroke: string;
 }) {
@@ -31,7 +33,10 @@ function Ring({
   const progress = max > 0 ? Math.min(value / max, 1) : 0;
   const offset = circumference * (1 - progress);
   const isOver = value > max && max > 0;
+  const targetHit = value >= max && max > 0;
   const remaining = Math.max(0, Math.round(max - value));
+
+  const activeColor = isOver ? '#ef4444' : targetHit && targetColor ? targetColor : color;
 
   return (
     <div className="flex flex-col items-center gap-0.5 min-w-0">
@@ -50,7 +55,7 @@ function Ring({
             cy={size / 2}
             r={radius}
             fill="none"
-            stroke={isOver ? '#ef4444' : color}
+            stroke={activeColor}
             strokeWidth={strokeWidth}
             strokeDasharray={circumference}
             strokeDashoffset={offset}
@@ -63,7 +68,7 @@ function Ring({
           y={size / 2}
           textAnchor="middle"
           dominantBaseline="central"
-          className={`fill-current font-semibold ${isOver ? 'text-red-500' : 'text-gray-700 dark:text-gray-200'}`}
+          className={`fill-current font-semibold ${isOver ? 'text-red-500' : targetHit && targetColor ? 'text-green-500' : 'text-gray-700 dark:text-gray-200'}`}
           fontSize={size * 0.18}
         >
           {isOver ? `+${Math.round(value - max)}` : remaining}
@@ -102,7 +107,8 @@ export function MacroRings({ totals, targets }: MacroRingsProps) {
           max={targets.proteinG}
           label="Protein"
           unit="g"
-          color="#3b82f6"
+          color="#ef4444"
+          targetColor="#10b981"
           bgStroke={bgStroke}
         />
         <Ring
@@ -118,7 +124,7 @@ export function MacroRings({ totals, targets }: MacroRingsProps) {
           max={targets.fatG}
           label="Fat"
           unit="g"
-          color="#ef4444"
+          color="#3b82f6"
           bgStroke={bgStroke}
         />
       </div>

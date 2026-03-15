@@ -18,6 +18,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
+  loginWithTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   register: (email: string, password: string, displayName?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -81,6 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { mustChangePassword: false };
   };
 
+  const loginWithTokens = async (accessToken: string, refreshToken: string) => {
+    setAccessToken(accessToken);
+    setRefreshToken(refreshToken);
+    await refreshUser();
+  };
+
   const register = async (email: string, password: string, displayName?: string) => {
     const res = await apiFetch<{ data: AuthTokens }>('/auth/register', {
       method: 'POST',
@@ -107,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithTokens, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

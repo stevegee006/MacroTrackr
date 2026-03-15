@@ -18,6 +18,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       where: { enabled: true },
       select: { id: true, name: true, type: true },
     });
+    // Check if any passkeys exist in the system (passkey login available)
+    const passkeyCount = await fastify.prisma.passkey.count();
+    if (passkeyCount > 0) {
+      providers.push('PASSKEY');
+    }
     const { signupsEnabled } = await appConfigService.getAppSettings(fastify);
     return { data: { providers, sso: ssoProviders, signupsEnabled } };
   });

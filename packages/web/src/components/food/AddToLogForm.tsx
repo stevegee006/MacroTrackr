@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
-import { todayString, parseDateLocal } from '@/lib/utils';
+import { todayString, parseDateLocal, addDays } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { FoodItem, MealType } from '@macrotracker/shared';
@@ -63,13 +63,13 @@ export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLog
         <input
           type="date"
           value={logDate}
-          max={todayString()}
+          max={addDays(todayString(), 7)}
           onChange={(e) => setLogDate(e.target.value)}
           className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
         />
         {!isToday && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-            Logging for {parseDateLocal(logDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          <p className={`text-xs mt-1 ${logDate > todayString() ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
+            {logDate > todayString() ? 'Pre-logging for' : 'Logging for'} {parseDateLocal(logDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
           </p>
         )}
       </div>
@@ -118,9 +118,9 @@ export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLog
         <p className="font-medium mb-1">Total for this entry:</p>
         <p>
           {Math.round(food.caloriesPer100g * factor)} kcal &middot;{' '}
-          <span className="text-blue-600">P: {Math.round(food.proteinPer100g * factor)}g</span> &middot;{' '}
+          <span className="text-red-600">P: {Math.round(food.proteinPer100g * factor)}g</span> &middot;{' '}
           <span className="text-amber-600">C: {Math.round(food.carbsPer100g * factor)}g</span> &middot;{' '}
-          <span className="text-red-600">F: {Math.round(food.fatPer100g * factor)}g</span>
+          <span className="text-blue-600">F: {Math.round(food.fatPer100g * factor)}g</span>
         </p>
         {(food.fiberPer100g != null || food.sugarPer100g != null) && (
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

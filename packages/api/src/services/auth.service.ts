@@ -183,6 +183,10 @@ export async function findOrCreateOAuthUser(
   return generateTokens(fastify, user.id, user.email, user.isAdmin);
 }
 
+export async function generateTokensForPasskey(fastify: FastifyInstance, userId: string, email: string, isAdmin: boolean) {
+  return generateTokens(fastify, userId, email, isAdmin);
+}
+
 async function generateTokens(fastify: FastifyInstance, userId: string, email: string, isAdmin: boolean) {
   const accessToken = fastify.jwt.sign({ sub: userId, email, isAdmin });
 

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { getApiUrl } from '@/lib/api-client';
+import { startAuthentication } from '@simplewebauthn/browser';
 
 interface SsoProviderInfo {
   id: string;
@@ -24,12 +25,13 @@ interface ProvidersResponse {
 }
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginWithTokens } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [authProviders, setAuthProviders] = useState<string[]>(['LOCAL']);
   const [ssoProviders, setSsoProviders] = useState<SsoProviderInfo[]>([]);
   const [signupsEnabled, setSignupsEnabled] = useState(true);
@@ -66,8 +68,56 @@ export default function LoginPage() {
     }
   }
 
+  async function handlePasskeyLogin() {
+    setError('');
+    setPasskeyLoading(true);
+    try {
+      const apiBaseUrl = getApiUrl();
+
+      // Get authentication options from server
+      const optionsRes = await fetch(`${apiBaseUrl}/auth/passkey/authenticate/options`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!optionsRes.ok) throw new Error('Failed to get passkey options');
+      const { data: options } = await optionsRes.json();
+
+      // Trigger browser passkey prompt
+      const authResponse = await startAuthentication({ optionsJSON: options });
+
+      // Verify with server
+      const verifyRes = await fetch(`${apiBaseUrl}/auth/passkey/authenticate/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          response: authResponse,
+          challenge: options.challenge,
+        }),
+      });
+      if (!verifyRes.ok) {
+        const errData = await verifyRes.json().catch(() => null);
+        throw new Error(errData?.error?.message || 'Passkey authentication failed');
+      }
+      const { data: tokens } = await verifyRes.json();
+
+      await loginWithTokens(tokens.accessToken, tokens.refreshToken);
+      router.push('/dashboard');
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError') {
+        setError('Passkey authentication was cancelled');
+      } else {
+        setError(err.message || 'Passkey authentication failed');
+      }
+    } finally {
+      setPasskeyLoading(false);
+    }
+  }
+
   const apiBaseUrl = getApiUrl();
   const hasOAuthProviders = authProviders.includes('GOOGLE') || ssoProviders.length > 0;
+  const hasPasskey = authProviders.includes('PASSKEY');
+  const hasAlternateProviders = hasOAuthProviders || hasPasskey;
 
   return (
     <Card className="p-8">
@@ -104,7 +154,7 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      {hasOAuthProviders && (
+      {hasAlternateProviders && (
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -118,6 +168,20 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-4 space-y-2">
+            {hasPasskey && (
+              <button
+                type="button"
+                onClick={handlePasskeyLogin}
+                disabled={passkeyLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.864 4.243A7.5 7.5 0 0119.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 004.5 10.5a7.464 7.464 0 01-1.15 3.993m1.989 3.559A11.209 11.209 0 008.25 10.5a3.75 3.75 0 117.5 0c0 .527-.021 1.049-.064 1.565M12 10.5a14.94 14.94 0 01-3.6 9.75m6.633-4.596a18.666 18.666 0 01-2.485 5.33" />
+                </svg>
+                {passkeyLoading ? 'Authenticating...' : 'Sign in with Passkey'}
+              </button>
+            )}
+
             {authProviders.includes('GOOGLE') && (
               <button
                 type="button"

@@ -128,6 +128,8 @@ export default function LogPage() {
 
   const logs = entries?.data ?? [];
   const isToday = date === todayString();
+  const maxDate = addDays(todayString(), 7);
+  const isMaxDate = date >= maxDate;
 
   const groupedLogs = MEAL_TYPES.reduce(
     (acc, type) => {
@@ -153,10 +155,14 @@ export default function LogPage() {
           <ChevronLeft className="h-5 w-5" />
         </button>
         <span className="font-medium">
-          {isToday ? 'Today' : parseDateLocal(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          {isToday
+            ? 'Today'
+            : date === addDays(todayString(), 1)
+              ? 'Tomorrow'
+              : parseDateLocal(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
         </span>
-        <button onClick={() => changeDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" disabled={isToday}>
-          <ChevronRight className="h-5 w-5 disabled:opacity-30" />
+        <button onClick={() => changeDate(1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-30" disabled={isMaxDate}>
+          <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
@@ -306,11 +312,11 @@ export default function LogPage() {
                             <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-2 text-xs">
                               <span className="font-medium">{Math.round((fi.caloriesPer100g ?? 0) * factor)} kcal</span>
                               {' · '}
-                              <span className="text-blue-500">P:{Math.round((fi.proteinPer100g ?? 0) * factor)}g</span>
+                              <span className="text-red-500">P:{Math.round((fi.proteinPer100g ?? 0) * factor)}g</span>
                               {' '}
                               <span className="text-amber-500">C:{Math.round((fi.carbsPer100g ?? 0) * factor)}g</span>
                               {' '}
-                              <span className="text-red-500">F:{Math.round((fi.fatPer100g ?? 0) * factor)}g</span>
+                              <span className="text-blue-500">F:{Math.round((fi.fatPer100g ?? 0) * factor)}g</span>
                             </div>
                           )
                         )}
@@ -346,11 +352,11 @@ export default function LogPage() {
                           {Math.round(entry.totalCalories)} kcal
                         </p>
                         <p className="text-xs mt-0.5">
-                          <span className="text-blue-500">P:{Math.round(entry.totalProteinG)}g</span>
+                          <span className="text-red-500">P:{Math.round(entry.totalProteinG)}g</span>
                           {' '}
                           <span className="text-amber-500">C:{Math.round(entry.totalCarbsG)}g</span>
                           {' '}
-                          <span className="text-red-500">F:{Math.round(entry.totalFatG)}g</span>
+                          <span className="text-blue-500">F:{Math.round(entry.totalFatG)}g</span>
                           {entry.totalFiberG != null && (
                             <>{' '}<span className="text-green-600">Fb:{Math.round(entry.totalFiberG)}g</span></>
                           )}

@@ -27,6 +27,7 @@ model User {
   foodLogs   FoodLog[]
   macroPlans MacroPlan[]
   mealPlans  MealPlan[]
+  passkeys   Passkey[]
 
   @@map("users")
 }
@@ -37,6 +38,7 @@ enum AuthProvider {
   GITHUB
   SAML
   OIDC
+  PASSKEY
 }
 
 model UserProfile {
@@ -109,6 +111,27 @@ enum AiProvider {
 enum Units {
   METRIC
   IMPERIAL
+}
+
+// ─── Passkeys (WebAuthn) ─────────────────────────────────────────
+
+model Passkey {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  credentialId      String   @unique @map("credential_id") @db.Text
+  publicKey         String   @map("public_key") @db.Text
+  counter           BigInt   @default(0)
+  transports        String[] @default([])
+  deviceType        String?  @map("device_type") @db.VarChar(50)
+  backedUp          Boolean  @default(false) @map("backed_up")
+  friendlyName      String?  @map("friendly_name") @db.VarChar(100)
+  createdAt         DateTime @default(now()) @map("created_at")
+  lastUsedAt        DateTime? @map("last_used_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("passkeys")
 }
 
 // ─── Food Items ──────────────────────────────────────────────────

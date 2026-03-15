@@ -17,6 +17,7 @@ import mealPlanRoutes from './routes/meal-plan/index.js';
 import adminRoutes from './routes/admin/index.js';
 import oauthRoutes from './routes/auth/oauth.js';
 import ssoRoutes from './routes/auth/sso.js';
+import passkeyRoutes from './routes/auth/passkey.js';
 import { AppError } from './utils/errors.js';
 import { logger } from './utils/logger.js';
 
@@ -77,6 +78,7 @@ export async function buildApp() {
       await api.register(authRoutes);
       await api.register(oauthRoutes);
       await api.register(ssoRoutes);
+      await api.register(passkeyRoutes);
       await api.register(userRoutes);
       await api.register(foodRoutes);
       await api.register(foodLogRoutes);

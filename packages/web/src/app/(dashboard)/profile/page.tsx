@@ -12,6 +12,8 @@ import { Spinner } from '@/components/ui/Spinner';
 import { ACTIVITY_LABELS, GOAL_LABELS, MEAL_TYPE_LABELS } from '@macrotracker/shared';
 import type { UserProfile, UserSettings, MealType } from '@macrotracker/shared';
 import Link from 'next/link';
+import { startRegistration } from '@simplewebauthn/browser';
+import { Trash2 } from 'lucide-react';
 
 // Conversion helpers
 const CM_PER_INCH = 2.54;
@@ -281,12 +283,142 @@ export default function ProfilePage() {
 
       </div>
 
+      <PasskeyCard />
+
       <ExportCard />
 
       <Button variant="outline" onClick={logout} className="w-full">
         Sign Out
       </Button>
     </div>
+  );
+}
+
+interface PasskeyInfo {
+  id: string;
+  friendlyName: string | null;
+  deviceType: string | null;
+  backedUp: boolean;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+function PasskeyCard() {
+  const queryClient = useQueryClient();
+  const [friendlyName, setFriendlyName] = useState('');
+  const [registering, setRegistering] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const { data: passkeysData, isLoading } = useQuery({
+    queryKey: ['passkeys'],
+    queryFn: () => apiFetch<{ data: PasskeyInfo[] }>('/auth/passkey/list'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/auth/passkey/${id}`, { method: 'DELETE' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['passkeys'] }),
+  });
+
+  async function handleRegister() {
+    setError('');
+    setSuccess('');
+    setRegistering(true);
+    try {
+      // Get registration options
+      const optionsRes = await apiFetch<{ data: any }>('/auth/passkey/register/options', {
+        method: 'POST',
+      });
+
+      // Trigger browser passkey creation
+      const regResponse = await startRegistration({ optionsJSON: optionsRes.data });
+
+      // Verify with server
+      await apiFetch('/auth/passkey/register/verify', {
+        method: 'POST',
+        body: JSON.stringify({
+          response: regResponse,
+          friendlyName: friendlyName.trim() || undefined,
+        }),
+      });
+
+      setSuccess('Passkey registered successfully!');
+      setFriendlyName('');
+      queryClient.invalidateQueries({ queryKey: ['passkeys'] });
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError') {
+        setError('Passkey registration was cancelled');
+      } else {
+        setError(err.message || 'Failed to register passkey');
+      }
+    } finally {
+      setRegistering(false);
+    }
+  }
+
+  const passkeys = passkeysData?.data ?? [];
+
+  return (
+    <Card className="space-y-4">
+      <div>
+        <h3 className="font-semibold">Passkeys</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Sign in without a password using Face ID, Touch ID, or a security key.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-4"><Spinner /></div>
+      ) : passkeys.length > 0 ? (
+        <div className="space-y-2">
+          {passkeys.map((pk) => (
+            <div key={pk.id} className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">
+                  {pk.friendlyName || 'Passkey'}
+                  {pk.deviceType && (
+                    <span className="ml-1 text-xs text-gray-400">({pk.deviceType})</span>
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Added {new Date(pk.createdAt).toLocaleDateString()}
+                  {pk.lastUsedAt && ` · Last used ${new Date(pk.lastUsedAt).toLocaleDateString()}`}
+                </p>
+              </div>
+              <button
+                onClick={() => deleteMutation.mutate(pk.id)}
+                disabled={deleteMutation.isPending}
+                className="ml-2 p-2 text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-400 dark:text-gray-500">No passkeys registered yet.</p>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          placeholder="Passkey name (optional)"
+          value={friendlyName}
+          onChange={(e) => setFriendlyName(e.target.value)}
+          className="flex-1"
+        />
+        <Button
+          onClick={handleRegister}
+          isLoading={registering}
+          size="sm"
+          className="whitespace-nowrap"
+        >
+          Add Passkey
+        </Button>
+      </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {success && <p className="text-sm text-emerald-600">{success}</p>}
+    </Card>
   );
 }
 

@@ -1,4 +1,4 @@
-export type AuthProvider = 'LOCAL' | 'GOOGLE' | 'GITHUB' | 'SAML' | 'OIDC';
+export type AuthProvider = 'LOCAL' | 'GOOGLE' | 'GITHUB' | 'SAML' | 'OIDC' | 'PASSKEY';
 export type Sex = 'MALE' | 'FEMALE' | 'OTHER';
 export type ActivityLevel =
   | 'SEDENTARY'

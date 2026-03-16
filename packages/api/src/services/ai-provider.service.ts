@@ -20,8 +20,8 @@ const MODEL_MAP: Record<AiProvider, Record<AiTier, string>> = {
   },
   ANTHROPIC: {
     light: 'claude-haiku-4-5-20251001',
-    heavy: 'claude-sonnet-4-5-20250514',
-    vision: 'claude-sonnet-4-5-20250514',
+    heavy: 'claude-sonnet-4-5-20250929',
+    vision: 'claude-sonnet-4-5-20250929',
   },
   GEMINI: {
     light: 'gemini-2.0-flash',
@@ -158,7 +158,7 @@ async function anthropicChat(
   maxTokens: number,
 ): Promise<AiResult> {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
-  const client = new Anthropic({ apiKey });
+  const client = new Anthropic({ apiKey, timeout: 120_000 });
 
   const message = await client.messages.create({
     model,
@@ -192,7 +192,7 @@ async function anthropicVision(
   maxTokens: number,
 ): Promise<AiResult> {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
-  const client = new Anthropic({ apiKey });
+  const client = new Anthropic({ apiKey, timeout: 120_000 });
 
   // imageBase64 is typically "data:image/...;base64,<data>"
   let mediaType = 'image/jpeg';
@@ -340,6 +340,12 @@ function handleProviderError(error: any, provider: AiProvider): never {
   };
   const name = providerNames[provider];
 
+  // Module not found (SDK not installed)
+  if (error?.code === 'MODULE_NOT_FOUND' || error?.code === 'ERR_MODULE_NOT_FOUND') {
+    logger.error({ error: error?.message, provider }, 'AI SDK not installed');
+    throw new AppError(502, 'AI_ERROR', `${name} SDK is not installed on the server.`);
+  }
+
   // Auth errors
   if (error?.status === 401 || error?.status === 403 || error?.message?.includes('API key')) {
     throw new ValidationError(`Invalid ${name} API key. Please check your API key in settings.`);
@@ -350,8 +356,20 @@ function handleProviderError(error: any, provider: AiProvider): never {
     throw new AppError(429, 'RATE_LIMITED', `${name} rate limit reached. Please wait a moment and try again.`);
   }
 
-  logger.error({ error: error?.message, provider }, 'AI provider error');
-  throw new AppError(502, 'AI_ERROR', `Failed to generate AI response via ${name}. Please try again.`);
+  // Not found (bad model ID)
+  if (error?.status === 404) {
+    logger.error({ error: error?.message, provider }, 'AI model not found');
+    throw new AppError(502, 'AI_ERROR', `${name} model not found. The configured model may be invalid.`);
+  }
+
+  // Connection / timeout errors
+  if (error?.code === 'ECONNREFUSED' || error?.code === 'ENOTFOUND' || error?.code === 'ETIMEDOUT' || error?.name === 'AbortError') {
+    logger.error({ error: error?.message, code: error?.code, provider }, 'AI provider connection error');
+    throw new AppError(502, 'AI_ERROR', `Could not connect to ${name} API. The service may be unavailable.`);
+  }
+
+  logger.error({ error: error?.message, stack: error?.stack, status: error?.status, code: error?.code, provider }, 'AI provider error');
+  throw new AppError(502, 'AI_ERROR', `${name} error: ${error?.message || 'Unknown error'}. Please try again.`);
 }
 
 // ─── Public API ───────────────────────────────────────────

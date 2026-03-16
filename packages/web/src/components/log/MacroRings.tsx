@@ -3,9 +3,12 @@
 import type { MacroTotals } from '@macrotracker/shared';
 import { useTheme } from '@/providers/ThemeProvider';
 
+export type MacroKey = 'calories' | 'protein' | 'carbs' | 'fat';
+
 interface MacroRingsProps {
   totals: MacroTotals;
   targets: MacroTotals;
+  onRingTap?: (macro: MacroKey) => void;
 }
 
 function Ring({
@@ -17,6 +20,7 @@ function Ring({
   targetColor,
   size = 72,
   bgStroke,
+  onTap,
 }: {
   value: number;
   max: number;
@@ -26,6 +30,7 @@ function Ring({
   targetColor?: string;
   size?: number;
   bgStroke: string;
+  onTap?: () => void;
 }) {
   const strokeWidth = 5;
   const radius = (size - strokeWidth) / 2;
@@ -38,8 +43,13 @@ function Ring({
 
   const activeColor = isOver ? '#ef4444' : targetHit && targetColor ? targetColor : color;
 
+  const Wrapper = onTap ? 'button' : 'div';
+
   return (
-    <div className="flex flex-col items-center gap-0.5 min-w-0">
+    <Wrapper
+      {...(onTap ? { type: 'button' as const, onClick: onTap } : {})}
+      className={`flex flex-col items-center gap-0.5 min-w-0 ${onTap ? 'cursor-pointer active:scale-95 transition-transform rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500' : ''}`}
+    >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
           <circle
@@ -82,11 +92,11 @@ function Ring({
         </p>
         <p className="text-[10px] text-gray-500 leading-tight">{label}</p>
       </div>
-    </div>
+    </Wrapper>
   );
 }
 
-export function MacroRings({ totals, targets }: MacroRingsProps) {
+export function MacroRings({ totals, targets, onRingTap }: MacroRingsProps) {
   const { isDark } = useTheme();
   const bgStroke = isDark ? '#374151' : '#e5e7eb';
 
@@ -101,6 +111,7 @@ export function MacroRings({ totals, targets }: MacroRingsProps) {
           color="#10b981"
           size={76}
           bgStroke={bgStroke}
+          onTap={onRingTap ? () => onRingTap('calories') : undefined}
         />
         <Ring
           value={totals.proteinG}
@@ -110,6 +121,7 @@ export function MacroRings({ totals, targets }: MacroRingsProps) {
           color="#ef4444"
           targetColor="#10b981"
           bgStroke={bgStroke}
+          onTap={onRingTap ? () => onRingTap('protein') : undefined}
         />
         <Ring
           value={totals.carbsG}
@@ -118,6 +130,7 @@ export function MacroRings({ totals, targets }: MacroRingsProps) {
           unit="g"
           color="#f59e0b"
           bgStroke={bgStroke}
+          onTap={onRingTap ? () => onRingTap('carbs') : undefined}
         />
         <Ring
           value={totals.fatG}
@@ -126,6 +139,7 @@ export function MacroRings({ totals, targets }: MacroRingsProps) {
           unit="g"
           color="#3b82f6"
           bgStroke={bgStroke}
+          onTap={onRingTap ? () => onRingTap('fat') : undefined}
         />
       </div>
       <div className="flex justify-center gap-4 text-xs text-gray-500 pt-1 border-t border-gray-100 dark:border-gray-700 dark:text-gray-400">

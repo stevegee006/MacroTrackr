@@ -6,6 +6,8 @@ import { apiFetch } from '@/lib/api-client';
 import { todayString } from '@/lib/utils';
 import { useAuth } from '@/providers/AuthProvider';
 import { MacroRings } from '@/components/log/MacroRings';
+import type { MacroKey } from '@/components/log/MacroRings';
+import { MacroBreakdownModal } from '@/components/log/MacroBreakdownModal';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { Share2, Check } from 'lucide-react';
@@ -128,6 +130,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const today = todayString();
   const [shared, setShared] = useState(false);
+  const [activeMacro, setActiveMacro] = useState<MacroKey | null>(null);
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['food-log-summary', today],
@@ -202,7 +205,7 @@ export default function DashboardPage() {
             >
               {shared ? <Check className="h-4 w-4 text-emerald-500" /> : <Share2 className="h-4 w-4" />}
             </button>
-            <MacroRings totals={s.totals} targets={s.targets} />
+            <MacroRings totals={s.totals} targets={s.targets} onRingTap={setActiveMacro} />
             <div className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
               {s.totals.calories} / {s.targets.calories} kcal
             </div>
@@ -246,6 +249,16 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {activeMacro && s && (
+        <MacroBreakdownModal
+          macro={activeMacro}
+          entries={logs}
+          totals={s.totals}
+          targets={s.targets}
+          onClose={() => setActiveMacro(null)}
+        />
+      )}
     </div>
   );
 }

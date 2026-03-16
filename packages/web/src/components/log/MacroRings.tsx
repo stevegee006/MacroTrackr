@@ -41,7 +41,7 @@ function Ring({
   const targetHit = value >= max && max > 0;
   const remaining = Math.max(0, Math.round(max - value));
 
-  const activeColor = isOver ? '#ef4444' : targetHit && targetColor ? targetColor : color;
+  const activeColor = targetHit && targetColor ? targetColor : isOver ? '#ef4444' : color;
 
   const Wrapper = onTap ? 'button' : 'div';
 
@@ -78,7 +78,7 @@ function Ring({
           y={size / 2}
           textAnchor="middle"
           dominantBaseline="central"
-          className={`fill-current font-semibold ${isOver ? 'text-red-500' : targetHit && targetColor ? 'text-green-500' : 'text-gray-700 dark:text-gray-200'}`}
+          className={`fill-current font-semibold ${targetHit && targetColor ? 'text-green-500' : isOver ? 'text-red-500' : 'text-gray-700 dark:text-gray-200'}`}
           fontSize={size * 0.18}
         >
           {isOver ? `+${Math.round(value - max)}` : remaining}

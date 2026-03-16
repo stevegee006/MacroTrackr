@@ -164,22 +164,34 @@ export default function DashboardPage() {
           <Card className="lg:h-fit relative">
             <button
               onClick={async () => {
-                const text = `Today's Macros\n${s.totals.calories}/${s.targets.calories} kcal\nProtein: ${Math.round(s.totals.proteinG)}/${Math.round(s.targets.proteinG)}g\nCarbs: ${Math.round(s.totals.carbsG)}/${Math.round(s.targets.carbsG)}g\nFat: ${Math.round(s.totals.fatG)}/${Math.round(s.targets.fatG)}g`;
                 try {
                   const blob = await generateShareImage(s.totals, s.targets);
                   const file = new File([blob], 'macros.png', { type: 'image/png' });
                   if (navigator.share && navigator.canShare?.({ files: [file] })) {
-                    await navigator.share({ text, files: [file] });
+                    await navigator.share({ files: [file] });
                   } else if (navigator.share) {
-                    await navigator.share({ text });
+                    await navigator.share({ files: [file] });
                   } else {
-                    await navigator.clipboard.writeText(text);
+                    // Desktop fallback: download the image
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'macros.png';
+                    a.click();
+                    URL.revokeObjectURL(url);
                     setShared(true);
                     setTimeout(() => setShared(false), 2000);
                   }
                 } catch (e: any) {
                   if (e?.name !== 'AbortError') {
-                    await navigator.clipboard.writeText(text);
+                    // Fallback: download the image
+                    const blob = await generateShareImage(s.totals, s.targets);
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'macros.png';
+                    a.click();
+                    URL.revokeObjectURL(url);
                     setShared(true);
                     setTimeout(() => setShared(false), 2000);
                   }

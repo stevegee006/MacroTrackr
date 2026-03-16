@@ -6,10 +6,13 @@ import { useEffect } from 'react';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { Spinner } from '@/components/ui/Spinner';
+import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const tutorial = useTutorial();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -34,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <main className="mx-auto max-w-lg lg:max-w-5xl px-4 lg:px-8 pt-safe-6 pb-20 lg:pb-6">{children}</main>
       </div>
       <BottomNav />
+      <TutorialOverlay {...tutorial} />
     </div>
   );
 }

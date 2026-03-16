@@ -16,7 +16,8 @@ import { ACTIVITY_LABELS, GOAL_LABELS, MEAL_TYPE_LABELS } from '@macrotracker/sh
 import type { UserProfile, UserSettings, MealType, AiProvider } from '@macrotracker/shared';
 import Link from 'next/link';
 import { startRegistration } from '@simplewebauthn/browser';
-import { Activity, Shield, Settings, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Activity, GraduationCap, Shield, Settings, Trash2 } from 'lucide-react';
 
 type Tab = 'biometrics' | 'security' | 'settings';
 
@@ -871,6 +872,10 @@ function SettingsTab() {
       <div className="lg:col-span-2">
         <ExportCard />
       </div>
+
+      <div className="lg:col-span-2">
+        <RestartTutorialCard />
+      </div>
     </div>
   );
 }
@@ -990,6 +995,36 @@ function ExportCard() {
         Export to CSV
       </Button>
       {error && <p className="text-sm text-red-600">{error}</p>}
+    </Card>
+  );
+}
+
+// ─── Restart Tutorial Card ────────────────────────────────────
+
+function RestartTutorialCard() {
+  const router = useRouter();
+
+  return (
+    <Card className="space-y-3">
+      <h3 className="font-semibold">App Tutorial</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Take a guided tour of MacroTrackr&apos;s features.
+      </p>
+      <Button
+        variant="outline"
+        onClick={() => {
+          localStorage.removeItem('macrotrackr-tutorial-complete');
+          router.push('/dashboard');
+          // Small delay to let navigation complete before triggering tutorial
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('tutorial-restart'));
+          }, 300);
+        }}
+        className="w-full"
+      >
+        <GraduationCap className="h-4 w-4 mr-2" />
+        Restart Tutorial
+      </Button>
     </Card>
   );
 }

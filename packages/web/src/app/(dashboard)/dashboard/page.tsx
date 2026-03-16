@@ -164,7 +164,7 @@ export default function DashboardPage() {
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-6">
         {s && (
-          <Card className="lg:h-fit relative">
+          <Card className="lg:h-fit relative" data-tutorial="macro-rings">
             <button
               onClick={async () => {
                 try {

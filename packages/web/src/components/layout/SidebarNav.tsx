@@ -5,6 +5,13 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { navItems } from './nav-items';
 
+const TUTORIAL_KEYS: Record<string, string> = {
+  '/scan': 'nav-add',
+  '/log': 'nav-log',
+  '/macro-plan': 'nav-macros',
+  '/profile': 'nav-profile',
+};
+
 export function SidebarNav() {
   const pathname = usePathname();
 
@@ -24,6 +31,7 @@ export function SidebarNav() {
             <Link
               key={href}
               href={href}
+              {...(TUTORIAL_KEYS[href] ? { 'data-tutorial': TUTORIAL_KEYS[href], 'data-tutorial-ctx': 'desktop' } : {})}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 isActive

@@ -5,6 +5,13 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { navItems } from './nav-items';
 
+const TUTORIAL_KEYS: Record<string, string> = {
+  '/scan': 'nav-add',
+  '/log': 'nav-log',
+  '/macro-plan': 'nav-macros',
+  '/profile': 'nav-profile',
+};
+
 export function BottomNav() {
   const pathname = usePathname();
 
@@ -17,6 +24,7 @@ export function BottomNav() {
             <Link
               key={href}
               href={href}
+              {...(TUTORIAL_KEYS[href] ? { 'data-tutorial': TUTORIAL_KEYS[href], 'data-tutorial-ctx': 'mobile' } : {})}
               className={cn(
                 'flex flex-col items-center justify-center gap-0.5 px-2 min-h-[48px] text-[10px] transition-colors',
                 isActive ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',

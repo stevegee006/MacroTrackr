@@ -125,7 +125,7 @@ export default function LoginPage() {
         <img src="/logo.svg" alt="MacroTrakr" className="h-28 mx-auto mb-1" />
         <h1 className="text-2xl font-bold">
           <span className="text-gray-900 dark:text-gray-100">macro</span>
-          <span className="text-gray-400 dark:text-gray-500 font-light">tracker</span>
+          <span className="text-gray-400 dark:text-gray-500 font-light">trakr</span>
         </h1>
       </div>
 

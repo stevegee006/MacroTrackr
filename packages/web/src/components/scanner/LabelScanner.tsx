@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
-import { Camera, X } from 'lucide-react';
+import { Camera, ImagePlus, X } from 'lucide-react';
 import { compressImage } from '@/lib/image-utils';
 import type { FoodItem } from '@macrotracker/shared';
 
@@ -16,7 +16,8 @@ interface LabelScannerProps {
 }
 
 export function LabelScanner({ onResult, existingFoodId }: LabelScannerProps) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const libraryRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
 
@@ -62,7 +63,6 @@ export function LabelScanner({ onResult, existingFoodId }: LabelScannerProps) {
     setImageBase64(null);
   }
 
-  const buttonLabel = existingFoodId ? 'Rescan with Label Photo' : 'Scan Nutrition Label';
   const extractLabel = existingFoodId ? 'Update from Label' : 'Extract Nutrition';
 
   if (preview && imageBase64) {
@@ -109,22 +109,37 @@ export function LabelScanner({ onResult, existingFoodId }: LabelScannerProps) {
   }
 
   return (
-    <div>
+    <div className="flex gap-2">
       <input
-        ref={fileRef}
+        ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
         onChange={handleFileChange}
         className="hidden"
       />
+      <input
+        ref={libraryRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
       <Button
         variant="secondary"
-        onClick={() => fileRef.current?.click()}
-        className="w-full flex items-center justify-center gap-2"
+        onClick={() => cameraRef.current?.click()}
+        className="flex-1 flex items-center justify-center gap-2"
       >
         <Camera className="h-4 w-4" />
-        {buttonLabel}
+        Take Photo
+      </Button>
+      <Button
+        variant="secondary"
+        onClick={() => libraryRef.current?.click()}
+        className="flex-1 flex items-center justify-center gap-2"
+      >
+        <ImagePlus className="h-4 w-4" />
+        Choose Photo
       </Button>
     </div>
   );

@@ -359,47 +359,27 @@ function PasskeyCard() {
     setSuccess('');
     setRegistering(true);
     try {
-      // Step 1: Get registration options from server
-      let optionsRes: { data: any };
-      try {
-        optionsRes = await apiFetch<{ data: any }>('/auth/passkey/register/options', {
-          method: 'POST',
-        });
-      } catch (err: any) {
-        setError(`Server error getting options: ${err.message} (${err.code || err.status || 'unknown'})`);
-        return;
-      }
-
-      // Step 2: Trigger browser passkey creation
-      let regResponse;
-      try {
-        regResponse = await startRegistration({ optionsJSON: optionsRes.data });
-      } catch (err: any) {
-        if (err.name === 'NotAllowedError') {
-          setError('Passkey registration was cancelled');
-        } else {
-          setError(`Browser error: ${err.name}: ${err.message}`);
-        }
-        return;
-      }
-
-      // Step 3: Verify with server
-      try {
-        await apiFetch('/auth/passkey/register/verify', {
-          method: 'POST',
-          body: JSON.stringify({
-            response: regResponse,
-            friendlyName: friendlyName.trim() || undefined,
-          }),
-        });
-      } catch (err: any) {
-        setError(`Server verification error: ${err.message}`);
-        return;
-      }
+      const optionsRes = await apiFetch<{ data: any }>('/auth/passkey/register/options', {
+        method: 'POST',
+      });
+      const regResponse = await startRegistration({ optionsJSON: optionsRes.data });
+      await apiFetch('/auth/passkey/register/verify', {
+        method: 'POST',
+        body: JSON.stringify({
+          response: regResponse,
+          friendlyName: friendlyName.trim() || undefined,
+        }),
+      });
 
       setSuccess('Passkey registered successfully!');
       setFriendlyName('');
       queryClient.invalidateQueries({ queryKey: ['passkeys'] });
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError') {
+        setError('Passkey registration was cancelled');
+      } else {
+        setError(err.message || 'Failed to register passkey');
+      }
     } finally {
       setRegistering(false);
     }

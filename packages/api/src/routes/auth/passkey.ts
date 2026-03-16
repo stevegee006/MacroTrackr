@@ -134,26 +134,4 @@ export default async function passkeyRoutes(fastify: FastifyInstance) {
     await passkeyService.deletePasskey(fastify, request.user.sub, id);
     reply.send({ data: { success: true } });
   });
-
-  // ── Diagnostic (temporary — remove after debugging) ──
-  fastify.get('/auth/passkey/debug', async (request, reply) => {
-    const clientOrigin = getClientOrigin(request);
-    const url = new URL(clientOrigin);
-    const hostname = url.hostname;
-    const parts = hostname.split('.');
-    const registrableDomain = parts.length > 2 ? parts.slice(-2).join('.') : hostname;
-    reply.send({
-      data: {
-        clientOrigin,
-        hostname,
-        registrableDomain,
-        frontendUrl: env.FRONTEND_URL,
-        headers: {
-          origin: request.headers['origin'] || null,
-          referer: request.headers['referer'] || null,
-          host: request.headers['host'] || null,
-        },
-      },
-    });
-  });
 }

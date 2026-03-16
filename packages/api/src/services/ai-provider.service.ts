@@ -12,6 +12,11 @@ interface AiResult {
   usage: { promptTokens: number; completionTokens: number };
 }
 
+/** Strip markdown code fences that LLMs sometimes wrap around JSON responses */
+function stripCodeFences(text: string): string {
+  return text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+}
+
 const MODEL_MAP: Record<AiProvider, Record<AiTier, string>> = {
   OPENAI: {
     light: 'gpt-4o-mini',
@@ -394,14 +399,20 @@ export async function aiChatCompletion(
   logger.info({ provider, model, tier }, 'AI chat completion');
 
   try {
+    let result: AiResult;
     switch (provider) {
       case 'OPENAI':
-        return await openaiChat(apiKey, systemPrompt, userPrompt, model, temperature, maxTokens);
+        result = await openaiChat(apiKey, systemPrompt, userPrompt, model, temperature, maxTokens);
+        break;
       case 'ANTHROPIC':
-        return await anthropicChat(apiKey, systemPrompt, userPrompt, model, temperature, maxTokens);
+        result = await anthropicChat(apiKey, systemPrompt, userPrompt, model, temperature, maxTokens);
+        break;
       case 'GEMINI':
-        return await geminiChat(apiKey, systemPrompt, userPrompt, model, temperature, maxTokens);
+        result = await geminiChat(apiKey, systemPrompt, userPrompt, model, temperature, maxTokens);
+        break;
     }
+    result.content = stripCodeFences(result.content);
+    return result;
   } catch (error) {
     handleProviderError(error, provider);
   }
@@ -428,14 +439,20 @@ export async function aiVisionCompletion(
   logger.info({ provider, model, tier }, 'AI vision completion');
 
   try {
+    let result: AiResult;
     switch (provider) {
       case 'OPENAI':
-        return await openaiVision(apiKey, systemPrompt, userPrompt, imageBase64, model, temperature, maxTokens);
+        result = await openaiVision(apiKey, systemPrompt, userPrompt, imageBase64, model, temperature, maxTokens);
+        break;
       case 'ANTHROPIC':
-        return await anthropicVision(apiKey, systemPrompt, userPrompt, imageBase64, model, temperature, maxTokens);
+        result = await anthropicVision(apiKey, systemPrompt, userPrompt, imageBase64, model, temperature, maxTokens);
+        break;
       case 'GEMINI':
-        return await geminiVision(apiKey, systemPrompt, userPrompt, imageBase64, model, temperature, maxTokens);
+        result = await geminiVision(apiKey, systemPrompt, userPrompt, imageBase64, model, temperature, maxTokens);
+        break;
     }
+    result.content = stripCodeFences(result.content);
+    return result;
   } catch (error) {
     handleProviderError(error, provider);
   }

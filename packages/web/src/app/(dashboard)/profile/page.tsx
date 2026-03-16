@@ -571,7 +571,7 @@ function AiProviderInfoPopover() {
           {/* Backdrop */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           {/* Popover */}
-          <div className="absolute right-0 top-8 z-50 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+          <div className="absolute left-0 top-8 z-50 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
             <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
               AI features require your own API key (BYOAI). Get one from your preferred provider:
             </p>

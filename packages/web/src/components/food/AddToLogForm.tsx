@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { todayString, parseDateLocal, addDays } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Minus, Plus } from 'lucide-react';
 import type { FoodItem, MealType } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@macrotracker/shared';
 
@@ -74,16 +75,43 @@ export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLog
         )}
       </div>
 
-      <div className="flex gap-4">
-        <Input
-          label="Servings"
-          type="number"
-          min={0.1}
-          step={0.1}
-          value={servingQty}
-          onChange={(e) => setServingQty(e.target.value)}
-          className="w-24"
-        />
+      <div className="flex gap-4 items-end">
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Servings</label>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                const n = Math.max(0.1, Math.round(((parseFloat(servingQty) || 1) - 0.5) * 10) / 10);
+                setServingQty(String(n));
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 text-gray-600 transition-colors hover:bg-gray-100 active:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:active:bg-gray-500"
+              aria-label="Decrease servings"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <Input
+              type="number"
+              inputMode="decimal"
+              min={0.1}
+              step={0.5}
+              value={servingQty}
+              onChange={(e) => setServingQty(e.target.value)}
+              className="w-16 text-center"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const n = Math.round(((parseFloat(servingQty) || 0) + 0.5) * 10) / 10;
+                setServingQty(String(n));
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 text-gray-600 transition-colors hover:bg-gray-100 active:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:active:bg-gray-500"
+              aria-label="Increase servings"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
         <Input
           label="Serving size (g)"
           type="number"

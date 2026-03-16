@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "MacroTracker",
-  "short_name": "MacroTracker",
+  "name": "MacroTrakr",
+  "short_name": "MacroTrakr",
   "description": "Track your macros, scan barcodes, and get AI-powered nutrition plans",
   "start_url": "/dashboard",
   "scope": "/",

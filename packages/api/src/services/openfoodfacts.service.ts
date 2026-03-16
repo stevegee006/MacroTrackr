@@ -1,7 +1,7 @@
 import { logger } from '../utils/logger.js';
 
 const OFF_BASE_URL = 'https://world.openfoodfacts.org/api/v2/product';
-const USER_AGENT = 'MacroTracker/1.0 (https://github.com/macrotracker)';
+const USER_AGENT = 'MacroTrakr/1.0 (https://github.com/macrotrakr)';
 
 interface OffProduct {
   product_name?: string;

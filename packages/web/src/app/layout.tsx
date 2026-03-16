@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/providers/ThemeProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'MacroTracker',
+  title: 'MacroTrakr',
   description: 'Track your macros, scan barcodes, and get AI-powered nutrition plans',
   manifest: '/manifest.json',
   icons: {
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'MacroTracker',
+    title: 'MacroTrakr',
   },
   formatDetection: {
     telephone: false,

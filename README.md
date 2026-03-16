@@ -1,4 +1,4 @@
-# MacroTracker
+# MacroTrakr
 
 A full-stack macro nutrition tracker with barcode scanning, AI-powered meal planning, and daily food logging. Scan a barcode or search for food, log what you eat, and let AI generate personalized macro and meal plans based on your profile.
 

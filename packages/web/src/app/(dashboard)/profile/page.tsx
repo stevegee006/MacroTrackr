@@ -17,7 +17,7 @@ import type { UserProfile, UserSettings, MealType, AiProvider } from '@macrotrac
 import Link from 'next/link';
 import { startRegistration } from '@simplewebauthn/browser';
 import { useRouter } from 'next/navigation';
-import { Activity, GraduationCap, Shield, Settings, Trash2 } from 'lucide-react';
+import { Activity, GraduationCap, HelpCircle, Shield, Settings, Trash2, ExternalLink } from 'lucide-react';
 
 type Tab = 'biometrics' | 'security' | 'settings';
 
@@ -547,6 +547,58 @@ const AI_PROVIDERS: { value: AiProvider; label: string }[] = [
   { value: 'GEMINI', label: 'Google Gemini' },
 ];
 
+const AI_KEY_LINKS: { provider: string; url: string; label: string }[] = [
+  { provider: 'OpenAI', url: 'https://platform.openai.com/api-keys', label: 'Get OpenAI API key' },
+  { provider: 'Anthropic', url: 'https://console.anthropic.com/settings/keys', label: 'Get Anthropic API key' },
+  { provider: 'Google Gemini', url: 'https://aistudio.google.com/apikey', label: 'Get Gemini API key' },
+];
+
+function AiProviderInfoPopover() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        aria-label="How to get API keys"
+      >
+        <HelpCircle className="h-4 w-4" />
+      </button>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          {/* Popover */}
+          <div className="absolute right-0 top-8 z-50 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+              AI features require your own API key (BYOAI). Get one from your preferred provider:
+            </p>
+            <div className="space-y-1.5">
+              {AI_KEY_LINKS.map(({ provider, url, label }) => (
+                <a
+                  key={provider}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                  {label}
+                </a>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+              Keys are encrypted with AES-256-GCM and stored securely on the server.
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function SettingsTab() {
   const queryClient = useQueryClient();
   const { isDark, toggle } = useTheme();
@@ -678,9 +730,12 @@ function SettingsTab() {
       </Card>
 
       <Card className="space-y-4 lg:col-span-2">
-        <h2 className="font-semibold">AI Provider</h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="font-semibold">AI Provider</h2>
+          <AiProviderInfoPopover />
+        </div>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Choose your AI provider for macro plans, meal plans, and label scanning. Keys are encrypted and stored securely.
+          Choose your AI provider for macro plans, meal plans, and label scanning. Bring your own API key (BYOAI).
         </p>
 
         <div className="flex gap-1.5 flex-wrap">

@@ -25,7 +25,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'nav-add',
     title: 'Add Food',
-    body: 'Scan a barcode, search by name, enter nutrition manually, or snap a photo of a label. You can also use AI to estimate macros.',
+    body: "Scan a barcode, search by name, enter nutrition manually, or snap a photo of a label. Tip: you only need to scan a barcode once — after that, the food is saved and you can find it by searching. Of course, you can scan every time if you prefer!",
     targetKey: 'nav-add',
     placement: 'top',
   },
@@ -39,7 +39,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'nav-macros',
     title: 'AI Macro & Meal Plans',
-    body: 'Get AI-powered macro targets based on your goals, and generate full meal plans tailored to your preferences.',
+    body: "Get AI-powered macro targets based on your goals, and generate full meal plans tailored to your preferences. Note: AI features (including label scanning) are BYOAI — bring your own AI key. You can set up your API key in Profile → Settings.",
     targetKey: 'nav-macros',
     placement: 'top',
   },

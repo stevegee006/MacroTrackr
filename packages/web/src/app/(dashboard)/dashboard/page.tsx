@@ -118,7 +118,7 @@ function generateShareImage(totals: DailySummary['totals'], targets: DailySummar
     // Branding
     ctx.fillStyle = '#4b5563';
     ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillText('macrotrakr', w / 2, 300);
+    ctx.fillText('macrotrackr', w / 2, 300);
 
     canvas.toBlob((blob) => resolve(blob!), 'image/png');
   });

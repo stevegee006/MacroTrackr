@@ -14,7 +14,7 @@ export function SidebarNav() {
         <img src="/logo-flame.svg" alt="" className="h-7 w-7" />
         <span className="text-lg font-bold">
           <span className="text-gray-900 dark:text-gray-100">macro</span>
-          <span className="text-gray-400 dark:text-gray-500 font-light">trakr</span>
+          <span className="text-gray-400 dark:text-gray-500 font-light">trackr</span>
         </span>
       </div>
       <nav className="flex-1 space-y-1 px-3 py-4">

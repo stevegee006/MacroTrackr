@@ -41,7 +41,7 @@ function getRegistrableDomain(hostname: string): string {
 function getRpConfigFromOrigin(origin: string) {
   const url = new URL(origin);
   return {
-    rpName: 'MacroTrakr',
+    rpName: 'MacroTrackr',
     rpID: getRegistrableDomain(url.hostname),
     origin: url.origin,
   };

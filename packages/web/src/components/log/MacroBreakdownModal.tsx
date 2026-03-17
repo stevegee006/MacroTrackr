@@ -114,7 +114,7 @@ export function MacroBreakdownModal({ macro, entries, totals, targets, onClose }
         </div>
 
         {/* Sort toggle */}
-        <div className="flex items-center gap-1 px-4 pt-3">
+        <div className="flex items-center gap-1 px-4 pt-3 pb-2">
           <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Sort:</span>
           <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5">
             {(['meal', 'total'] as const).map((mode) => (

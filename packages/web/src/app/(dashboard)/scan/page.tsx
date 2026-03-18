@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { BarcodeScanner } from '@/components/scanner/BarcodeScanner';
@@ -30,6 +30,7 @@ const TABS: { key: InputMethod; label: string }[] = [
 
 export default function ScanPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const dateParam = searchParams.get('date') ?? undefined;
   const [method, setMethod] = useState<InputMethod>('search');
   const [scannedFood, setScannedFood] = useState<FoodItem | null>(null);
@@ -166,10 +167,10 @@ export default function ScanPage() {
                 Add another
               </Button>
               <button
-                onClick={() => setAdded(false)}
+                onClick={() => router.push('/log')}
                 className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               >
-                Done
+                Go to Food Log
               </button>
             </div>
           </div>

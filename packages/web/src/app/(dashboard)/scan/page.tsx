@@ -13,7 +13,9 @@ import { FoodSearchForm } from '@/components/food/FoodSearchForm';
 import { NutritionLabel } from '@/components/food/NutritionLabel';
 import { AddToLogForm } from '@/components/food/AddToLogForm';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { CheckCircle } from 'lucide-react';
 import type { FoodItem } from '@macrotracker/shared';
 
 type InputMethod = 'search' | 'barcode' | 'label' | 'manual' | 'estimate';
@@ -144,16 +146,34 @@ export default function ScanPage() {
         </div>
       )}
 
+      {/* Success dialog */}
       {added && (
-        <Card className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 text-center">
-          <p className="font-medium">Added to your food log!</p>
-          <button
-            onClick={resetState}
-            className="mt-2 text-sm underline"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setAdded(false)}>
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl text-center space-y-4"
+            onClick={(e) => e.stopPropagation()}
           >
-            Add another
-          </button>
-        </Card>
+            <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto" />
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Added to your food log!</p>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => {
+                  setScannedFood(null);
+                  setAdded(false);
+                }}
+                className="w-full"
+              >
+                Add another
+              </Button>
+              <button
+                onClick={() => setAdded(false)}
+                className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

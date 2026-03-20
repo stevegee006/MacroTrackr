@@ -172,7 +172,7 @@ export default function MacroPlanPage() {
     manualName.trim().length > 0 && parseInt(manualCalories) > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tutorial="macro-plan-header">
       <h1 className="text-xl font-bold">Macro Plans</h1>
 
       {/* Tab toggle */}

@@ -6,6 +6,7 @@ import type { TutorialStep } from './tutorial-steps';
 
 interface TutorialOverlayProps {
   isActive: boolean;
+  isNavigating: boolean;
   stepIndex: number;
   step: TutorialStep;
   totalSteps: number;
@@ -88,6 +89,7 @@ function getTooltipPosition(
 
 export function TutorialOverlay({
   isActive,
+  isNavigating,
   stepIndex,
   step,
   totalSteps,
@@ -125,11 +127,11 @@ export function TutorialOverlay({
   }, [step]);
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || isNavigating) return;
     // Small delay to let DOM settle
     const timer = setTimeout(measure, 50);
     return () => clearTimeout(timer);
-  }, [isActive, stepIndex, measure]);
+  }, [isActive, isNavigating, stepIndex, measure]);
 
   // Recalculate on resize/scroll
   useEffect(() => {
@@ -142,15 +144,16 @@ export function TutorialOverlay({
     };
   }, [isActive, measure]);
 
-  // Body scroll lock
+  // Body scroll lock (release during navigation so pages can render)
   useEffect(() => {
-    if (isActive) {
+    if (isActive && !isNavigating) {
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = '';
       };
     }
-  }, [isActive]);
+    document.body.style.overflow = '';
+  }, [isActive, isNavigating]);
 
   // Escape key to skip
   useEffect(() => {
@@ -163,6 +166,15 @@ export function TutorialOverlay({
   }, [isActive, skip]);
 
   if (!isActive) return null;
+
+  // While navigating, show dark overlay only (no tooltip or spotlight)
+  if (isNavigating) {
+    return (
+      <div className="fixed inset-0 z-[60]">
+        <div className="absolute inset-0 bg-black/60" />
+      </div>
+    );
+  }
 
   const isCentered = !step.targetKey;
 

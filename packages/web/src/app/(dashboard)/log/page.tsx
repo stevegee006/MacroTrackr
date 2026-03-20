@@ -153,7 +153,7 @@ export default function LogPage() {
       </div>
 
       {/* Date picker */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tutorial="log-date-nav">
         <button onClick={() => changeDate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -182,7 +182,7 @@ export default function LogPage() {
           {Object.keys(groupedLogs).length === 0 ? (
             <Card className="py-6 text-center text-gray-500 dark:text-gray-400">No food logged for this day.</Card>
           ) : (
-            <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
+            <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0" data-tutorial="log-entries">
             {Object.entries(groupedLogs).map(([mealType, items]) => (
               <div key={mealType} className="space-y-2">
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">

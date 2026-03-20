@@ -16,7 +16,6 @@ import { ACTIVITY_LABELS, GOAL_LABELS, MEAL_TYPE_LABELS } from '@macrotracker/sh
 import type { UserProfile, UserSettings, MealType, AiProvider } from '@macrotracker/shared';
 import Link from 'next/link';
 import { startRegistration } from '@simplewebauthn/browser';
-import { useRouter } from 'next/navigation';
 import { Activity, GraduationCap, HelpCircle, MessageSquare, Shield, Settings, Trash2, ExternalLink } from 'lucide-react';
 
 type Tab = 'biometrics' | 'security' | 'settings';
@@ -65,7 +64,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1" data-tutorial="profile-tab-bar">
         {([
           { key: 'biometrics' as Tab, label: 'Biometrics', icon: Activity },
           { key: 'security' as Tab, label: 'Security', icon: Shield },
@@ -1061,8 +1060,6 @@ function ExportCard() {
 // ─── Restart Tutorial Card ────────────────────────────────────
 
 function RestartTutorialCard() {
-  const router = useRouter();
-
   return (
     <Card className="space-y-3">
       <h3 className="font-semibold">App Tutorial</h3>
@@ -1073,11 +1070,7 @@ function RestartTutorialCard() {
         variant="outline"
         onClick={() => {
           localStorage.removeItem('macrotrackr-tutorial-complete');
-          router.push('/dashboard');
-          // Small delay to let navigation complete before triggering tutorial
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('tutorial-restart'));
-          }, 300);
+          window.dispatchEvent(new CustomEvent('tutorial-restart'));
         }}
         className="w-full"
       >

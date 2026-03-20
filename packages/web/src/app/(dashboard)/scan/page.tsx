@@ -64,7 +64,7 @@ export default function ScanPage() {
       <h1 className="text-xl font-bold">Add Food</h1>
 
       {/* Tab selector */}
-      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1" data-tutorial="scan-tab-selector">
         {TABS.map((tab) => (
           <button
             key={tab.key}
@@ -82,7 +82,9 @@ export default function ScanPage() {
 
       {/* Tab content */}
       {method === 'search' && !scannedFood && (
-        <FoodSearchForm onResult={handleFoodResult} />
+        <div data-tutorial="scan-search-area">
+          <FoodSearchForm onResult={handleFoodResult} />
+        </div>
       )}
 
       {method === 'barcode' && !scannedFood && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { TUTORIAL_STEPS } from '@/components/tutorial/tutorial-steps';
 
@@ -12,8 +12,6 @@ export function useTutorial() {
   const [isActive, setIsActive] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
-  const pathnameRef = useRef(pathname);
-  pathnameRef.current = pathname;
 
   // Auto-start on first visit (after a short delay for dashboard to load)
   useEffect(() => {
@@ -44,7 +42,7 @@ export function useTutorial() {
     if (!step) return;
 
     // If step has a route and we're not on it, navigate
-    if (step.route && pathnameRef.current !== step.route) {
+    if (step.route && pathname !== step.route) {
       setIsNavigating(true);
       router.push(step.route);
       return; // Wait for pathname to change, then re-run
@@ -52,6 +50,13 @@ export function useTutorial() {
 
     // If we have a target, poll for it to appear in DOM
     if (step.targetKey) {
+      // Check if element already exists (avoids unnecessary isNavigating flash)
+      const existing = document.querySelector(`[data-tutorial="${step.targetKey}"]`);
+      if (existing) {
+        setIsNavigating(false);
+        return;
+      }
+
       setIsNavigating(true);
       let cancelled = false;
       const deadline = Date.now() + 3000;

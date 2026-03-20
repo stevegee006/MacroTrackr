@@ -30,6 +30,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [authProviders, setAuthProviders] = useState<string[]>(['LOCAL']);
@@ -55,7 +56,7 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
     try {
-      const result = await login(email, password);
+      const result = await login(email, password, rememberMe);
       if (result.mustChangePassword) {
         router.push('/change-password');
       } else {
@@ -146,6 +147,16 @@ export default function LoginPage() {
           placeholder="Min 8 characters"
           required
         />
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:border-gray-600 dark:bg-gray-800"
+          />
+          <span className="text-sm text-gray-600 dark:text-gray-400">Keep me logged in</span>
+        </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

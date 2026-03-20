@@ -6,6 +6,7 @@ import { getAppSettings } from './app-config.service.js';
 import { env } from '../config/env.js';
 
 const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
+const REFRESH_TOKEN_TTL_REMEMBER = 30 * 24 * 60 * 60; // 30 days in seconds
 
 export async function registerUser(
   fastify: FastifyInstance,
@@ -39,7 +40,7 @@ export async function registerUser(
   return generateTokens(fastify, user.id, user.email, user.isAdmin);
 }
 
-export async function loginUser(fastify: FastifyInstance, email: string, password: string) {
+export async function loginUser(fastify: FastifyInstance, email: string, password: string, rememberMe?: boolean) {
   const user = await fastify.prisma.user.findUnique({
     where: { email },
     select: { id: true, email: true, passwordHash: true, authProvider: true, isAdmin: true, mustChangePassword: true },
@@ -67,7 +68,7 @@ export async function loginUser(fastify: FastifyInstance, email: string, passwor
     }
   }
 
-  const tokens = await generateTokens(fastify, user.id, user.email, isAdmin);
+  const tokens = await generateTokens(fastify, user.id, user.email, isAdmin, rememberMe);
   return { ...tokens, mustChangePassword: user.mustChangePassword ?? false };
 }
 
@@ -187,12 +188,13 @@ export async function generateTokensForPasskey(fastify: FastifyInstance, userId:
   return generateTokens(fastify, userId, email, isAdmin);
 }
 
-async function generateTokens(fastify: FastifyInstance, userId: string, email: string, isAdmin: boolean) {
+async function generateTokens(fastify: FastifyInstance, userId: string, email: string, isAdmin: boolean, rememberMe?: boolean) {
   const accessToken = fastify.jwt.sign({ sub: userId, email, isAdmin });
 
+  const ttl = rememberMe ? REFRESH_TOKEN_TTL_REMEMBER : REFRESH_TOKEN_TTL;
   const refreshToken = crypto.randomBytes(48).toString('hex');
   const tokenHash = hashToken(refreshToken);
-  await fastify.redis.set(`refresh:${tokenHash}`, userId, 'EX', REFRESH_TOKEN_TTL);
+  await fastify.redis.set(`refresh:${tokenHash}`, userId, 'EX', ttl);
 
   return { accessToken, refreshToken };
 }

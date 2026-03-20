@@ -26,6 +26,7 @@ export function AIFoodEstimateForm({ onResult }: AIFoodEstimateFormProps) {
           description,
           weightG: parseFloat(weightG),
         }),
+        timeout: 150_000, // 2.5 min — AI processing on slow connections
       }),
     onSuccess: (res) => {
       onResult(res.data);

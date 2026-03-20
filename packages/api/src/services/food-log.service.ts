@@ -187,6 +187,7 @@ export async function updateLogEntry(
   return fastify.prisma.foodLog.update({
     where: { id: logId },
     data: {
+      logDate: input.logDate ? new Date(input.logDate) : existing.logDate,
       mealType: input.mealType ?? existing.mealType,
       servingQty,
       servingSizeG,

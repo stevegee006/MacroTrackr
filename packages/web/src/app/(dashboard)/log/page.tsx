@@ -15,6 +15,7 @@ import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@macrotracker/shared';
 import Link from 'next/link';
 
 interface EditForm {
+  logDate: string;
   servingQty: string;
   servingSizeG: string;
   mealType: MealType;
@@ -72,8 +73,8 @@ export default function LogPage() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['food-log', date] });
-      queryClient.invalidateQueries({ queryKey: ['food-log-summary', date] });
+      queryClient.invalidateQueries({ queryKey: ['food-log'] });
+      queryClient.invalidateQueries({ queryKey: ['food-log-summary'] });
       setEditingId(null);
       setEditForm(null);
     },
@@ -82,6 +83,7 @@ export default function LogPage() {
   function startEditing(entry: FoodLogEntry) {
     setEditingId(entry.id);
     setEditForm({
+      logDate: typeof entry.logDate === 'string' ? entry.logDate.split('T')[0] : date,
       servingQty: entry.servingQty.toString(),
       servingSizeG: entry.servingSizeG.toString(),
       mealType: entry.mealType as MealType,
@@ -104,6 +106,7 @@ export default function LogPage() {
     if (!editForm) return;
 
     const data: Record<string, unknown> = {
+      logDate: editForm.logDate,
       servingQty: parseFloat(editForm.servingQty) || 1,
       servingSizeG: parseFloat(editForm.servingSizeG) || 100,
       mealType: editForm.mealType,
@@ -205,6 +208,17 @@ export default function LogPage() {
                           >
                             <X className="h-4 w-4" />
                           </button>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Date</label>
+                          <input
+                            type="date"
+                            value={editForm.logDate}
+                            max={addDays(todayString(), 7)}
+                            onChange={(e) => setEditForm({ ...editForm, logDate: e.target.value })}
+                            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                          />
                         </div>
 
                         <div className="flex gap-3">

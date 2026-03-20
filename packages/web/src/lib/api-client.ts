@@ -82,18 +82,19 @@ async function refreshAccessToken(): Promise<string | null> {
 
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit = {},
+  options: RequestInit & { timeout?: number } = {},
 ): Promise<T> {
   const baseUrl = getApiUrl();
   const url = `${baseUrl}${path}`;
+  const { timeout, ...fetchOptions } = options;
 
   const headers: Record<string, string> = {
-    ...(options.headers as Record<string, string>),
+    ...(fetchOptions.headers as Record<string, string>),
   };
 
   // Only set Content-Type for requests that have a body (avoids Fastify
   // JSON parse errors when POST/PUT is sent with an empty body)
-  if (options.body) {
+  if (fetchOptions.body) {
     headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
   }
 
@@ -101,13 +102,20 @@ export async function apiFetch<T>(
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
+  // Use AbortSignal.timeout for requests that may take long (e.g. AI vision)
+  const signal = timeout ? AbortSignal.timeout(timeout) : undefined;
+
   let res: Response;
   try {
     res = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       headers,
+      signal,
     });
-  } catch {
+  } catch (err: any) {
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+      throw new ApiError(0, 'TIMEOUT', 'Request timed out. Try again with a better connection.');
+    }
     throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the server. Check your connection and try again.');
   }
 
@@ -118,10 +126,14 @@ export async function apiFetch<T>(
       headers['Authorization'] = `Bearer ${newToken}`;
       try {
         res = await fetch(url, {
-          ...options,
+          ...fetchOptions,
           headers,
+          signal,
         });
-      } catch {
+      } catch (err: any) {
+        if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+          throw new ApiError(0, 'TIMEOUT', 'Request timed out. Try again with a better connection.');
+        }
         throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the server. Check your connection and try again.');
       }
     }

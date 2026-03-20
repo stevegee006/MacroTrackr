@@ -29,6 +29,7 @@ export function LabelScanner({ onResult, existingFoodId }: LabelScannerProps) {
       return apiFetch<{ data: FoodItem }>(url, {
         method: 'POST',
         body: JSON.stringify({ image }),
+        timeout: 150_000, // 2.5 min — AI vision + slow mobile upload
       });
     },
     onSuccess: (res) => {

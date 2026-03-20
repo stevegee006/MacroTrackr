@@ -10,6 +10,7 @@ export const createFoodLogSchema = z.object({
 });
 
 export const updateFoodLogSchema = z.object({
+  logDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   mealType: z.enum(['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK']).optional(),
   servingQty: z.number().positive().optional(),
   servingSizeG: z.number().positive().optional(),

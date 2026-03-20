@@ -84,7 +84,7 @@ async function openaiChat(
   maxTokens: number,
 ): Promise<AiResult> {
   const { default: OpenAI } = await import('openai');
-  const client = new OpenAI({ apiKey });
+  const client = new OpenAI({ apiKey, timeout: 120_000 });
 
   const completion = await client.chat.completions.create({
     model,
@@ -120,7 +120,7 @@ async function openaiVision(
   maxTokens: number,
 ): Promise<AiResult> {
   const { default: OpenAI } = await import('openai');
-  const client = new OpenAI({ apiKey });
+  const client = new OpenAI({ apiKey, timeout: 120_000 });
 
   const completion = await client.chat.completions.create({
     model,

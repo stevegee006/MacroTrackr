@@ -17,7 +17,7 @@ interface LoginResult {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<LoginResult>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<LoginResult>;
   loginWithTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   register: (email: string, password: string, displayName?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -66,10 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, [refreshUser]);
 
-  const login = async (email: string, password: string): Promise<LoginResult> => {
+  const login = async (email: string, password: string, rememberMe?: boolean): Promise<LoginResult> => {
     const res = await apiFetch<{ data: AuthTokens }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, rememberMe }),
     });
     setAccessToken(res.data.accessToken);
     setRefreshToken(res.data.refreshToken);

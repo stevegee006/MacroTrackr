@@ -45,7 +45,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
   fastify.post('/auth/login', { ...authRateLimit }, async (request, reply) => {
     const body = loginSchema.parse(request.body);
-    const result = await authService.loginUser(fastify, body.email, body.password);
+    const result = await authService.loginUser(fastify, body.email, body.password, body.rememberMe);
     reply.send({
       data: {
         accessToken: result.accessToken,

@@ -52,6 +52,8 @@ interface AdminFoodItem {
   proteinPer100g: number;
   carbsPer100g: number;
   fatPer100g: number;
+  fiberPer100g: number | null;
+  sugarPer100g: number | null;
   createdAt: string;
 }
 
@@ -562,6 +564,8 @@ function FoodItemEditForm({ item, onClose }: { item: AdminFoodItem; onClose: () 
     proteinPer100g: String(item.proteinPer100g),
     carbsPer100g: String(item.carbsPer100g),
     fatPer100g: String(item.fatPer100g),
+    fiberPer100g: item.fiberPer100g != null ? String(item.fiberPer100g) : '',
+    sugarPer100g: item.sugarPer100g != null ? String(item.sugarPer100g) : '',
   });
   const [error, setError] = useState('');
 
@@ -590,6 +594,8 @@ function FoodItemEditForm({ item, onClose }: { item: AdminFoodItem; onClose: () 
       proteinPer100g: parseFloat(form.proteinPer100g) || 0,
       carbsPer100g: parseFloat(form.carbsPer100g) || 0,
       fatPer100g: parseFloat(form.fatPer100g) || 0,
+      fiberPer100g: form.fiberPer100g ? parseFloat(form.fiberPer100g) : null,
+      sugarPer100g: form.sugarPer100g ? parseFloat(form.sugarPer100g) : null,
     });
   }
 
@@ -649,6 +655,22 @@ function FoodItemEditForm({ item, onClose }: { item: AdminFoodItem; onClose: () 
             step="0.1"
             value={form.fatPer100g}
             onChange={(e) => setForm({ ...form, fatPer100g: e.target.value })}
+          />
+          <Input
+            label="Fiber (g)"
+            type="number"
+            step="0.1"
+            placeholder="optional"
+            value={form.fiberPer100g}
+            onChange={(e) => setForm({ ...form, fiberPer100g: e.target.value })}
+          />
+          <Input
+            label="Sugar (g)"
+            type="number"
+            step="0.1"
+            placeholder="optional"
+            value={form.sugarPer100g}
+            onChange={(e) => setForm({ ...form, sugarPer100g: e.target.value })}
           />
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}

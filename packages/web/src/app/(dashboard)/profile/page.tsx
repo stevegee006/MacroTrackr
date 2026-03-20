@@ -17,7 +17,7 @@ import type { UserProfile, UserSettings, MealType, AiProvider } from '@macrotrac
 import Link from 'next/link';
 import { startRegistration } from '@simplewebauthn/browser';
 import { useRouter } from 'next/navigation';
-import { Activity, GraduationCap, HelpCircle, Shield, Settings, Trash2, ExternalLink } from 'lucide-react';
+import { Activity, GraduationCap, HelpCircle, MessageSquare, Shield, Settings, Trash2, ExternalLink } from 'lucide-react';
 
 type Tab = 'biometrics' | 'security' | 'settings';
 
@@ -931,6 +931,10 @@ function SettingsTab() {
       <div className="lg:col-span-2">
         <RestartTutorialCard />
       </div>
+
+      <div className="lg:col-span-2">
+        <FeedbackCard />
+      </div>
     </div>
   );
 }
@@ -1079,6 +1083,29 @@ function RestartTutorialCard() {
       >
         <GraduationCap className="h-4 w-4 mr-2" />
         Restart Tutorial
+      </Button>
+    </Card>
+  );
+}
+
+// ─── Feedback Card ────────────────────────────────────────────
+
+function FeedbackCard() {
+  return (
+    <Card className="space-y-3">
+      <h3 className="font-semibold">Send Feedback</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Found a bug or have a feature request? We&apos;d love to hear from you.
+      </p>
+      <Button
+        variant="outline"
+        onClick={() => {
+          window.location.href = 'mailto:macrotracker@geehive.com?subject=MacroTrackr Feedback';
+        }}
+        className="w-full"
+      >
+        <MessageSquare className="h-4 w-4 mr-2" />
+        Send Feedback
       </Button>
     </Card>
   );

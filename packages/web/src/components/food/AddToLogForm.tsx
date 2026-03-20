@@ -66,7 +66,7 @@ export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLog
           value={logDate}
           max={addDays(todayString(), 7)}
           onChange={(e) => setLogDate(e.target.value)}
-          className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+          className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 appearance-none [-webkit-appearance:none] [&::-webkit-date-and-time-value]:text-left"
         />
         {!isToday && (
           <p className={`text-xs mt-1 ${logDate > todayString() ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>

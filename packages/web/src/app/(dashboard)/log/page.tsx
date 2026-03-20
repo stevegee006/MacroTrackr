@@ -217,7 +217,7 @@ export default function LogPage() {
                             value={editForm.logDate}
                             max={addDays(todayString(), 7)}
                             onChange={(e) => setEditForm({ ...editForm, logDate: e.target.value })}
-                            className="block w-full max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 appearance-none [-webkit-appearance:none] [&::-webkit-date-and-time-value]:text-left"
                           />
                         </div>
 

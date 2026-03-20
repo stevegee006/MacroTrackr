@@ -1019,7 +1019,7 @@ function ExportCard() {
       <p className="text-sm text-gray-500 dark:text-gray-400">
         Download your food log entries as a CSV file.
       </p>
-      <div className="flex gap-2 items-end">
+      <div className="flex gap-2 items-end overflow-hidden">
         <div className="flex-1 min-w-0">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">From</label>
           <input
@@ -1027,7 +1027,7 @@ function ExportCard() {
             value={from}
             max={to}
             onChange={(e) => setFrom(e.target.value)}
-            className="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+            className="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 appearance-none [-webkit-appearance:none] [&::-webkit-date-and-time-value]:text-left"
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -1037,7 +1037,7 @@ function ExportCard() {
             value={to}
             max={todayString()}
             onChange={(e) => setTo(e.target.value)}
-            className="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+            className="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 appearance-none [-webkit-appearance:none] [&::-webkit-date-and-time-value]:text-left"
           />
         </div>
       </div>

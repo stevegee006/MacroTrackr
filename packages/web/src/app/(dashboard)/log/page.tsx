@@ -199,7 +199,7 @@ export default function LogPage() {
                     const fi = entry.foodItem;
 
                     return (
-                      <Card key={entry.id} className="space-y-3 py-3">
+                      <Card key={entry.id} className="space-y-3 py-3 overflow-hidden">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium truncate">{fi?.name}</p>
                           <button
@@ -210,14 +210,14 @@ export default function LogPage() {
                           </button>
                         </div>
 
-                        <div>
+                        <div className="min-w-0">
                           <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Date</label>
                           <input
                             type="date"
                             value={editForm.logDate}
                             max={addDays(todayString(), 7)}
                             onChange={(e) => setEditForm({ ...editForm, logDate: e.target.value })}
-                            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                            className="block w-full max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                           />
                         </div>
 

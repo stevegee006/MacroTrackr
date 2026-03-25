@@ -17,15 +17,27 @@ export async function getFoodByBarcode(fastify: FastifyInstance, barcode: string
   const redisKey = `off:${barcode}`;
   const redisCached = await fastify.redis.get(redisKey);
   if (redisCached) {
-    const parsed = JSON.parse(redisCached);
-    // Insert into DB from Redis cache
-    return fastify.prisma.foodItem.create({
-      data: {
-        barcode,
-        ...parsed,
-        source: 'OPENFOODFACTS',
-      },
-    });
+    const parsed = JSON.parse(redisCached) as Awaited<ReturnType<typeof lookupBarcode>>;
+    if (parsed) {
+      return fastify.prisma.foodItem.create({
+        data: {
+          barcode,
+          name: parsed.name,
+          brand: parsed.brand,
+          servingSizeG: parsed.servingSizeG,
+          caloriesPer100g: parsed.caloriesPer100g,
+          proteinPer100g: parsed.proteinPer100g,
+          carbsPer100g: parsed.carbsPer100g,
+          fatPer100g: parsed.fatPer100g,
+          fiberPer100g: parsed.fiberPer100g,
+          sugarPer100g: parsed.sugarPer100g,
+          sodiumPer100g: parsed.sodiumPer100g,
+          imageUrl: parsed.imageUrl,
+          source: 'OPENFOODFACTS',
+          offProductJson: parsed.rawJson as any,
+        },
+      });
+    }
   }
 
   // Fetch from OpenFoodFacts

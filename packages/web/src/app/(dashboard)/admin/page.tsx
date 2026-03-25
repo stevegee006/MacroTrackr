@@ -48,6 +48,7 @@ interface AdminFoodItem {
   brand: string | null;
   barcode: string | null;
   source: string;
+  servingSizeG: number;
   caloriesPer100g: number;
   proteinPer100g: number;
   carbsPer100g: number;
@@ -560,6 +561,7 @@ function FoodItemEditForm({ item, onClose }: { item: AdminFoodItem; onClose: () 
     name: item.name,
     brand: item.brand || '',
     barcode: item.barcode || '',
+    servingSizeG: String(item.servingSizeG),
     caloriesPer100g: String(item.caloriesPer100g),
     proteinPer100g: String(item.proteinPer100g),
     carbsPer100g: String(item.carbsPer100g),
@@ -590,6 +592,7 @@ function FoodItemEditForm({ item, onClose }: { item: AdminFoodItem; onClose: () 
       name: form.name,
       brand: form.brand || undefined,
       barcode: form.barcode || undefined,
+      servingSizeG: parseFloat(form.servingSizeG) || 100,
       caloriesPer100g: parseFloat(form.caloriesPer100g) || 0,
       proteinPer100g: parseFloat(form.proteinPer100g) || 0,
       carbsPer100g: parseFloat(form.carbsPer100g) || 0,
@@ -626,6 +629,14 @@ function FoodItemEditForm({ item, onClose }: { item: AdminFoodItem; onClose: () 
             onChange={(e) => setForm({ ...form, barcode: e.target.value })}
           />
         </div>
+        <Input
+          label="Serving Size (g)"
+          type="number"
+          step="0.1"
+          min="1"
+          value={form.servingSizeG}
+          onChange={(e) => setForm({ ...form, servingSizeG: e.target.value })}
+        />
         <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Macros per 100g</p>
         <div className="grid grid-cols-2 gap-3">
           <Input

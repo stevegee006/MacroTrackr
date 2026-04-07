@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, getApiUrl, getAccessToken } from '@/lib/api-client';
 import { todayString, addDays, parseDateLocal } from '@/lib/utils';
 import { MacroRings } from '@/components/log/MacroRings';
+import { MacroBreakdownModal } from '@/components/log/MacroBreakdownModal';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -33,6 +34,7 @@ export default function LogPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [activeMacro, setActiveMacro] = useState<'calories' | 'protein' | 'carbs' | 'fat' | null>(null);
   const queryClient = useQueryClient();
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -175,7 +177,7 @@ export default function LogPage() {
         <>
           {summary?.data && (
             <Card>
-              <MacroRings totals={summary.data.totals} targets={summary.data.targets} />
+              <MacroRings totals={summary.data.totals} targets={summary.data.targets} onRingTap={setActiveMacro} />
             </Card>
           )}
 
@@ -183,11 +185,27 @@ export default function LogPage() {
             <Card className="py-6 text-center text-gray-500 dark:text-gray-400">No food logged for this day.</Card>
           ) : (
             <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0" data-tutorial="log-entries">
-            {Object.entries(groupedLogs).map(([mealType, items]) => (
+            {Object.entries(groupedLogs).map(([mealType, items]) => {
+              const mealCals = items.reduce((s, e) => s + e.totalCalories, 0);
+              const mealP = items.reduce((s, e) => s + e.totalProteinG, 0);
+              const mealC = items.reduce((s, e) => s + e.totalCarbsG, 0);
+              const mealF = items.reduce((s, e) => s + e.totalFatG, 0);
+              return (
               <div key={mealType} className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
-                  {MEAL_TYPE_LABELS[mealType as keyof typeof MEAL_TYPE_LABELS]}
-                </h3>
+                <div className="flex items-baseline justify-between">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                    {MEAL_TYPE_LABELS[mealType as keyof typeof MEAL_TYPE_LABELS]}
+                  </h3>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                    {Math.round(mealCals)} kcal
+                    {' · '}
+                    <span className="text-red-500">P:{Math.round(mealP)}g</span>
+                    {' '}
+                    <span className="text-amber-500">C:{Math.round(mealC)}g</span>
+                    {' '}
+                    <span className="text-blue-500">F:{Math.round(mealF)}g</span>
+                  </p>
+                </div>
                 {items.map((entry) => {
                   const isEditing = editingId === entry.id;
 
@@ -402,8 +420,17 @@ export default function LogPage() {
                   );
                 })}
               </div>
-            ))}
+            );})}
             </div>
+          )}
+          {activeMacro && summary?.data && (
+            <MacroBreakdownModal
+              macro={activeMacro}
+              entries={logs}
+              totals={summary.data.totals}
+              targets={summary.data.targets}
+              onClose={() => setActiveMacro(null)}
+            />
           )}
         </>
       )}

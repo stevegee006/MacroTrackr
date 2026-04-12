@@ -6,9 +6,8 @@ import { cn } from '@/lib/utils';
 import { navItems } from './nav-items';
 
 const TUTORIAL_KEYS: Record<string, string> = {
-  '/scan': 'nav-add',
   '/log': 'nav-log',
-  '/macro-plan': 'nav-macros',
+  '/nutrition': 'nav-macros',
   '/profile': 'nav-profile',
 };
 

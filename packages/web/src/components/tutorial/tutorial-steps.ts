@@ -70,12 +70,20 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     placement: 'top',
   },
   {
+    id: 'trends',
+    title: 'Your Trends',
+    body: "See your 7-day nutrition trends at a glance — average calories, protein, and logging consistency. Color-coded bars show if you're hitting your targets.",
+    targetKey: null,
+    placement: 'center',
+    route: '/trends',
+  },
+  {
     id: 'macro-plan',
     title: 'AI Macro & Meal Plans',
     body: "Get AI-powered macro targets based on your goals, and generate full meal plans tailored to your preferences. Note: AI features (including label scanning) are BYOAI — bring your own AI key. You can set up your key in Profile \u2192 Settings.",
     targetKey: 'macro-plan-header',
     placement: 'bottom',
-    route: '/macro-plan',
+    route: '/nutrition',
   },
   {
     id: 'profile-settings',

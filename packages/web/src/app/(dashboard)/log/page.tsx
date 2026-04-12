@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
-import { ChevronLeft, ChevronRight, Trash2, Pencil, Loader2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2, Pencil, Loader2, X, Plus } from 'lucide-react';
 import type { DailySummary, FoodLogEntry, MealType } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@macrotracker/shared';
 import Link from 'next/link';
@@ -149,9 +149,6 @@ export default function LogPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Food Log</h1>
-        <Link href={isToday ? '/scan' : `/scan?date=${date}`} className="text-sm text-emerald-600 hover:underline">
-          + Add Food
-        </Link>
       </div>
 
       {/* Date picker */}
@@ -421,6 +418,15 @@ export default function LogPage() {
                 })}
               </div>
             );})}
+            <Link
+              href={isToday ? '/scan' : `/scan?date=${date}`}
+              className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-emerald-500/30 py-3 text-sm text-emerald-600 dark:text-emerald-400 hover:border-emerald-500/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all active:scale-[0.98]"
+            >
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800">
+                <Plus className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <span className="font-medium">Add food to log</span>
+            </Link>
             </div>
           )}
           {activeMacro && summary?.data && (
@@ -434,6 +440,14 @@ export default function LogPage() {
           )}
         </>
       )}
+
+      <Link
+        href={isToday ? '/scan' : `/scan?date=${date}`}
+        className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 shadow-lg shadow-emerald-500/30 transition-all active:scale-95 hover:bg-emerald-700 lg:hidden"
+        aria-label="Add food"
+      >
+        <Plus className="h-6 w-6 text-white" />
+      </Link>
     </div>
   );
 }

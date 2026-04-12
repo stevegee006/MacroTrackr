@@ -109,7 +109,7 @@ export function MacroRings({ totals, targets, onRingTap }: MacroRingsProps) {
           label="Calories"
           unit=""
           color="#10b981"
-          size={92}
+          size={72}
           bgStroke={bgStroke}
           onTap={onRingTap ? () => onRingTap('calories') : undefined}
         />

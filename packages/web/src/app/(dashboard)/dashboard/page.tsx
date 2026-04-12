@@ -10,7 +10,7 @@ import type { MacroKey } from '@/components/log/MacroRings';
 import { MacroBreakdownModal } from '@/components/log/MacroBreakdownModal';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
-import { Share2, Check, Flame } from 'lucide-react';
+import { Share2, Check, Flame, PlusCircle } from 'lucide-react';
 import type { DailySummary, FoodLogEntry } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS } from '@macrotracker/shared';
 import Link from 'next/link';
@@ -235,13 +235,28 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        <div className="space-y-4 mt-6 lg:mt-0">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Today&apos;s Log</h2>
-            <Link href="/scan" className="text-sm text-emerald-600 hover:underline">
-              + Add Food
-            </Link>
-          </div>
+        {s && (
+          <Link
+            href="/scan"
+            className="flex items-center gap-3 rounded-2xl bg-emerald-600 dark:bg-emerald-600 px-4 py-3 transition-all active:scale-[0.98] hover:bg-emerald-700 mt-6 lg:mt-0 lg:col-span-2"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 flex-shrink-0">
+              <PlusCircle className="h-4 w-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Log a meal</p>
+              <p className="text-xs text-emerald-100">
+                {Math.max(0, Math.round(s.targets.calories - s.totals.calories)).toLocaleString()} kcal remaining
+              </p>
+            </div>
+            <svg className="h-4 w-4 text-white/60 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </Link>
+        )}
+
+        <div className="space-y-4 mt-6 lg:mt-0 lg:col-span-2">
+          <h2 className="text-lg font-semibold">Today&apos;s Log</h2>
 
           {logs.length === 0 ? (
             <Card className="py-10 text-center">

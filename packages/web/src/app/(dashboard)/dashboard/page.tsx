@@ -424,24 +424,24 @@ export default function DashboardPage() {
               {logs.map((entry) => (
                 <Card key={entry.id} className="flex gap-0 p-0 overflow-hidden">
                   <div className={`w-1.5 shrink-0 rounded-l-2xl ${MEAL_COLORS[entry.mealType] ?? 'bg-gray-400'}`} />
-                  <div className="flex-1 min-w-0 py-2.5 px-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{entry.foodItem?.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {MEAL_TYPE_LABELS[entry.mealType]} &middot; {entry.servingQty} &times; {entry.servingSizeG}g
-                        </p>
-                      </div>
-                      <p className="text-sm font-semibold shrink-0">{Math.round(entry.totalCalories)} kcal</p>
+                  <div className="flex-1 min-w-0 py-2.5 px-3 flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{entry.foodItem?.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {MEAL_TYPE_LABELS[entry.mealType]} &middot; {entry.servingQty} &times; {entry.servingSizeG}g
+                      </p>
                     </div>
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-800/30 px-1.5 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400">
+                    <div className="flex flex-wrap gap-1 shrink-0 justify-end">
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/30 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                        {Math.round(entry.totalCalories)}cal
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-800/30 px-1.5 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400">
                         P:{Math.round(entry.totalProteinG)}g
                       </span>
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-800/30 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-800/30 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
                         C:{Math.round(entry.totalCarbsG)}g
                       </span>
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/30 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
+                      <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/30 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
                         F:{Math.round(entry.totalFatG)}g
                       </span>
                     </div>

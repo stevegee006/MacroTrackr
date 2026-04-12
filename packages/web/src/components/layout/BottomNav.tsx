@@ -10,7 +10,17 @@ export function BottomNav() {
   const centerIndex = Math.floor(navItems.length / 2);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200/80 bg-white/90 backdrop-blur-md pb-safe dark:border-gray-700/60 dark:bg-gray-900/90 lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md pb-safe dark:bg-gray-900/90 lg:hidden">
+      {/* Top border with notch for center button */}
+      <svg className="absolute top-0 left-0 w-full h-[1px] overflow-visible" preserveAspectRatio="none">
+        <defs>
+          <clipPath id="nav-notch">
+            <rect x="0" y="0" width="100%" height="20" />
+            <circle cx="50%" cy="-8" r="32" />
+          </clipPath>
+        </defs>
+        <line x1="0" y1="0" x2="100%" y2="0" className="stroke-gray-200/80 dark:stroke-gray-700/60" strokeWidth="1" clipPath="url(#nav-notch)" />
+      </svg>
       <div className="flex items-end justify-around px-2">
         {navItems.map(({ href, label, icon: Icon }, index) => {
           const isActive = pathname === href || pathname.startsWith(href + '/');

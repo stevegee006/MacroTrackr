@@ -202,6 +202,34 @@ export default function TrendsPage() {
         targetKey="proteinG"
         label="Protein"
       />
+
+      <BarChart
+        data={rangeData}
+        valueKey="carbsG"
+        targetKey="carbsG"
+        label="Carbs"
+      />
+
+      <BarChart
+        data={rangeData}
+        valueKey="fatG"
+        targetKey="fatG"
+        label="Fat"
+      />
+
+      <BarChart
+        data={rangeData}
+        valueKey="fiberG"
+        targetKey="fiberG"
+        label="Fiber"
+      />
+
+      <BarChart
+        data={rangeData}
+        valueKey="sugarG"
+        targetKey="sugarG"
+        label="Sugar"
+      />
     </div>
   );
 }

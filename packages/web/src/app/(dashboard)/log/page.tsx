@@ -136,6 +136,13 @@ export default function LogPage() {
   const maxDate = addDays(todayString(), 7);
   const isMaxDate = date >= maxDate;
 
+  const MEAL_COLORS: Record<string, string> = {
+    BREAKFAST: 'bg-amber-500',
+    LUNCH: 'bg-blue-500',
+    DINNER: 'bg-purple-500',
+    SNACK: 'bg-rose-400',
+  };
+
   const groupedLogs = MEAL_TYPES.reduce(
     (acc, type) => {
       const items = logs.filter((l) => l.mealType === type);
@@ -187,34 +194,16 @@ export default function LogPage() {
               const mealP = items.reduce((s, e) => s + e.totalProteinG, 0);
               const mealC = items.reduce((s, e) => s + e.totalCarbsG, 0);
               const mealF = items.reduce((s, e) => s + e.totalFatG, 0);
-              return (
-              <div key={mealType} className="space-y-2">
-                <div className="flex items-baseline justify-between">
-                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
-                    {MEAL_TYPE_LABELS[mealType as keyof typeof MEAL_TYPE_LABELS]}
-                  </h3>
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                    {Math.round(mealCals)} kcal
-                    {' · '}
-                    <span className="text-red-500">P:{Math.round(mealP)}g</span>
-                    {' '}
-                    <span className="text-amber-500">C:{Math.round(mealC)}g</span>
-                    {' '}
-                    <span className="text-blue-500">F:{Math.round(mealF)}g</span>
-                  </p>
-                </div>
-                {items.map((entry) => {
-                  const isEditing = editingId === entry.id;
 
-                  if (isEditing && editForm) {
-                    // Compute preview macros (only shown when NOT in override mode)
-                    const qty = parseFloat(editForm.servingQty) || 0;
-                    const sizeG = parseFloat(editForm.servingSizeG) || 0;
-                    const factor = (sizeG * qty) / 100;
-                    const fi = entry.foodItem;
-
-                    return (
-                      <Card key={entry.id} className="space-y-3 py-3 overflow-hidden">
+              // Check if any item in this meal is being edited
+              const editingEntry = items.find((e) => editingId === e.id);
+              if (editingEntry && editForm) {
+                const qty = parseFloat(editForm.servingQty) || 0;
+                const sizeG = parseFloat(editForm.servingSizeG) || 0;
+                const factor = (sizeG * qty) / 100;
+                const fi = editingEntry.foodItem;
+                return (
+                  <Card key={mealType} className="space-y-3 py-3 overflow-hidden">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium truncate">{fi?.name}</p>
                           <button
@@ -353,7 +342,7 @@ export default function LogPage() {
                         <div className="flex gap-2">
                           <Button
                             size="sm"
-                            onClick={() => saveEdit(entry.id)}
+                            onClick={() => saveEdit(editingEntry.id)}
                             isLoading={updateMutation.isPending}
                             className="flex-1"
                           >
@@ -367,57 +356,80 @@ export default function LogPage() {
                         {updateMutation.isError && (
                           <p className="text-xs text-red-600">Failed to update entry</p>
                         )}
-                      </Card>
-                    );
-                  }
+                  </Card>
+                );
+              }
 
-                  // Display mode
-                  return (
-                    <Card key={entry.id} className="flex items-center justify-between py-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{entry.foodItem?.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {entry.servingQty} x {entry.servingSizeG}g &middot;{' '}
-                          {Math.round(entry.totalCalories)} kcal
-                        </p>
-                        <p className="text-xs mt-0.5">
-                          <span className="text-red-500">P:{Math.round(entry.totalProteinG)}g</span>
-                          {' '}
-                          <span className="text-amber-500">C:{Math.round(entry.totalCarbsG)}g</span>
-                          {' '}
-                          <span className="text-blue-500">F:{Math.round(entry.totalFatG)}g</span>
-                          {entry.totalFiberG != null && (
-                            <>{' '}<span className="text-green-600">Fb:{Math.round(entry.totalFiberG)}g</span></>
-                          )}
-                          {entry.totalSugarG != null && (
-                            <>{' '}<span className="text-purple-500">S:{Math.round(entry.totalSugarG)}g</span></>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex items-center ml-2">
-                        <button
-                          onClick={() => startEditing(entry)}
-                          className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-emerald-600 active:text-emerald-700 transition-colors rounded-lg hover:bg-emerald-50"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => deleteMutation.mutate(entry.id)}
-                          disabled={deletingId === entry.id}
-                          className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg hover:bg-red-50 active:bg-red-100"
-                        >
-                          {deletingId === entry.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            );})}
+              // Display mode — single card per meal with color indicator
+              return (
+                <Card key={mealType} className="flex gap-0 p-0 overflow-hidden">
+                  <div className={`w-1.5 shrink-0 rounded-l-2xl ${MEAL_COLORS[mealType] ?? 'bg-gray-400'}`} />
+                  <div className="flex-1 min-w-0 py-3 px-3">
+                    {/* Meal header */}
+                    <div className="flex items-baseline justify-between mb-2">
+                      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                        {MEAL_TYPE_LABELS[mealType as keyof typeof MEAL_TYPE_LABELS]}
+                      </h3>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                        {Math.round(mealCals)} kcal
+                        {' · '}
+                        <span className="text-red-500">P:{Math.round(mealP)}g</span>
+                        {' '}
+                        <span className="text-amber-500">C:{Math.round(mealC)}g</span>
+                        {' '}
+                        <span className="text-blue-500">F:{Math.round(mealF)}g</span>
+                      </p>
+                    </div>
+                    {/* Items */}
+                    <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {items.map((entry) => (
+                        <div key={entry.id} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{entry.foodItem?.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {entry.servingQty} &times; {entry.servingSizeG}g &middot;{' '}
+                              {Math.round(entry.totalCalories)} kcal
+                            </p>
+                            <p className="text-xs mt-0.5">
+                              <span className="text-red-500">P:{Math.round(entry.totalProteinG)}g</span>
+                              {' '}
+                              <span className="text-amber-500">C:{Math.round(entry.totalCarbsG)}g</span>
+                              {' '}
+                              <span className="text-blue-500">F:{Math.round(entry.totalFatG)}g</span>
+                              {entry.totalFiberG != null && (
+                                <>{' '}<span className="text-green-600">Fb:{Math.round(entry.totalFiberG)}g</span></>
+                              )}
+                              {entry.totalSugarG != null && (
+                                <>{' '}<span className="text-purple-500">S:{Math.round(entry.totalSugarG)}g</span></>
+                              )}
+                            </p>
+                          </div>
+                          <div className="flex items-center ml-2 shrink-0">
+                            <button
+                              onClick={() => startEditing(entry)}
+                              className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-gray-400 hover:text-emerald-600 active:text-emerald-700 transition-colors rounded-lg"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => deleteMutation.mutate(entry.id)}
+                              disabled={deletingId === entry.id}
+                              className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-gray-400 hover:text-red-500 active:text-red-600 transition-colors rounded-lg"
+                            >
+                              {deletingId === entry.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
             <Link
               href={isToday ? '/scan' : `/scan?date=${date}`}
               className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-emerald-500/30 py-3 text-sm text-emerald-600 dark:text-emerald-400 hover:border-emerald-500/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all active:scale-[0.98]"
@@ -443,7 +455,7 @@ export default function LogPage() {
 
       <Link
         href={isToday ? '/scan' : `/scan?date=${date}`}
-        className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 shadow-lg shadow-emerald-500/30 transition-all active:scale-95 hover:bg-emerald-700 lg:hidden"
+        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 shadow-lg shadow-emerald-500/30 transition-all active:scale-95 hover:bg-emerald-700 lg:hidden"
         aria-label="Add food"
       >
         <Plus className="h-6 w-6 text-white" />

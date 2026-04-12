@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { BarcodeScanner } from '@/components/scanner/BarcodeScanner';
 import { LabelScanner } from '@/components/scanner/LabelScanner';
@@ -32,9 +32,23 @@ export default function ScanPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const dateParam = searchParams.get('date') ?? undefined;
+  const foodIdParam = searchParams.get('foodId');
   const [method, setMethod] = useState<InputMethod>('search');
   const [scannedFood, setScannedFood] = useState<FoodItem | null>(null);
   const [added, setAdded] = useState(false);
+
+  // Pre-populate from foodId query param (quick-add from dashboard)
+  const { data: prefetchedFood } = useQuery({
+    queryKey: ['food', foodIdParam],
+    queryFn: () => apiFetch<{ data: FoodItem }>(`/food/${foodIdParam}`),
+    enabled: !!foodIdParam && !scannedFood,
+  });
+
+  useEffect(() => {
+    if (prefetchedFood?.data && !scannedFood) {
+      setScannedFood(prefetchedFood.data);
+    }
+  }, [prefetchedFood, scannedFood]);
 
   const lookup = useMutation({
     mutationFn: (barcode: string) =>

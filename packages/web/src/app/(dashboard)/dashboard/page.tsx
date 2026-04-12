@@ -10,7 +10,7 @@ import type { MacroKey } from '@/components/log/MacroRings';
 import { MacroBreakdownModal } from '@/components/log/MacroBreakdownModal';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
-import { Share2, Check, Flame, PlusCircle } from 'lucide-react';
+import { Share2, Check, Flame, Plus } from 'lucide-react';
 import type { DailySummary, FoodLogEntry } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS } from '@macrotracker/shared';
 import Link from 'next/link';
@@ -235,28 +235,41 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {s && (
-          <Link
-            href="/scan"
-            className="flex items-center gap-3 rounded-2xl bg-emerald-600 dark:bg-emerald-600 px-4 py-3 transition-all active:scale-[0.98] hover:bg-emerald-700 mt-6 lg:mt-0 lg:col-span-2"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 flex-shrink-0">
-              <PlusCircle className="h-4 w-4 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Log a meal</p>
-              <p className="text-xs text-emerald-100">
-                {Math.max(0, Math.round(s.targets.calories - s.totals.calories)).toLocaleString()} kcal remaining
-              </p>
-            </div>
-            <svg className="h-4 w-4 text-white/60 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </Link>
-        )}
-
         <div className="space-y-4 mt-6 lg:mt-0 lg:col-span-2">
           <h2 className="text-lg font-semibold">Today&apos;s Log</h2>
+
+          {/* Quick-add strip */}
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+            <Link
+              href="/scan"
+              className="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-emerald-500/40 px-4 py-2.5 shrink-0 hover:border-emerald-500/70 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all active:scale-95"
+            >
+              <Plus className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">Add food</span>
+            </Link>
+            {(() => {
+              // Deduplicate recent foods by foodItem id
+              const seen = new Set<string>();
+              const recentFoods: typeof logs = [];
+              for (const entry of logs) {
+                const fid = entry.foodItem?.id;
+                if (fid && !seen.has(fid)) {
+                  seen.add(fid);
+                  recentFoods.push(entry);
+                }
+              }
+              return recentFoods.map((entry) => (
+                <Link
+                  key={entry.foodItem!.id}
+                  href={`/scan?foodId=${entry.foodItem!.id}`}
+                  className="flex flex-col justify-center rounded-xl bg-gray-100 dark:bg-gray-800 px-4 py-2.5 shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all active:scale-95"
+                >
+                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">{entry.foodItem?.name}</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">{Math.round(entry.totalCalories)} kcal</span>
+                </Link>
+              ));
+            })()}
+          </div>
 
           {logs.length === 0 ? (
             <Card className="py-10 text-center">

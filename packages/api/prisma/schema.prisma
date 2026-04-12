@@ -22,12 +22,14 @@ model User {
   createdAt           DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
-  profile    UserProfile?
-  settings   UserSettings?
-  foodLogs   FoodLog[]
-  macroPlans MacroPlan[]
-  mealPlans  MealPlan[]
-  passkeys   Passkey[]
+  profile          UserProfile?
+  settings         UserSettings?
+  foodLogs         FoodLog[]
+  macroPlans       MacroPlan[]
+  mealPlans        MealPlan[]
+  passkeys         Passkey[]
+  bodyMeasurements BodyMeasurement[]
+  progressPhotos   ProgressPhoto[]
 
   @@map("users")
 }
@@ -47,6 +49,7 @@ model UserProfile {
   heightCm       Float?         @map("height_cm")
   weightKg       Float?         @map("weight_kg")
   age            Int?
+  birthDate      DateTime?      @map("birth_date") @db.Date
   sex            Sex?
   activityLevel  ActivityLevel? @map("activity_level")
   goal           Goal?
@@ -132,6 +135,49 @@ model Passkey {
 
   @@index([userId])
   @@map("passkeys")
+}
+
+// ─── Body Measurements ──────────────────────────────────────────
+
+model BodyMeasurement {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  measuredAt DateTime @map("measured_at") @db.Date
+  waist      Float?
+  hip        Float?
+  abdomen    Float?
+  chest      Float?
+  thighR     Float?   @map("thigh_r")
+  thighL     Float?   @map("thigh_l")
+  bicepR     Float?   @map("bicep_r")
+  bicepL     Float?   @map("bicep_l")
+  neck       Float?
+  calfR      Float?   @map("calf_r")
+  calfL      Float?   @map("calf_l")
+  shoulder   Float?
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, measuredAt])
+  @@map("body_measurements")
+}
+
+// ─── Progress Photos ────────────────────────────────────────────
+
+model ProgressPhoto {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  filePath  String   @map("file_path") @db.Text
+  takenAt   DateTime @map("taken_at") @db.Date
+  notes     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, takenAt])
+  @@map("progress_photos")
 }
 
 // ─── Food Items ──────────────────────────────────────────────────

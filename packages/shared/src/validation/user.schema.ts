@@ -16,6 +16,7 @@ export const updateProfileSchema = z.object({
   heightCm: z.number().positive().max(300).nullable().optional(),
   weightKg: z.number().positive().max(500).nullable().optional(),
   age: z.number().int().positive().max(150).nullable().optional(),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   sex: z.enum(['MALE', 'FEMALE', 'OTHER']).nullable().optional(),
   activityLevel: z
     .enum(['SEDENTARY', 'LIGHTLY_ACTIVE', 'MODERATELY_ACTIVE', 'VERY_ACTIVE', 'EXTREMELY_ACTIVE'])
@@ -86,6 +87,41 @@ export const convertRecipeSchema = z.object({
   mealType: z.enum(['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK']).default('DINNER'),
 });
 
+export const createBodyMeasurementSchema = z.object({
+  measuredAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  waist: z.number().positive().max(500).nullable().optional(),
+  hip: z.number().positive().max(500).nullable().optional(),
+  abdomen: z.number().positive().max(500).nullable().optional(),
+  chest: z.number().positive().max(500).nullable().optional(),
+  thighR: z.number().positive().max(200).nullable().optional(),
+  thighL: z.number().positive().max(200).nullable().optional(),
+  bicepR: z.number().positive().max(100).nullable().optional(),
+  bicepL: z.number().positive().max(100).nullable().optional(),
+  neck: z.number().positive().max(100).nullable().optional(),
+  calfR: z.number().positive().max(100).nullable().optional(),
+  calfL: z.number().positive().max(100).nullable().optional(),
+  shoulder: z.number().positive().max(300).nullable().optional(),
+  notes: z.string().max(500).optional(),
+});
+
+export const measurementQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
+export const createProgressPhotoSchema = z.object({
+  takenAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  notes: z.string().max(500).optional(),
+  image: z.string().min(1),
+});
+
+export const progressPhotoQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(50).default(20),
+});
+
+export type CreateBodyMeasurementInput = z.infer<typeof createBodyMeasurementSchema>;
+export type CreateProgressPhotoInput = z.infer<typeof createProgressPhotoSchema>;
 export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
 export type AppSettingsInput = z.infer<typeof appSettingsSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

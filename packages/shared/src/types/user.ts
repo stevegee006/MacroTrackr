@@ -27,6 +27,7 @@ export interface UserProfile {
   heightCm: number | null;
   weightKg: number | null;
   age: number | null;
+  birthDate: string | null;
   sex: Sex | null;
   activityLevel: ActivityLevel | null;
   goal: Goal | null;
@@ -34,6 +35,34 @@ export interface UserProfile {
   targetProteinG: number | null;
   targetCarbsG: number | null;
   targetFatG: number | null;
+}
+
+export interface BodyMeasurement {
+  id: string;
+  userId: string;
+  measuredAt: string;
+  waist: number | null;
+  hip: number | null;
+  abdomen: number | null;
+  chest: number | null;
+  thighR: number | null;
+  thighL: number | null;
+  bicepR: number | null;
+  bicepL: number | null;
+  neck: number | null;
+  calfR: number | null;
+  calfL: number | null;
+  shoulder: number | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface ProgressPhotoMeta {
+  id: string;
+  userId: string;
+  takenAt: string;
+  notes: string | null;
+  createdAt: string;
 }
 
 export interface UserSettings {

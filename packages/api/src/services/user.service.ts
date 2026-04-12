@@ -3,6 +3,16 @@ import type { UpdateProfileInput, UpdateSettingsInput } from '@macrotracker/shar
 import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { encrypt } from '../utils/encryption.js';
 
+function calculateAge(birthDate: Date): number {
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export async function getUser(fastify: FastifyInstance, userId: string) {
   const user = await fastify.prisma.user.findUnique({
     where: { id: userId },
@@ -45,6 +55,10 @@ export async function updateUser(
 export async function getProfile(fastify: FastifyInstance, userId: string) {
   const profile = await fastify.prisma.userProfile.findUnique({ where: { userId } });
   if (!profile) throw new NotFoundError('User profile');
+  // Auto-compute age from birthDate if set
+  if (profile.birthDate) {
+    return { ...profile, age: calculateAge(profile.birthDate) };
+  }
   return profile;
 }
 
@@ -53,10 +67,23 @@ export async function updateProfile(
   userId: string,
   data: UpdateProfileInput,
 ) {
+  const writeData: Record<string, unknown> = { ...data };
+
+  // Convert birthDate string to Date and compute age
+  if (data.birthDate !== undefined) {
+    if (data.birthDate) {
+      const bd = new Date(data.birthDate + 'T00:00:00Z');
+      writeData.birthDate = bd;
+      writeData.age = calculateAge(bd);
+    } else {
+      writeData.birthDate = null;
+    }
+  }
+
   return fastify.prisma.userProfile.upsert({
     where: { userId },
-    update: data,
-    create: { userId, ...data },
+    update: writeData,
+    create: { userId, ...writeData },
   });
 }
 

@@ -16,9 +16,12 @@ import { ACTIVITY_LABELS, GOAL_LABELS, MEAL_TYPE_LABELS } from '@macrotracker/sh
 import type { UserProfile, UserSettings, MealType, AiProvider } from '@macrotracker/shared';
 import Link from 'next/link';
 import { startRegistration } from '@simplewebauthn/browser';
-import { Activity, GraduationCap, HelpCircle, MessageSquare, Shield, Settings, Trash2, ExternalLink } from 'lucide-react';
+import { Activity, Camera, GraduationCap, HelpCircle, MessageSquare, Ruler, Shield, Settings, Trash2, ExternalLink } from 'lucide-react';
+import { compressImage } from '@/lib/image-utils';
+import { getApiUrl, getAccessToken } from '@/lib/api-client';
+import type { BodyMeasurement, ProgressPhotoMeta } from '@macrotracker/shared';
 
-type Tab = 'biometrics' | 'security' | 'settings';
+type Tab = 'biometrics' | 'security' | 'settings' | 'measurements' | 'photos';
 
 // Conversion helpers
 const CM_PER_INCH = 2.54;
@@ -67,6 +70,8 @@ export default function ProfilePage() {
       <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1" data-tutorial="profile-tab-bar">
         {([
           { key: 'biometrics' as Tab, label: 'Biometrics', icon: Activity },
+          { key: 'measurements' as Tab, label: 'Measurements', icon: Ruler },
+          { key: 'photos' as Tab, label: 'Photos', icon: Camera },
           { key: 'security' as Tab, label: 'Security', icon: Shield },
           { key: 'settings' as Tab, label: 'Settings', icon: Settings },
         ]).map(({ key, label, icon: Icon }) => (
@@ -86,6 +91,8 @@ export default function ProfilePage() {
       </div>
 
       {tab === 'biometrics' && <BiometricsTab />}
+      {tab === 'measurements' && <MeasurementsTab />}
+      {tab === 'photos' && <PhotosTab />}
       {tab === 'security' && <SecurityTab />}
       {tab === 'settings' && <SettingsTab />}
 
@@ -120,6 +127,8 @@ function BiometricsTab() {
     inches: '',
     weightLbs: '',
     age: '',
+    birthDate: '' as string,
+    useBirthDate: false,
     sex: '' as string,
     activityLevel: '' as string,
     goal: '' as string,
@@ -139,6 +148,8 @@ function BiometricsTab() {
         inches: heightCm ? inches.toString() : '',
         weightLbs: weightKg ? kgToLbs(weightKg).toString() : '',
         age: p.age?.toString() || '',
+        birthDate: p.birthDate ?? '',
+        useBirthDate: !!p.birthDate,
         sex: p.sex || '',
         activityLevel: p.activityLevel || '',
         goal: p.goal || '',
@@ -172,14 +183,23 @@ function BiometricsTab() {
       weightKg = form.weightKg ? parseFloat(form.weightKg) : null;
     }
 
-    mutation.mutate({
+    const body: Record<string, unknown> = {
       heightCm,
       weightKg,
-      age: form.age ? parseInt(form.age) : null,
       sex: form.sex || null,
       activityLevel: form.activityLevel || null,
       goal: form.goal || null,
-    });
+    };
+
+    if (form.useBirthDate && form.birthDate) {
+      body.birthDate = form.birthDate;
+      body.age = null;
+    } else {
+      body.age = form.age ? parseInt(form.age) : null;
+      body.birthDate = null;
+    }
+
+    mutation.mutate(body);
   }
 
   if (isLoading) {
@@ -243,12 +263,46 @@ function BiometricsTab() {
                 />
               </>
             )}
-            <Input
-              label="Age"
-              type="number"
-              value={form.age}
-              onChange={(e) => setForm({ ...form, age: e.target.value })}
-            />
+            {form.useBirthDate ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Birthday</label>
+                <input
+                  type="date"
+                  value={form.birthDate}
+                  max={todayString()}
+                  onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 appearance-none [-webkit-appearance:none] [&::-webkit-date-and-time-value]:text-left"
+                />
+                {form.birthDate && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Age: {Math.floor((Date.now() - new Date(form.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, useBirthDate: false, birthDate: '' })}
+                  className="mt-1 text-xs text-emerald-600 hover:underline dark:text-emerald-400"
+                >
+                  Use manual age instead
+                </button>
+              </div>
+            ) : (
+              <div>
+                <Input
+                  label="Age"
+                  type="number"
+                  value={form.age}
+                  onChange={(e) => setForm({ ...form, age: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, useBirthDate: true, age: '' })}
+                  className="mt-1 text-xs text-emerald-600 hover:underline dark:text-emerald-400"
+                >
+                  Use birthday instead
+                </button>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sex</label>
               <select
@@ -934,6 +988,501 @@ function SettingsTab() {
       <div className="lg:col-span-2">
         <FeedbackCard />
       </div>
+    </div>
+  );
+}
+
+// ─── Measurements Tab ─────────────────────────────────────────
+
+const MEASUREMENT_FIELDS = [
+  { key: 'waist', label: 'Waist' },
+  { key: 'hip', label: 'Hip' },
+  { key: 'abdomen', label: 'Abdomen' },
+  { key: 'chest', label: 'Chest' },
+  { key: 'thighR', label: 'Thigh (R)' },
+  { key: 'thighL', label: 'Thigh (L)' },
+  { key: 'bicepR', label: 'Bicep (R)' },
+  { key: 'bicepL', label: 'Bicep (L)' },
+  { key: 'neck', label: 'Neck' },
+  { key: 'calfR', label: 'Calf (R)' },
+  { key: 'calfL', label: 'Calf (L)' },
+  { key: 'shoulder', label: 'Shoulder' },
+] as const;
+
+function MeasurementsTab() {
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+
+  const { data: settingsData } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => apiFetch<{ data: { preferredUnits: string } }>('/users/me/settings'),
+  });
+
+  const isImperial = settingsData?.data?.preferredUnits === 'IMPERIAL';
+  const unitLabel = isImperial ? 'in' : 'cm';
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['measurements', page],
+    queryFn: () =>
+      apiFetch<{ data: BodyMeasurement[]; meta: { page: number; totalPages: number } }>(
+        `/measurements?page=${page}&limit=10`,
+      ),
+  });
+
+  const [measuredAt, setMeasuredAt] = useState(todayString());
+  const [notes, setNotes] = useState('');
+  const [fields, setFields] = useState<Record<string, string>>(() =>
+    Object.fromEntries(MEASUREMENT_FIELDS.map(({ key }) => [key, ''])),
+  );
+
+  const createMutation = useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      apiFetch('/measurements', { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['measurements'] });
+      setFields(Object.fromEntries(MEASUREMENT_FIELDS.map(({ key }) => [key, ''])));
+      setNotes('');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/measurements/${id}`, { method: 'DELETE' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['measurements'] }),
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const body: Record<string, unknown> = { measuredAt };
+    if (notes.trim()) body.notes = notes.trim();
+
+    for (const { key } of MEASUREMENT_FIELDS) {
+      const val = fields[key];
+      if (val) {
+        const num = parseFloat(val);
+        body[key] = isImperial ? Math.round(num * CM_PER_INCH * 100) / 100 : num;
+      }
+    }
+
+    createMutation.mutate(body);
+  }
+
+  // Convert cm values for display when imperial
+  function displayVal(cmVal: number | null): string {
+    if (cmVal == null) return '-';
+    if (isImperial) return (cmVal * IN_PER_CM).toFixed(1);
+    return cmVal.toFixed(1);
+  }
+
+  const measurements = data?.data ?? [];
+  const latest = measurements[0];
+  const totalPages = data?.meta?.totalPages ?? 1;
+
+  // Ratios from latest measurement
+  const waistToHip =
+    latest?.waist && latest?.hip ? (latest.waist / latest.hip).toFixed(2) : null;
+  const chestToHip =
+    latest?.chest && latest?.hip ? (latest.chest / latest.hip).toFixed(2) : null;
+  const waistToChest =
+    latest?.waist && latest?.chest ? (latest.waist / latest.chest).toFixed(2) : null;
+
+  if (isLoading) {
+    return <div className="flex justify-center py-12"><Spinner /></div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Add measurement form */}
+      <Card>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <h3 className="font-semibold">New Measurement</h3>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+            <input
+              type="date"
+              value={measuredAt}
+              max={todayString()}
+              onChange={(e) => setMeasuredAt(e.target.value)}
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 appearance-none [-webkit-appearance:none] [&::-webkit-date-and-time-value]:text-left"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {MEASUREMENT_FIELDS.map(({ key, label }) => (
+              <Input
+                key={key}
+                label={`${label} (${unitLabel})`}
+                type="number"
+                step="0.1"
+                value={fields[key]}
+                onChange={(e) => setFields({ ...fields, [key]: e.target.value })}
+              />
+            ))}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional notes..."
+              rows={2}
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+            />
+          </div>
+          <Button type="submit" isLoading={createMutation.isPending} className="w-full">
+            Save Measurement
+          </Button>
+          {createMutation.isSuccess && (
+            <p className="text-sm text-emerald-600 text-center">Measurement saved!</p>
+          )}
+          {createMutation.isError && (
+            <p className="text-sm text-red-600 text-center">
+              {(createMutation.error as any)?.message || 'Failed to save measurement'}
+            </p>
+          )}
+        </form>
+      </Card>
+
+      {/* Ratios card */}
+      {(waistToHip || chestToHip || waistToChest) && (
+        <Card>
+          <h3 className="font-semibold mb-3">Body Ratios (latest)</h3>
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            {waistToHip && (
+              <div>
+                <p className="text-gray-500 dark:text-gray-400">Waist : Hip</p>
+                <p className="font-medium text-lg">{waistToHip}</p>
+              </div>
+            )}
+            {chestToHip && (
+              <div>
+                <p className="text-gray-500 dark:text-gray-400">Chest : Hip</p>
+                <p className="font-medium text-lg">{chestToHip}</p>
+              </div>
+            )}
+            {waistToChest && (
+              <div>
+                <p className="text-gray-500 dark:text-gray-400">Waist : Chest</p>
+                <p className="font-medium text-lg">{waistToChest}</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* History */}
+      {measurements.length > 0 ? (
+        <Card>
+          <h3 className="font-semibold mb-3">History</h3>
+          <div className="space-y-3">
+            {measurements.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-start justify-between rounded-lg border border-gray-200 dark:border-gray-700 p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">
+                    {new Date(m.measuredAt).toLocaleDateString()}
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {m.waist != null && <span>Waist: {displayVal(m.waist)}{unitLabel}</span>}
+                    {m.hip != null && <span>Hip: {displayVal(m.hip)}{unitLabel}</span>}
+                    {m.chest != null && <span>Chest: {displayVal(m.chest)}{unitLabel}</span>}
+                    {m.neck != null && <span>Neck: {displayVal(m.neck)}{unitLabel}</span>}
+                    {m.shoulder != null && <span>Shoulder: {displayVal(m.shoulder)}{unitLabel}</span>}
+                  </div>
+                  {m.notes && (
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">{m.notes}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => deleteMutation.mutate(m.id)}
+                  disabled={deleteMutation.isPending}
+                  className="ml-2 p-2 text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Prev
+              </Button>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </Card>
+      ) : (
+        <Card>
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+            No measurements recorded yet. Add your first one above!
+          </p>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── Photos Tab ───────────────────────────────────────────────
+
+function PhotoCard({ photo, onDelete }: { photo: ProgressPhotoMeta; onDelete: (id: string) => void }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadImage() {
+      try {
+        const res = await fetch(getApiUrl() + '/progress-photos/' + photo.id + '/image', {
+          headers: { Authorization: 'Bearer ' + getAccessToken() },
+        });
+        if (!res.ok) throw new Error('Failed to load image');
+        const blob = await res.blob();
+        if (!cancelled) {
+          setImageUrl(URL.createObjectURL(blob));
+        }
+      } catch {
+        // silently fail
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadImage();
+    return () => {
+      cancelled = true;
+    };
+  }, [photo.id]);
+
+  useEffect(() => {
+    return () => {
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
+    };
+  }, [imageUrl]);
+
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="aspect-square bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+        {loading ? (
+          <Spinner />
+        ) : imageUrl ? (
+          <img src={imageUrl} alt="Progress" className="w-full h-full object-cover" />
+        ) : (
+          <p className="text-xs text-gray-400">Failed to load</p>
+        )}
+      </div>
+      <div className="p-2">
+        <p className="text-xs font-medium">{new Date(photo.takenAt).toLocaleDateString()}</p>
+        {photo.notes && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{photo.notes}</p>
+        )}
+        {confirmDelete ? (
+          <div className="flex gap-1 mt-1">
+            <button
+              onClick={() => onDelete(photo.id)}
+              className="text-xs text-red-600 hover:underline"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="text-xs text-gray-500 hover:underline"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="mt-1 p-1 text-gray-400 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PhotosTab() {
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [takenAt, setTakenAt] = useState(todayString());
+  const [photoNotes, setPhotoNotes] = useState('');
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['progress-photos', page],
+    queryFn: () =>
+      apiFetch<{ data: ProgressPhotoMeta[]; meta: { page: number; totalPages: number } }>(
+        `/progress-photos?page=${page}&limit=12`,
+      ),
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: (body: { takenAt: string; notes?: string; image: string }) =>
+      apiFetch('/progress-photos', { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['progress-photos'] });
+      setImageBase64(null);
+      setPhotoNotes('');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/progress-photos/${id}`, { method: 'DELETE' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['progress-photos'] }),
+  });
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCompressing(true);
+    try {
+      const base64 = await compressImage(file);
+      setImageBase64(base64);
+    } catch {
+      // ignore
+    } finally {
+      setCompressing(false);
+    }
+  }
+
+  function handleUpload(e: React.FormEvent) {
+    e.preventDefault();
+    if (!imageBase64) return;
+    const body: { takenAt: string; notes?: string; image: string } = {
+      takenAt,
+      image: imageBase64,
+    };
+    if (photoNotes.trim()) body.notes = photoNotes.trim();
+    uploadMutation.mutate(body);
+  }
+
+  const photos = data?.data ?? [];
+  const totalPages = data?.meta?.totalPages ?? 1;
+
+  if (isLoading) {
+    return <div className="flex justify-center py-12"><Spinner /></div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Upload form */}
+      <Card>
+        <form onSubmit={handleUpload} className="space-y-4">
+          <h3 className="font-semibold">Upload Progress Photo</h3>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Photo</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-950 dark:file:text-emerald-300"
+            />
+            {compressing && <p className="text-xs text-gray-400 mt-1">Compressing image...</p>}
+            {imageBase64 && !compressing && (
+              <img src={imageBase64} alt="Preview" className="mt-2 h-32 rounded-lg object-cover" />
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+            <input
+              type="date"
+              value={takenAt}
+              max={todayString()}
+              onChange={(e) => setTakenAt(e.target.value)}
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 appearance-none [-webkit-appearance:none] [&::-webkit-date-and-time-value]:text-left"
+            />
+          </div>
+          <Input
+            label="Notes (optional)"
+            value={photoNotes}
+            onChange={(e) => setPhotoNotes(e.target.value)}
+            placeholder="e.g. Front pose, morning"
+          />
+          <Button
+            type="submit"
+            isLoading={uploadMutation.isPending}
+            disabled={!imageBase64 || compressing}
+            className="w-full"
+          >
+            Upload Photo
+          </Button>
+          {uploadMutation.isSuccess && (
+            <p className="text-sm text-emerald-600 text-center">Photo uploaded!</p>
+          )}
+          {uploadMutation.isError && (
+            <p className="text-sm text-red-600 text-center">
+              {(uploadMutation.error as any)?.message || 'Failed to upload photo'}
+            </p>
+          )}
+        </form>
+      </Card>
+
+      {/* Gallery */}
+      {photos.length > 0 ? (
+        <div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {photos.map((photo) => (
+              <PhotoCard
+                key={photo.id}
+                photo={photo}
+                onDelete={(id) => deleteMutation.mutate(id)}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Prev
+              </Button>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <Card>
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+            No progress photos yet. Upload your first one above!
+          </p>
+        </Card>
+      )}
     </div>
   );
 }

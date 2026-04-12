@@ -15,6 +15,8 @@ import foodLogRoutes from './routes/food-log/index.js';
 import macroPlanRoutes from './routes/macro-plan/index.js';
 import mealPlanRoutes from './routes/meal-plan/index.js';
 import adminRoutes from './routes/admin/index.js';
+import measurementRoutes from './routes/measurements/index.js';
+import progressPhotoRoutes from './routes/progress-photos/index.js';
 import oauthRoutes from './routes/auth/oauth.js';
 import ssoRoutes from './routes/auth/sso.js';
 import passkeyRoutes from './routes/auth/passkey.js';
@@ -85,6 +87,8 @@ export async function buildApp() {
       await api.register(macroPlanRoutes);
       await api.register(mealPlanRoutes);
       await api.register(adminRoutes);
+      await api.register(measurementRoutes);
+      await api.register(progressPhotoRoutes);
     },
     { prefix: '/api/v1' },
   );

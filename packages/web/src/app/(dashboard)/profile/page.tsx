@@ -67,10 +67,10 @@ export default function ProfilePage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1" data-tutorial="profile-tab-bar">
+      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1 overflow-x-auto scrollbar-none" data-tutorial="profile-tab-bar">
         {([
-          { key: 'biometrics' as Tab, label: 'Biometrics', icon: Activity },
-          { key: 'measurements' as Tab, label: 'Measurements', icon: Ruler },
+          { key: 'biometrics' as Tab, label: 'Bio', icon: Activity },
+          { key: 'measurements' as Tab, label: 'Measure', icon: Ruler },
           { key: 'photos' as Tab, label: 'Photos', icon: Camera },
           { key: 'security' as Tab, label: 'Security', icon: Shield },
           { key: 'settings' as Tab, label: 'Settings', icon: Settings },
@@ -78,14 +78,15 @@ export default function ProfilePage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1 rounded-md py-2 px-2 text-xs font-medium transition-colors shrink-0 ${
               tab === key
                 ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
           >
-            <Icon className="h-4 w-4" />
-            {label}
+            <Icon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{label}</span>
+            <span className="sm:hidden">{label}</span>
           </button>
         ))}
       </div>

@@ -147,7 +147,7 @@ function BiometricsTab() {
         inches: heightCm ? inches.toString() : '',
         weightLbs: weightKg ? kgToLbs(weightKg).toString() : '',
         age: p.age?.toString() || '',
-        birthDate: p.birthDate ?? '',
+        birthDate: p.birthDate ? p.birthDate.slice(0, 10) : '',
         useBirthDate: !!p.birthDate,
         sex: p.sex || '',
         activityLevel: p.activityLevel || '',

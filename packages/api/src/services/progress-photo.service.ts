@@ -64,7 +64,7 @@ export async function listPhotos(
     }),
     fastify.prisma.progressPhoto.count({ where: { userId } }),
   ]);
-  return { items, total, page, limit };
+  return { data: items, meta: { page, totalPages: Math.ceil(total / limit) || 1 } };
 }
 
 export async function getPhotoImage(

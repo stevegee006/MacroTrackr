@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/providers/AuthProvider';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { SidebarNav } from '@/components/layout/SidebarNav';
@@ -12,6 +12,7 @@ import { useTutorial } from '@/hooks/useTutorial';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const tutorial = useTutorial();
 
   useEffect(() => {
@@ -19,6 +20,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.replace('/login');
     }
   }, [user, isLoading, router]);
+
+  // Scroll to top on route change to prevent stale scroll position
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   if (isLoading) {
     return (

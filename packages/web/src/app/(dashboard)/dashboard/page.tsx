@@ -229,9 +229,6 @@ export default function DashboardPage() {
               {shared ? <Check className="h-4 w-4 text-emerald-500" /> : <Share2 className="h-4 w-4" />}
             </button>
             <MacroRings totals={s.totals} targets={s.targets} onRingTap={setActiveMacro} />
-            <div className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
-              {s.totals.calories} / {s.targets.calories} kcal
-            </div>
           </Card>
         )}
 

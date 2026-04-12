@@ -34,7 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen lg:flex">
       <SidebarNav />
       <div className="flex-1 lg:pl-64">
-        <main className="mx-auto max-w-lg lg:max-w-5xl px-4 lg:px-8 pt-safe-6 pb-20 lg:pb-6">{children}</main>
+        <main className="mx-auto max-w-lg lg:max-w-5xl px-4 lg:px-8 pt-safe-6 pb-28 lg:pb-6">{children}</main>
       </div>
       <BottomNav />
       <TutorialOverlay {...tutorial} />

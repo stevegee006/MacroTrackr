@@ -430,15 +430,6 @@ export default function LogPage() {
                 </Card>
               );
             })}
-            <Link
-              href={isToday ? '/scan' : `/scan?date=${date}`}
-              className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-emerald-500/30 py-3 text-sm text-emerald-600 dark:text-emerald-400 hover:border-emerald-500/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all active:scale-[0.98]"
-            >
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800">
-                <Plus className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <span className="font-medium">Add food to log</span>
-            </Link>
             </div>
           )}
           {activeMacro && summary?.data && (

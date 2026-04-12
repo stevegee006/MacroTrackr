@@ -1,20 +1,38 @@
 # MacroTrackr
 
-A full-stack macro nutrition tracker with barcode scanning, AI-powered meal planning, and daily food logging. Scan a barcode or search for food, log what you eat, and let AI generate personalized macro and meal plans based on your profile.
+A self-hosted, privacy-first macro nutrition tracker PWA with barcode scanning, multi-provider AI integration, and daily food logging. Scan a barcode or search for food, log what you eat, and let AI generate personalized macro and meal plans based on your profile.
 
-Built as a **pnpm monorepo** with a Next.js frontend and Fastify API, deployable as a Docker Compose stack.
+Built as a **pnpm monorepo** with a Next.js frontend and Fastify API, deployable as a Docker Compose stack. Installable as a Progressive Web App on mobile and desktop.
 
 ## Features
 
-- **Barcode Scanning** - Scan food with your phone camera or enter barcodes manually. Product data pulled from OpenFoodFacts.
-- **Food Logging** - Log meals by type (breakfast, lunch, dinner, snack) with adjustable serving sizes. Daily macro totals update in real time.
-- **Macro Rings Dashboard** - Visual progress rings for calories, protein, carbs, and fat against your daily targets.
-- **AI Macro Plans** - Generate personalized calorie and macro targets using GPT-4o-mini based on your height, weight, age, sex, activity level, and goal. Or create plans manually.
+### Core Tracking
+- **Barcode Scanning** - Scan food with your phone camera or enter barcodes manually. Product data pulled from OpenFoodFacts and USDA FoodData Central.
+- **Food Logging** - Log meals by type (breakfast, lunch, dinner, snack) with adjustable serving sizes and +/- stepper buttons. Daily macro totals update in real time.
+- **Macro Rings Dashboard** - Interactive progress rings for calories, protein, carbs, and fat against your daily targets. Tap any ring to see a per-food breakdown sorted by meal or by total contribution. Protein ring turns green when the goal is met.
+- **Per-Meal Totals** - Food log view shows macro subtotals for each meal section alongside tappable macro breakdown rings.
+- **Fuzzy Search** - Search saved foods by name or brand. Special characters are stripped for flexible matching (e.g. "MoBettahs" finds "Mo'Bettahs").
+
+### AI-Powered
+- **AI Macro Plans** - Generate personalized calorie and macro targets using OpenAI, Anthropic, or Google Gemini based on your height, weight, age, sex, activity level, and goal. Or create plans manually.
 - **AI Meal Plans** - Generate structured 1, 3, or 7-day meal plans with recipes, ingredients, prep times, and per-meal macro breakdowns.
-- **Editable Nutrition** - Edit any food item's nutrition data with a per-serving or per-100g input toggle.
+- **AI Label Scanning** - Photograph a nutrition label and let AI extract the data automatically.
+- **AI Food Estimation** - Describe a food item and get AI-estimated macros.
+- **BYOAI (Bring Your Own AI)** - Users supply their own API key for OpenAI, Anthropic, or Google Gemini. Keys encrypted at rest with AES-256-GCM.
+
+### User Experience
+- **Progressive Web App** - Installable on mobile and desktop with offline shell caching via service worker. Includes iOS splash screens and Android install prompts.
+- **Guided Tutorial** - Multi-page onboarding tutorial walks new users through scanning, searching, logging, and setting up macro plans. Restartable from settings.
+- **Editable Nutrition** - Edit any food item's nutrition data including serving size, fiber, and sugar via admin panel.
 - **Imperial & Metric** - Switch between unit systems in settings; the profile page adapts automatically.
+- **Dark Mode** - System-aware dark mode with manual toggle.
+- **Food Log Export** - Export your food log data from settings.
+- **Feedback Button** - Send feedback directly from the settings page.
+
+### Auth & Security
 - **JWT Auth + Google OAuth** - Local email/password registration with refresh tokens, or sign in with Google.
-- **User-Provided API Keys** - Users supply their own OpenAI API key, encrypted at rest with AES-256-GCM.
+- **Refresh Tokens** - Stored in Redis with SHA-256 hashing and 7-day TTL.
+- **Encrypted API Keys** - User-provided AI keys encrypted with AES-256-GCM server-side.
 
 ## Tech Stack
 
@@ -22,9 +40,11 @@ Built as a **pnpm monorepo** with a Next.js frontend and Fastify API, deployable
 |-------|------------|
 | Frontend | Next.js 15 (App Router), React 19, Tailwind CSS 4, TanStack Query v5 |
 | Backend | Fastify 5, Prisma 6, PostgreSQL 17, Redis 7 |
-| AI | OpenAI SDK (GPT-4o-mini for macros, GPT-4o for meal plans) |
-| Barcode | html5-qrcode (camera PWA), OpenFoodFacts API v2 |
+| AI | OpenAI, Anthropic, Google Gemini (user-provided keys, multi-provider) |
+| Food Data | OpenFoodFacts API v2, USDA FoodData Central |
+| Barcode | html5-qrcode (camera PWA + manual entry) |
 | Auth | JWT access/refresh tokens, Google OAuth via @fastify/oauth2 |
+| PWA | @serwist/next (service worker, precaching, offline shell) |
 | Monorepo | pnpm workspaces, Turborepo |
 | Deploy | Docker Compose, GitHub Actions for Docker Hub publishing |
 
@@ -38,14 +58,17 @@ MacroTracker/
 │   │   ├── prisma/      #   Prisma schema & migrations
 │   │   └── src/
 │   │       ├── plugins/ #   Auth, Prisma, Redis plugins
-│   │       ├── routes/  #   auth, users, food, food-log, macro-plan, meal-plan
-│   │       └── services/#   Business logic layer
+│   │       ├── routes/  #   auth, users, food, food-log, macro-plan, meal-plan, admin
+│   │       ├── services/#   Business logic layer
+│   │       └── utils/   #   Errors, encryption, logging, helpers
 │   └── web/             # @macrotracker/web   - Next.js frontend (port 3000)
 │       └── src/
 │           ├── app/     #   (auth) and (dashboard) route groups
-│           ├── components/  # UI, scanner, food, log, plan components
+│           ├── components/  # UI, scanner, food, log, plan, tutorial components
+│           ├── hooks/   #   useTutorial, custom hooks
 │           ├── lib/     #   API client, auth helpers, utils
-│           └── providers/   # AuthProvider, QueryProvider
+│           ├── providers/   # AuthProvider, QueryProvider, ThemeProvider
+│           └── sw.ts    #   Service worker (Serwist)
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
 └── turbo.json
@@ -243,11 +266,16 @@ All authenticated endpoints require a `Bearer` token in the `Authorization` head
 ### Food
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/food/barcode/:barcode` | Lookup by barcode (checks DB, then OpenFoodFacts) |
-| GET | `/api/v1/food/search?q=` | Search food items by name |
+| GET | `/api/v1/food/barcode/:barcode` | Lookup by barcode (checks DB, Redis cache, then OpenFoodFacts) |
+| GET | `/api/v1/food/search?q=` | Search saved foods by name or brand (fuzzy, strips special chars) |
+| GET | `/api/v1/food/search/external?q=` | Search USDA FoodData Central |
+| POST | `/api/v1/food/import/usda` | Import a USDA food into local DB |
 | GET | `/api/v1/food/:id` | Get food item by ID |
 | POST | `/api/v1/food` | Create manual food item |
 | PATCH | `/api/v1/food/:id` | Update food item nutrition |
+| POST | `/api/v1/food/scan-label` | AI-extract nutrition from a label photo |
+| POST | `/api/v1/food/:id/scan-label` | Re-scan label to update existing food |
+| POST | `/api/v1/food/estimate` | AI-estimate macros from a text description |
 
 ### Food Log
 | Method | Endpoint | Description |
@@ -287,9 +315,9 @@ Seven models managed by Prisma:
 
 - **User** - Auth credentials, display name, OAuth provider
 - **UserProfile** - Height, weight, age, sex, activity level, goal, macro targets
-- **UserSettings** - Encrypted OpenAI API key, preferred units, dark mode
-- **FoodItem** - Nutrition per 100g, barcode, source (OpenFoodFacts or manual)
-- **FoodLog** - Daily entries with pre-computed totals, grouped by meal type
+- **UserSettings** - Encrypted AI API key, preferred AI provider, units, dark mode
+- **FoodItem** - Nutrition per 100g, barcode, brand, source (OpenFoodFacts, USDA, manual, label scan, AI estimate)
+- **FoodLog** - Daily entries with pre-computed totals, grouped by meal type (breakfast, lunch, dinner, snack)
 - **MacroPlan** - AI or manual calorie/macro targets with activation support
 - **MealPlan** - Structured JSON with daily meals, ingredients, macros, and instructions
 

@@ -366,19 +366,16 @@ export default function LogPage() {
                   <div className={`w-1.5 shrink-0 rounded-l-2xl ${MEAL_COLORS[mealType] ?? 'bg-gray-400'}`} />
                   <div className="flex-1 min-w-0 py-3 px-3">
                     {/* Meal header */}
-                    <div className="flex items-baseline justify-between mb-2">
+                    <div className="flex items-center justify-between mb-2">
                       <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
                         {MEAL_TYPE_LABELS[mealType as keyof typeof MEAL_TYPE_LABELS]}
                       </h3>
-                      <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                        {Math.round(mealCals)} kcal
-                        {' · '}
-                        <span className="text-red-500">P:{Math.round(mealP)}g</span>
-                        {' '}
-                        <span className="text-amber-500">C:{Math.round(mealC)}g</span>
-                        {' '}
-                        <span className="text-blue-500">F:{Math.round(mealF)}g</span>
-                      </p>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{Math.round(mealCals)} kcal</span>
+                        <span className="inline-flex items-center rounded-full bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-800/30 px-1.5 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400">P:{Math.round(mealP)}g</span>
+                        <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-800/30 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">C:{Math.round(mealC)}g</span>
+                        <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/30 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">F:{Math.round(mealF)}g</span>
+                      </div>
                     </div>
                     {/* Items */}
                     <div className="divide-y divide-gray-100 dark:divide-gray-800">

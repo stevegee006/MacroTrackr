@@ -59,20 +59,85 @@ function drawRingToCanvas(
   ctx.fillText(display, cx, cy);
 }
 
-function generateShareImage(totals: DailySummary['totals'], targets: DailySummary['targets']): Promise<Blob> {
+function drawPill(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  text: string,
+  dotColor: string,
+  labelColor: string,
+  valueColor: string,
+  bgColor: string,
+  borderColor: string,
+  label: string,
+  value: string,
+) {
+  const font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  const boldFont = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.font = boldFont;
+  const labelW = ctx.measureText(label).width;
+  ctx.font = font;
+  const valueW = ctx.measureText(value).width;
+  const pillW = 10 + 6 + labelW + 6 + valueW + 12; // dot + gaps + padding
+  const pillH = 24;
+  const pillX = x - pillW / 2;
+  const pillY = y - pillH / 2;
+  const r = pillH / 2;
+
+  // Background + border
+  ctx.beginPath();
+  ctx.moveTo(pillX + r, pillY);
+  ctx.lineTo(pillX + pillW - r, pillY);
+  ctx.arc(pillX + pillW - r, pillY + r, r, -Math.PI / 2, Math.PI / 2);
+  ctx.lineTo(pillX + r, pillY + pillH);
+  ctx.arc(pillX + r, pillY + r, r, Math.PI / 2, -Math.PI / 2);
+  ctx.closePath();
+  ctx.fillStyle = bgColor;
+  ctx.fill();
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Dot
+  let cx = pillX + 10;
+  ctx.beginPath();
+  ctx.arc(cx, y, 3, 0, Math.PI * 2);
+  ctx.fillStyle = dotColor;
+  ctx.fill();
+  cx += 8;
+
+  // Label (bold)
+  ctx.font = boldFont;
+  ctx.fillStyle = labelColor;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, cx, y);
+  cx += labelW + 4;
+
+  // Value
+  ctx.font = font;
+  ctx.fillStyle = valueColor;
+  ctx.fillText(value, cx, y);
+}
+
+function generateShareImage(totals: DailySummary['totals'], targets: DailySummary['targets'], streak: number): Promise<Blob> {
   return new Promise((resolve) => {
-    const w = 600, h = 320;
+    const dpr = 3; // High DPI for crisp rendering
+    const w = 600, h = 380;
     const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
     const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
 
     // Background
     ctx.fillStyle = '#030712';
     ctx.fillRect(0, 0, w, h);
 
-    const ringRadius = 40;
-    const ringY = 110;
+    const ringRadius = 44;
+    const ringY = 100;
     const gap = 130;
     const startX = (w - gap * 3) / 2;
     const bgRing = '#374151';
@@ -86,41 +151,99 @@ function generateShareImage(totals: DailySummary['totals'], targets: DailySummar
 
     // Title
     ctx.fillStyle = '#f3f4f6';
-    ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText("Today's Macros", w / 2, 40);
+    ctx.fillText("Today's Macros", w / 2, 36);
 
     rings.forEach((r, i) => {
       const cx = startX + i * gap;
       drawRingToCanvas(ctx, cx, ringY, ringRadius, r.value, r.max, r.color, r.targetColor, bgRing);
 
       // Value / target
+      const isOver = r.value > r.max && r.max > 0;
       ctx.fillStyle = '#d1d5db';
-      ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${Math.round(r.value)}/${Math.round(r.max)}${r.unit}`, cx, ringY + ringRadius + 24);
+      const valStr = `${Math.round(r.value)}`;
+      const maxStr = `/${Math.round(r.max)}${r.unit}`;
+      const valW = ctx.measureText(valStr).width;
+      ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      const maxW = ctx.measureText(maxStr).width;
+      const totalW = valW + maxW;
+      const startXPos = cx - totalW / 2;
+
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = isOver ? '#ef4444' : '#e5e7eb';
+      ctx.fillText(valStr, startXPos, ringY + ringRadius + 22);
+      ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillStyle = '#9ca3af';
+      ctx.fillText(maxStr, startXPos + valW, ringY + ringRadius + 22);
 
       // Label
+      ctx.textAlign = 'center';
       ctx.fillStyle = '#9ca3af';
       ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      ctx.fillText(r.label, cx, ringY + ringRadius + 42);
+      ctx.fillText(r.label, cx, ringY + ringRadius + 40);
     });
 
-    // Fiber / Sugar row
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`Fiber: ${totals.fiberG}/${targets.fiberG}g    Sugar: ${totals.sugarG}/${targets.sugarG}g`, w / 2, 240);
+    // Divider line
+    const dividerY = ringY + ringRadius + 56;
+    ctx.strokeStyle = '#1f2937';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(40, dividerY);
+    ctx.lineTo(w - 40, dividerY);
+    ctx.stroke();
 
-    // Calorie total
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillText(`${totals.calories} / ${targets.calories} kcal`, w / 2, 270);
+    // Fiber & Sugar pills
+    const pillY = dividerY + 24;
+    const pillGap = 130;
+    drawPill(ctx, w / 2 - pillGap / 2, pillY, '', '#22c55e', '#15803d', '#9ca3af', 'rgba(34,197,94,0.08)', 'rgba(34,197,94,0.15)', 'Fiber', `${totals.fiberG}/${targets.fiberG}g`);
+    drawPill(ctx, w / 2 + pillGap / 2, pillY, '', '#a855f7', '#7e22ce', '#9ca3af', 'rgba(168,85,247,0.08)', 'rgba(168,85,247,0.15)', 'Sugar', `${totals.sugarG}/${targets.sugarG}g`);
+
+    // Streak pill (if applicable)
+    if (streak > 0) {
+      const streakY = pillY + 32;
+      const streakText = `${streak} day streak`;
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      const streakW = ctx.measureText(streakText).width + 36;
+      const streakH = 24;
+      const sx = w / 2 - streakW / 2;
+      const sr = streakH / 2;
+
+      ctx.beginPath();
+      ctx.moveTo(sx + sr, streakY - sr);
+      ctx.lineTo(sx + streakW - sr, streakY - sr);
+      ctx.arc(sx + streakW - sr, streakY, sr, -Math.PI / 2, Math.PI / 2);
+      ctx.lineTo(sx + sr, streakY + sr);
+      ctx.arc(sx + sr, streakY, sr, Math.PI / 2, -Math.PI / 2);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(249,115,22,0.08)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(249,115,22,0.2)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Flame emoji substitute (orange circle)
+      ctx.beginPath();
+      ctx.arc(sx + 14, streakY, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#f97316';
+      ctx.fill();
+
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillStyle = '#c2410c';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(streakText, sx + 24, streakY);
+    }
 
     // Branding
     ctx.fillStyle = '#4b5563';
     ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillText('macrotrackr', w / 2, 300);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('macrotrackr', w / 2, h - 12);
 
     canvas.toBlob((blob) => resolve(blob!), 'image/png');
   });
@@ -205,7 +328,7 @@ export default function DashboardPage() {
             <button
               onClick={async () => {
                 try {
-                  const blob = await generateShareImage(s.totals, s.targets);
+                  const blob = await generateShareImage(s.totals, s.targets, streak);
                   const file = new File([blob], 'macros.png', { type: 'image/png' });
                   if (navigator.share && navigator.canShare?.({ files: [file] })) {
                     await navigator.share({ files: [file] });
@@ -225,7 +348,7 @@ export default function DashboardPage() {
                 } catch (e: any) {
                   if (e?.name !== 'AbortError') {
                     // Fallback: download the image
-                    const blob = await generateShareImage(s.totals, s.targets);
+                    const blob = await generateShareImage(s.totals, s.targets, streak);
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -299,19 +422,29 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-2">
               {logs.map((entry) => (
-                <Card key={entry.id} className="flex items-center gap-3 py-3 px-3">
-                  <div className={`h-full w-1 self-stretch rounded-full ${MEAL_COLORS[entry.mealType] ?? 'bg-gray-400'}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{entry.foodItem?.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {MEAL_TYPE_LABELS[entry.mealType]} &middot; {entry.servingQty} &times; {entry.servingSizeG}g
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold">{Math.round(entry.totalCalories)} kcal</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      P:{Math.round(entry.totalProteinG)} C:{Math.round(entry.totalCarbsG)} F:{Math.round(entry.totalFatG)}
-                    </p>
+                <Card key={entry.id} className="flex gap-0 p-0 overflow-hidden">
+                  <div className={`w-1.5 shrink-0 rounded-l-2xl ${MEAL_COLORS[entry.mealType] ?? 'bg-gray-400'}`} />
+                  <div className="flex-1 min-w-0 py-2.5 px-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{entry.foodItem?.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {MEAL_TYPE_LABELS[entry.mealType]} &middot; {entry.servingQty} &times; {entry.servingSizeG}g
+                        </p>
+                      </div>
+                      <p className="text-sm font-semibold shrink-0">{Math.round(entry.totalCalories)} kcal</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-800/30 px-1.5 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400">
+                        P:{Math.round(entry.totalProteinG)}g
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-800/30 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                        C:{Math.round(entry.totalCarbsG)}g
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/30 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
+                        F:{Math.round(entry.totalFatG)}g
+                      </span>
+                    </div>
                   </div>
                 </Card>
               ))}

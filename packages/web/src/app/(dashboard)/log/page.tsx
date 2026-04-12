@@ -455,10 +455,11 @@ export default function LogPage() {
 
       <Link
         href={isToday ? '/scan' : `/scan?date=${date}`}
-        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 shadow-lg shadow-emerald-500/30 transition-all active:scale-95 hover:bg-emerald-700 lg:hidden"
+        className="fixed bottom-28 right-4 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 pl-4 pr-5 py-3 shadow-xl shadow-emerald-500/25 transition-all active:scale-95 hover:shadow-emerald-500/40 hover:from-emerald-700 hover:to-emerald-600 lg:hidden"
         aria-label="Add food"
       >
-        <Plus className="h-6 w-6 text-white" />
+        <Plus className="h-5 w-5 text-white" />
+        <span className="text-sm font-semibold text-white">Add Food</span>
       </Link>
     </div>
   );

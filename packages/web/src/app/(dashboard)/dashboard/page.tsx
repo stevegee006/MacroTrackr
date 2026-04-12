@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
-import { todayString } from '@/lib/utils';
+import { todayString, addDays } from '@/lib/utils';
 import { useAuth } from '@/providers/AuthProvider';
 import { MacroRings } from '@/components/log/MacroRings';
 import type { MacroKey } from '@/components/log/MacroRings';
 import { MacroBreakdownModal } from '@/components/log/MacroBreakdownModal';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
-import { Share2, Check, Flame, Plus } from 'lucide-react';
+import { Share2, Check, Plus } from 'lucide-react';
 import type { DailySummary, FoodLogEntry } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS } from '@macrotracker/shared';
 import Link from 'next/link';
@@ -142,6 +142,16 @@ export default function DashboardPage() {
     queryFn: () => apiFetch<{ data: FoodLogEntry[] }>(`/food-log?date=${today}`),
   });
 
+  // Fetch last 30 days for streak calculation
+  const thirtyDaysAgo = addDays(today, -30);
+  const { data: rangeData } = useQuery({
+    queryKey: ['food-log-range', thirtyDaysAgo, today],
+    queryFn: () =>
+      apiFetch<{ data: { date: string; totals: { calories: number } }[] }>(
+        `/food-log/range?from=${thirtyDaysAgo}&to=${today}`,
+      ),
+  });
+
   if (summaryLoading || entriesLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -153,8 +163,21 @@ export default function DashboardPage() {
   const s = summary?.data;
   const logs = entries?.data ?? [];
 
-  // Calculate streak (placeholder — will be replaced with actual API call)
-  const streak = 0;
+  // Calculate streak: consecutive days with logged food ending today
+  const loggedDates = new Set(
+    (rangeData?.data ?? [])
+      .filter((d) => d.totals.calories > 0)
+      .map((d) => d.date.split('T')[0]),
+  );
+  let streak = 0;
+  for (let i = 0; i <= 30; i++) {
+    const d = addDays(today, -i);
+    if (loggedDates.has(d)) {
+      streak++;
+    } else {
+      break;
+    }
+  }
 
   const MEAL_COLORS: Record<string, string> = {
     BREAKFAST: 'bg-amber-500',
@@ -165,23 +188,14 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-0.5">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-          </p>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Hi, {user?.displayName?.split(' ')[0] || 'there'}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Here&apos;s your nutrition for today</p>
-        </div>
-        {streak > 0 && (
-          <div className="flex items-center gap-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/50 px-3 py-2">
-            <Flame className="h-4 w-4 text-orange-500" />
-            <span className="text-sm font-bold text-orange-600 dark:text-orange-400">{streak}</span>
-            <span className="text-xs text-orange-500 dark:text-orange-500">day streak</span>
-          </div>
-        )}
+      <div>
+        <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-0.5">
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        </p>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Hi, {user?.displayName?.split(' ')[0] || 'there'}
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Here&apos;s your nutrition for today</p>
       </div>
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-6">
@@ -228,7 +242,7 @@ export default function DashboardPage() {
             >
               {shared ? <Check className="h-4 w-4 text-emerald-500" /> : <Share2 className="h-4 w-4" />}
             </button>
-            <MacroRings totals={s.totals} targets={s.targets} onRingTap={setActiveMacro} />
+            <MacroRings totals={s.totals} targets={s.targets} onRingTap={setActiveMacro} streak={streak} />
           </Card>
         )}
 

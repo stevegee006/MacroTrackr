@@ -2,6 +2,7 @@
 
 import type { MacroTotals } from '@macrotracker/shared';
 import { useTheme } from '@/providers/ThemeProvider';
+import { Flame } from 'lucide-react';
 
 export type MacroKey = 'calories' | 'protein' | 'carbs' | 'fat';
 
@@ -9,6 +10,7 @@ interface MacroRingsProps {
   totals: MacroTotals;
   targets: MacroTotals;
   onRingTap?: (macro: MacroKey) => void;
+  streak?: number;
 }
 
 function Ring({
@@ -96,7 +98,7 @@ function Ring({
   );
 }
 
-export function MacroRings({ totals, targets, onRingTap }: MacroRingsProps) {
+export function MacroRings({ totals, targets, onRingTap, streak }: MacroRingsProps) {
   const { isDark } = useTheme();
   const bgStroke = isDark ? '#374151' : '#e5e7eb';
 
@@ -154,6 +156,14 @@ export function MacroRings({ totals, targets, onRingTap }: MacroRingsProps) {
           <span className="text-gray-500 dark:text-gray-400">{totals.sugarG}/{targets.sugarG}g</span>
         </span>
       </div>
+      {streak != null && streak > 0 && (
+        <div className="flex justify-center pt-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 dark:bg-orange-950/40 border border-orange-100 dark:border-orange-800/40 px-2.5 py-0.5 text-xs">
+            <Flame className="h-3 w-3 text-orange-500" />
+            <span className="text-orange-700 dark:text-orange-400 font-medium">{streak} day streak</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

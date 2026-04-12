@@ -16,12 +16,12 @@ import { ACTIVITY_LABELS, GOAL_LABELS, MEAL_TYPE_LABELS } from '@macrotracker/sh
 import type { UserProfile, UserSettings, MealType, AiProvider } from '@macrotracker/shared';
 import Link from 'next/link';
 import { startRegistration } from '@simplewebauthn/browser';
-import { Activity, Camera, GraduationCap, HelpCircle, MessageSquare, Ruler, Shield, Settings, Trash2, ExternalLink } from 'lucide-react';
+import { Activity, Camera, GraduationCap, HelpCircle, MessageSquare, Shield, Settings, Trash2, ExternalLink } from 'lucide-react';
 import { compressImage } from '@/lib/image-utils';
 import { getApiUrl, getAccessToken } from '@/lib/api-client';
 import type { BodyMeasurement, ProgressPhotoMeta } from '@macrotracker/shared';
 
-type Tab = 'biometrics' | 'security' | 'settings' | 'measurements' | 'photos';
+type Tab = 'biometrics' | 'security' | 'settings' | 'photos';
 
 // Conversion helpers
 const CM_PER_INCH = 2.54;
@@ -70,7 +70,6 @@ export default function ProfilePage() {
       <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1 overflow-x-auto scrollbar-none" data-tutorial="profile-tab-bar">
         {([
           { key: 'biometrics' as Tab, label: 'Bio', icon: Activity },
-          { key: 'measurements' as Tab, label: 'Measure', icon: Ruler },
           { key: 'photos' as Tab, label: 'Photos', icon: Camera },
           { key: 'security' as Tab, label: 'Security', icon: Shield },
           { key: 'settings' as Tab, label: 'Settings', icon: Settings },
@@ -92,7 +91,6 @@ export default function ProfilePage() {
       </div>
 
       {tab === 'biometrics' && <BiometricsTab />}
-      {tab === 'measurements' && <MeasurementsTab />}
       {tab === 'photos' && <PhotosTab />}
       {tab === 'security' && <SecurityTab />}
       {tab === 'settings' && <SettingsTab />}
@@ -368,6 +366,12 @@ function BiometricsTab() {
           </div>
         </Card>
       )}
+
+      {/* Body Measurements Section */}
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+        <h3 className="text-lg font-semibold mb-4">Body Measurements</h3>
+        <MeasurementsTab />
+      </div>
     </div>
   );
 }

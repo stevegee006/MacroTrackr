@@ -16,7 +16,7 @@ import { ACTIVITY_LABELS, GOAL_LABELS, MEAL_TYPE_LABELS } from '@macrotracker/sh
 import type { UserProfile, UserSettings, MealType, AiProvider } from '@macrotracker/shared';
 import Link from 'next/link';
 import { startRegistration } from '@simplewebauthn/browser';
-import { Activity, Camera, GraduationCap, HelpCircle, MessageSquare, Shield, Settings, Trash2, ExternalLink } from 'lucide-react';
+import { Activity, Camera, GraduationCap, HelpCircle, MessageSquare, Ruler, Shield, Settings, Trash2, ExternalLink, User } from 'lucide-react';
 import { compressImage } from '@/lib/image-utils';
 import { getApiUrl, getAccessToken } from '@/lib/api-client';
 import type { BodyMeasurement, ProgressPhotoMeta } from '@macrotracker/shared';
@@ -105,6 +105,7 @@ export default function ProfilePage() {
 // ─── Biometrics Tab ────────────────────────────────────────────
 
 function BiometricsTab() {
+  const [bioTab, setBioTab] = useState<'profile' | 'measurements'>('profile');
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -206,7 +207,32 @@ function BiometricsTab() {
   }
 
   return (
-    <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
+    <div className="space-y-4">
+      {/* Sub-tab bar */}
+      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+        {([
+          { key: 'profile' as const, label: 'Profile', icon: User },
+          { key: 'measurements' as const, label: 'Measurements', icon: Ruler },
+        ]).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setBioTab(key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-2 px-3 text-xs font-medium transition-colors ${
+              bioTab === key
+                ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {bioTab === 'measurements' && <MeasurementsTab />}
+
+      {bioTab === 'profile' && (
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
       <Card>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -366,12 +392,8 @@ function BiometricsTab() {
           </div>
         </Card>
       )}
-
-      {/* Body Measurements Section */}
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
-        <h3 className="text-lg font-semibold mb-4">Body Measurements</h3>
-        <MeasurementsTab />
       </div>
+      )}
     </div>
   );
 }

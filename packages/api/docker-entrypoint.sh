@@ -1,9 +1,11 @@
 #!/bin/sh
-set -e
 
 echo "Running database migrations..."
 cd /app/packages/api
-npx prisma migrate deploy
+if ! npx prisma migrate deploy; then
+  echo "migrate deploy failed — attempting db push as fallback..."
+  npx prisma db push --skip-generate || echo "WARNING: db push also failed, starting anyway"
+fi
 
 echo "Starting API server..."
 cd /app

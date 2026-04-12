@@ -155,6 +155,8 @@ model BodyMeasurement {
   calfR      Float?   @map("calf_r")
   calfL      Float?   @map("calf_l")
   shoulder   Float?
+  bodyFatPct Float?   @map("body_fat_pct")
+  leanMassKg Float?   @map("lean_mass_kg")
   notes      String?  @db.Text
   createdAt  DateTime @default(now()) @map("created_at")
 

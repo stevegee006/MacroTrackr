@@ -101,6 +101,8 @@ export const createBodyMeasurementSchema = z.object({
   calfR: z.number().positive().max(100).nullable().optional(),
   calfL: z.number().positive().max(100).nullable().optional(),
   shoulder: z.number().positive().max(300).nullable().optional(),
+  bodyFatPct: z.number().positive().max(100).nullable().optional(),
+  leanMassKg: z.number().positive().max(500).nullable().optional(),
   notes: z.string().max(500).optional(),
 });
 

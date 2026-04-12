@@ -16,7 +16,7 @@ import { ACTIVITY_LABELS, GOAL_LABELS, MEAL_TYPE_LABELS } from '@macrotracker/sh
 import type { UserProfile, UserSettings, MealType, AiProvider } from '@macrotracker/shared';
 import Link from 'next/link';
 import { startRegistration } from '@simplewebauthn/browser';
-import { Activity, Camera, GraduationCap, HelpCircle, MessageSquare, Ruler, Shield, Settings, Trash2, ExternalLink, User } from 'lucide-react';
+import { Activity, Camera, GraduationCap, HelpCircle, MessageSquare, Ruler, Shield, Settings, Trash2, ExternalLink, User, X } from 'lucide-react';
 import { compressImage } from '@/lib/image-utils';
 import { getApiUrl, getAccessToken } from '@/lib/api-client';
 import type { BodyMeasurement, ProgressPhotoMeta } from '@macrotracker/shared';
@@ -1036,6 +1036,12 @@ const MEASUREMENT_FIELDS = [
   { key: 'shoulder', label: 'Shoulder' },
 ] as const;
 
+// Fields that aren't length-based (need different unit handling)
+const EXTRA_FIELDS = [
+  { key: 'bodyFatPct', label: 'Body Fat', unit: '%' },
+  { key: 'leanMassKg', label: 'Lean Mass', unitMetric: 'kg', unitImperial: 'lbs' },
+] as const;
+
 function MeasurementsTab() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -1058,16 +1064,16 @@ function MeasurementsTab() {
 
   const [measuredAt, setMeasuredAt] = useState(todayString());
   const [notes, setNotes] = useState('');
-  const [fields, setFields] = useState<Record<string, string>>(() =>
-    Object.fromEntries(MEASUREMENT_FIELDS.map(({ key }) => [key, ''])),
-  );
+  const allFieldKeys = [...MEASUREMENT_FIELDS.map(f => f.key), ...EXTRA_FIELDS.map(f => f.key)];
+  const emptyFields = () => Object.fromEntries(allFieldKeys.map((k) => [k, '']));
+  const [fields, setFields] = useState<Record<string, string>>(emptyFields);
 
   const createMutation = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
       apiFetch('/measurements', { method: 'POST', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['measurements'] });
-      setFields(Object.fromEntries(MEASUREMENT_FIELDS.map(({ key }) => [key, ''])));
+      setFields(emptyFields());
       setNotes('');
     },
   });
@@ -1082,12 +1088,22 @@ function MeasurementsTab() {
     const body: Record<string, unknown> = { measuredAt };
     if (notes.trim()) body.notes = notes.trim();
 
+    // Length-based fields: convert inches → cm when imperial
     for (const { key } of MEASUREMENT_FIELDS) {
       const val = fields[key];
       if (val) {
         const num = parseFloat(val);
         body[key] = isImperial ? Math.round(num * CM_PER_INCH * 100) / 100 : num;
       }
+    }
+
+    // Body fat % — no conversion needed
+    if (fields.bodyFatPct) body.bodyFatPct = parseFloat(fields.bodyFatPct);
+
+    // Lean mass: convert lbs → kg when imperial
+    if (fields.leanMassKg) {
+      const num = parseFloat(fields.leanMassKg);
+      body.leanMassKg = isImperial ? lbsToKg(num) : num;
     }
 
     createMutation.mutate(body);
@@ -1143,6 +1159,22 @@ function MeasurementsTab() {
                 onChange={(e) => setFields({ ...fields, [key]: e.target.value })}
               />
             ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Body Fat (%)"
+              type="number"
+              step="0.1"
+              value={fields.bodyFatPct}
+              onChange={(e) => setFields({ ...fields, bodyFatPct: e.target.value })}
+            />
+            <Input
+              label={`Lean Mass (${isImperial ? 'lbs' : 'kg'})`}
+              type="number"
+              step="0.1"
+              value={fields.leanMassKg}
+              onChange={(e) => setFields({ ...fields, leanMassKg: e.target.value })}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
@@ -1215,6 +1247,8 @@ function MeasurementsTab() {
                     {m.chest != null && <span>Chest: {displayVal(m.chest)}{unitLabel}</span>}
                     {m.neck != null && <span>Neck: {displayVal(m.neck)}{unitLabel}</span>}
                     {m.shoulder != null && <span>Shoulder: {displayVal(m.shoulder)}{unitLabel}</span>}
+                    {m.bodyFatPct != null && <span>BF: {m.bodyFatPct.toFixed(1)}%</span>}
+                    {m.leanMassKg != null && <span>Lean: {isImperial ? kgToLbs(m.leanMassKg).toFixed(1) + 'lbs' : m.leanMassKg.toFixed(1) + 'kg'}</span>}
                   </div>
                   {m.notes && (
                     <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">{m.notes}</p>
@@ -1269,7 +1303,7 @@ function MeasurementsTab() {
 
 // ─── Photos Tab ───────────────────────────────────────────────
 
-function PhotoCard({ photo, onDelete }: { photo: ProgressPhotoMeta; onDelete: (id: string) => void }) {
+function PhotoCard({ photo, onDelete, onView }: { photo: ProgressPhotoMeta; onDelete: (id: string) => void; onView: (url: string, photo: ProgressPhotoMeta) => void }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -1306,7 +1340,12 @@ function PhotoCard({ photo, onDelete }: { photo: ProgressPhotoMeta; onDelete: (i
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="aspect-square bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+      <button
+        type="button"
+        onClick={() => imageUrl && onView(imageUrl, photo)}
+        className="aspect-square w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center cursor-pointer"
+        disabled={!imageUrl}
+      >
         {loading ? (
           <Spinner />
         ) : imageUrl ? (
@@ -1314,7 +1353,7 @@ function PhotoCard({ photo, onDelete }: { photo: ProgressPhotoMeta; onDelete: (i
         ) : (
           <p className="text-xs text-gray-400">Failed to load</p>
         )}
-      </div>
+      </button>
       <div className="p-2">
         <p className="text-xs font-medium">{new Date(photo.takenAt).toLocaleDateString()}</p>
         {photo.notes && (
@@ -1355,6 +1394,7 @@ function PhotosTab() {
   const [photoNotes, setPhotoNotes] = useState('');
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
+  const [lightbox, setLightbox] = useState<{ url: string; photo: ProgressPhotoMeta } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['progress-photos', page],
@@ -1474,6 +1514,7 @@ function PhotosTab() {
                 key={photo.id}
                 photo={photo}
                 onDelete={(id) => deleteMutation.mutate(id)}
+                onView={(url, p) => setLightbox({ url, photo: p })}
               />
             ))}
           </div>
@@ -1509,6 +1550,35 @@ function PhotosTab() {
             No progress photos yet. Upload your first one above!
           </p>
         </Card>
+      )}
+
+      {/* Lightbox modal */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 text-white/80 hover:text-white z-10"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <div
+            className="relative max-w-3xl max-h-[90vh] w-full flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={lightbox.url}
+              alt="Progress photo"
+              className="max-h-[80vh] w-auto rounded-lg object-contain"
+            />
+            <div className="mt-3 text-center text-sm text-white/80">
+              <p className="font-medium">{new Date(lightbox.photo.takenAt).toLocaleDateString()}</p>
+              {lightbox.photo.notes && <p className="text-white/60">{lightbox.photo.notes}</p>}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

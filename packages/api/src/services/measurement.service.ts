@@ -18,6 +18,8 @@ export async function createMeasurement(
     calfR?: number | null;
     calfL?: number | null;
     shoulder?: number | null;
+    bodyFatPct?: number | null;
+    leanMassKg?: number | null;
     notes?: string;
   },
 ) {
@@ -37,6 +39,8 @@ export async function createMeasurement(
       calfR: data.calfR ?? null,
       calfL: data.calfL ?? null,
       shoulder: data.shoulder ?? null,
+      bodyFatPct: data.bodyFatPct ?? null,
+      leanMassKg: data.leanMassKg ?? null,
       notes: data.notes ?? null,
     },
   });

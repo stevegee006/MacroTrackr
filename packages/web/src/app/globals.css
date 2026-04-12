@@ -21,6 +21,14 @@
   padding-right: env(safe-area-inset-right, 0px);
 }
 
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Prevent iOS Safari from zooming on input focus (requires font-size >= 16px) */
 @media screen and (max-width: 639px) {
   input,

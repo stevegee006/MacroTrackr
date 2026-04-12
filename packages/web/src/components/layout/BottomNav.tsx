@@ -27,7 +27,7 @@ export function BottomNav() {
 
               if (isCenter) {
                 return (
-                  <div key={href} className="flex flex-col items-center -mt-9">
+                  <div key={href} className="flex flex-col items-center -mt-7">
                     <Link
                       href={href}
                       className={cn(

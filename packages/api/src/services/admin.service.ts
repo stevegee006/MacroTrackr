@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { NotFoundError, ForbiddenError, ValidationError, ConflictError } from '../utils/errors.js';
+import { mapFoodItemRow } from '../utils/map-food-row.js';
 
 export async function getStats(fastify: FastifyInstance) {
   const [users, foodItems, foodLogs, macroPlans, mealPlans] = await Promise.all([
@@ -84,17 +85,33 @@ export async function listFoodItems(
   search?: string,
 ) {
   const skip = (page - 1) * limit;
-  const where = search
-    ? { name: { contains: search, mode: 'insensitive' as const } }
-    : {};
 
-  const [items, total] = await Promise.all([
-    fastify.prisma.foodItem.findMany({
-      where,
+  if (search) {
+    const normalized = `%${search.replace(/[^a-zA-Z0-9 ]/g, '')}%`;
+    const items = await fastify.prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM food_items
+       WHERE regexp_replace(name, '[^a-zA-Z0-9 ]', '', 'g') ILIKE $1
+          OR regexp_replace(COALESCE(brand, ''), '[^a-zA-Z0-9 ]', '', 'g') ILIKE $1
+       ORDER BY created_at DESC
+       LIMIT $2 OFFSET $3`,
+      normalized,
+      limit,
       skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-    }),
+    );
+    const countResult = await fastify.prisma.$queryRawUnsafe<[{ count: bigint }]>(
+      `SELECT count(*) FROM food_items
+       WHERE regexp_replace(name, '[^a-zA-Z0-9 ]', '', 'g') ILIKE $1
+          OR regexp_replace(COALESCE(brand, ''), '[^a-zA-Z0-9 ]', '', 'g') ILIKE $1`,
+      normalized,
+    );
+    const total = Number(countResult[0].count);
+    const data = items.map(mapFoodItemRow);
+    return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  }
+
+  const where = {};
+  const [items, total] = await Promise.all([
+    fastify.prisma.foodItem.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
     fastify.prisma.foodItem.count({ where }),
   ]);
 

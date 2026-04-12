@@ -19,5 +19,10 @@ dist/
 .DS_Store
 Thumbs.db
 
+# PWA service worker (generated at build time)
+packages/web/public/sw.js
+packages/web/public/sw.js.map
+packages/web/public/swe-worker-*.js
+
 # Docker
 *.log

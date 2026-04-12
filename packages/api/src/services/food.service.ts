@@ -7,6 +7,7 @@ import { getUsdaApiKey } from './app-config.service.js';
 import { aiVisionCompletion, aiChatCompletion } from './ai-provider.service.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import { mapFoodItemRow } from '../utils/map-food-row.js';
 
 export async function getFoodByBarcode(fastify: FastifyInstance, barcode: string) {
   // Check local cache first
@@ -77,20 +78,32 @@ export async function searchFood(
   limit: number,
 ) {
   const skip = (page - 1) * limit;
-  const where = {
-    OR: [
-      { name: { contains: query, mode: 'insensitive' as const } },
-      { brand: { contains: query, mode: 'insensitive' as const } },
-    ],
-  };
+  // Strip non-alphanumeric/space chars so "MoBettahs" matches "Mo'Bettahs"
+  const normalized = `%${query.replace(/[^a-zA-Z0-9 ]/g, '')}%`;
 
-  const [items, total] = await Promise.all([
-    fastify.prisma.foodItem.findMany({ where, skip, take: limit, orderBy: { name: 'asc' } }),
-    fastify.prisma.foodItem.count({ where }),
-  ]);
+  const items = await fastify.prisma.$queryRawUnsafe<any[]>(
+    `SELECT * FROM food_items
+     WHERE regexp_replace(name, '[^a-zA-Z0-9 ]', '', 'g') ILIKE $1
+        OR regexp_replace(COALESCE(brand, ''), '[^a-zA-Z0-9 ]', '', 'g') ILIKE $1
+     ORDER BY name ASC
+     LIMIT $2 OFFSET $3`,
+    normalized,
+    limit,
+    skip,
+  );
+
+  const countResult = await fastify.prisma.$queryRawUnsafe<[{ count: bigint }]>(
+    `SELECT count(*) FROM food_items
+     WHERE regexp_replace(name, '[^a-zA-Z0-9 ]', '', 'g') ILIKE $1
+        OR regexp_replace(COALESCE(brand, ''), '[^a-zA-Z0-9 ]', '', 'g') ILIKE $1`,
+    normalized,
+  );
+  const total = Number(countResult[0].count);
+
+  const data = items.map(mapFoodItemRow);
 
   return {
-    data: items,
+    data,
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
 }

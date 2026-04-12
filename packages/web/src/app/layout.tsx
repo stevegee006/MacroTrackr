@@ -47,7 +47,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-startup-image" href="/splash/iPad_Pro_11.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)" />
         <link rel="apple-touch-startup-image" href="/splash/iPad_Pro_12.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" />
       </head>
-      <body className="bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 antialiased">
+      <body className="bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900 dark:bg-none dark:bg-gray-950 dark:text-gray-100 antialiased">
+        <div className="pointer-events-none fixed inset-0 z-0 hidden dark:block">
+          <div className="absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-emerald-500/5 blur-3xl" />
+        </div>
         <ThemeProvider>
           <QueryProvider>
             <AuthProvider>{children}</AuthProvider>

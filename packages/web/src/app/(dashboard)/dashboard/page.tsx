@@ -10,7 +10,7 @@ import type { MacroKey } from '@/components/log/MacroRings';
 import { MacroBreakdownModal } from '@/components/log/MacroBreakdownModal';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
-import { Share2, Check } from 'lucide-react';
+import { Share2, Check, Flame } from 'lucide-react';
 import type { DailySummary, FoodLogEntry } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS } from '@macrotracker/shared';
 import Link from 'next/link';
@@ -153,18 +153,41 @@ export default function DashboardPage() {
   const s = summary?.data;
   const logs = entries?.data ?? [];
 
+  // Calculate streak (placeholder — will be replaced with actual API call)
+  const streak = 0;
+
+  const MEAL_COLORS: Record<string, string> = {
+    BREAKFAST: 'bg-amber-500',
+    LUNCH: 'bg-blue-500',
+    DINNER: 'bg-purple-500',
+    SNACK: 'bg-rose-400',
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">
-          Hi, {user?.displayName || 'there'}
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Today&apos;s Progress</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-0.5">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Hi, {user?.displayName?.split(' ')[0] || 'there'}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Here&apos;s your nutrition for today</p>
+        </div>
+        {streak > 0 && (
+          <div className="flex items-center gap-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/50 px-3 py-2">
+            <Flame className="h-4 w-4 text-orange-500" />
+            <span className="text-sm font-bold text-orange-600 dark:text-orange-400">{streak}</span>
+            <span className="text-xs text-orange-500 dark:text-orange-500">day streak</span>
+          </div>
+        )}
       </div>
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-6">
         {s && (
-          <Card className="lg:h-fit relative" data-tutorial="macro-rings">
+          <Card className="lg:h-fit relative overflow-hidden border-emerald-200/50 dark:border-emerald-800/30 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900/50" data-tutorial="macro-rings">
+            <div className="pointer-events-none absolute -top-8 -right-8 h-32 w-32 rounded-full bg-emerald-500/5 dark:bg-emerald-400/5 blur-2xl" />
             <button
               onClick={async () => {
                 try {
@@ -221,23 +244,31 @@ export default function DashboardPage() {
           </div>
 
           {logs.length === 0 ? (
-            <Card className="py-8 text-center text-gray-500 dark:text-gray-400">
-              <p>No food logged today.</p>
-              <Link href="/scan" className="mt-2 inline-block text-emerald-600 hover:underline">
-                Scan a barcode to get started
+            <Card className="py-10 text-center">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-100 dark:border-emerald-800/50">
+                <span className="text-2xl">🥗</span>
+              </div>
+              <p className="font-semibold text-gray-700 dark:text-gray-200">Nothing logged yet</p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Start tracking to hit your goals today</p>
+              <Link
+                href="/scan"
+                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 active:scale-95 transition-all"
+              >
+                + Add Your First Food
               </Link>
             </Card>
           ) : (
             <div className="space-y-2">
               {logs.map((entry) => (
-                <Card key={entry.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium">{entry.foodItem?.name}</p>
+                <Card key={entry.id} className="flex items-center gap-3 py-3 px-3">
+                  <div className={`h-full w-1 self-stretch rounded-full ${MEAL_COLORS[entry.mealType] ?? 'bg-gray-400'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{entry.foodItem?.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {MEAL_TYPE_LABELS[entry.mealType]} &middot; {entry.servingQty} x {entry.servingSizeG}g
+                      {MEAL_TYPE_LABELS[entry.mealType]} &middot; {entry.servingQty} &times; {entry.servingSizeG}g
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="text-sm font-semibold">{Math.round(entry.totalCalories)} kcal</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       P:{Math.round(entry.totalProteinG)} C:{Math.round(entry.totalCarbsG)} F:{Math.round(entry.totalFatG)}

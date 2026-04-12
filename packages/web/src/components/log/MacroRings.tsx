@@ -109,7 +109,7 @@ export function MacroRings({ totals, targets, onRingTap }: MacroRingsProps) {
           label="Calories"
           unit=""
           color="#10b981"
-          size={76}
+          size={92}
           bgStroke={bgStroke}
           onTap={onRingTap ? () => onRingTap('calories') : undefined}
         />
@@ -142,14 +142,16 @@ export function MacroRings({ totals, targets, onRingTap }: MacroRingsProps) {
           onTap={onRingTap ? () => onRingTap('fat') : undefined}
         />
       </div>
-      <div className="flex justify-center gap-4 text-xs text-gray-500 pt-1 border-t border-gray-100 dark:border-gray-700 dark:text-gray-400">
-        <span>
-          <span className="text-green-600 font-medium">Fiber:</span>{' '}
-          {totals.fiberG}/{targets.fiberG}g
+      <div className="flex justify-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-950/40 border border-green-100 dark:border-green-800/40 px-2.5 py-0.5 text-xs">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+          <span className="text-green-700 dark:text-green-400 font-medium">Fiber</span>
+          <span className="text-gray-500 dark:text-gray-400">{totals.fiberG}/{targets.fiberG}g</span>
         </span>
-        <span>
-          <span className="text-purple-500 font-medium">Sugar:</span>{' '}
-          {totals.sugarG}/{targets.sugarG}g
+        <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-800/40 px-2.5 py-0.5 text-xs">
+          <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+          <span className="text-purple-700 dark:text-purple-400 font-medium">Sugar</span>
+          <span className="text-gray-500 dark:text-gray-400">{totals.sugarG}/{targets.sugarG}g</span>
         </span>
       </div>
     </div>

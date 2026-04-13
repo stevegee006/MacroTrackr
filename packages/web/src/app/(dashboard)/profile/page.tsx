@@ -167,7 +167,6 @@ function BiometricsTab() {
     e.preventDefault();
 
     let heightCm: number | null = null;
-    let weightKg: number | null = null;
 
     if (isImperial) {
       const feet = form.feet ? parseInt(form.feet) : 0;
@@ -175,17 +174,12 @@ function BiometricsTab() {
       if (feet || inches) {
         heightCm = Math.round(feetInchesToCm(feet, inches) * 10) / 10;
       }
-      if (form.weightLbs) {
-        weightKg = lbsToKg(parseFloat(form.weightLbs));
-      }
     } else {
       heightCm = form.heightCm ? parseFloat(form.heightCm) : null;
-      weightKg = form.weightKg ? parseFloat(form.weightKg) : null;
     }
 
     const body: Record<string, unknown> = {
       heightCm,
-      weightKg,
       sex: form.sex || null,
       activityLevel: form.activityLevel || null,
       goal: form.goal || null,
@@ -263,13 +257,13 @@ function BiometricsTab() {
                     </div>
                   </div>
                 </div>
-                <Input
-                  label="Weight (lbs)"
-                  type="number"
-                  step="0.1"
-                  value={form.weightLbs}
-                  onChange={(e) => setForm({ ...form, weightLbs: e.target.value })}
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Weight (lbs)</label>
+                  <p className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-sm text-gray-600 dark:text-gray-300">
+                    {form.weightLbs ? `${form.weightLbs}` : '—'}
+                  </p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Log via Measurements tab</p>
+                </div>
               </>
             ) : (
               <>
@@ -279,13 +273,13 @@ function BiometricsTab() {
                   value={form.heightCm}
                   onChange={(e) => setForm({ ...form, heightCm: e.target.value })}
                 />
-                <Input
-                  label="Weight (kg)"
-                  type="number"
-                  step="0.1"
-                  value={form.weightKg}
-                  onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Weight (kg)</label>
+                  <p className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-sm text-gray-600 dark:text-gray-300">
+                    {form.weightKg ? `${form.weightKg}` : '—'}
+                  </p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Log via Measurements tab</p>
+                </div>
               </>
             )}
             {form.useBirthDate ? (

@@ -431,17 +431,17 @@ export default function DashboardPage() {
                         {MEAL_TYPE_LABELS[entry.mealType]} &middot; {entry.servingQty} &times; {entry.servingSizeG}g
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-1 shrink-0 justify-end">
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/30 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                    <div className="grid grid-cols-2 gap-1 shrink-0">
+                      <span className="inline-flex items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/30 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
                         {Math.round(entry.totalCalories)}cal
                       </span>
-                      <span className="inline-flex items-center rounded-full bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-800/30 px-1.5 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400">
+                      <span className="inline-flex items-center justify-center rounded-full bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-800/30 px-1.5 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400">
                         P:{Math.round(entry.totalProteinG)}g
                       </span>
-                      <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-800/30 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      <span className="inline-flex items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-800/30 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
                         C:{Math.round(entry.totalCarbsG)}g
                       </span>
-                      <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/30 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
+                      <span className="inline-flex items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/30 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
                         F:{Math.round(entry.totalFatG)}g
                       </span>
                     </div>

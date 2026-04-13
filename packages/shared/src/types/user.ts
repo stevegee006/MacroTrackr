@@ -53,6 +53,7 @@ export interface BodyMeasurement {
   calfR: number | null;
   calfL: number | null;
   shoulder: number | null;
+  weightKg: number | null;
   bodyFatPct: number | null;
   leanMassKg: number | null;
   notes: string | null;

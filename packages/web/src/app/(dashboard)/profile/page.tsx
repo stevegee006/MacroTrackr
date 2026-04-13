@@ -1038,6 +1038,7 @@ const MEASUREMENT_FIELDS = [
 
 // Fields that aren't length-based (need different unit handling)
 const EXTRA_FIELDS = [
+  { key: 'weightKg', label: 'Weight', unitMetric: 'kg', unitImperial: 'lbs' },
   { key: 'bodyFatPct', label: 'Body Fat', unit: '%' },
   { key: 'leanMassKg', label: 'Lean Mass', unitMetric: 'kg', unitImperial: 'lbs' },
 ] as const;
@@ -1073,6 +1074,7 @@ function MeasurementsTab() {
       apiFetch('/measurements', { method: 'POST', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['measurements'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
       setFields(emptyFields());
       setNotes('');
     },
@@ -1095,6 +1097,12 @@ function MeasurementsTab() {
         const num = parseFloat(val);
         body[key] = isImperial ? Math.round(num * CM_PER_INCH * 100) / 100 : num;
       }
+    }
+
+    // Weight: convert lbs → kg when imperial
+    if (fields.weightKg) {
+      const num = parseFloat(fields.weightKg);
+      body.weightKg = isImperial ? lbsToKg(num) : num;
     }
 
     // Body fat % — no conversion needed
@@ -1160,7 +1168,14 @@ function MeasurementsTab() {
               />
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <Input
+              label={`Weight (${isImperial ? 'lbs' : 'kg'})`}
+              type="number"
+              step="0.1"
+              value={fields.weightKg}
+              onChange={(e) => setFields({ ...fields, weightKg: e.target.value })}
+            />
             <Input
               label="Body Fat (%)"
               type="number"
@@ -1247,6 +1262,7 @@ function MeasurementsTab() {
                     {m.chest != null && <span>Chest: {displayVal(m.chest)}{unitLabel}</span>}
                     {m.neck != null && <span>Neck: {displayVal(m.neck)}{unitLabel}</span>}
                     {m.shoulder != null && <span>Shoulder: {displayVal(m.shoulder)}{unitLabel}</span>}
+                    {m.weightKg != null && <span className="font-medium">Wt: {isImperial ? kgToLbs(m.weightKg).toFixed(1) + 'lbs' : m.weightKg.toFixed(1) + 'kg'}</span>}
                     {m.bodyFatPct != null && <span>BF: {m.bodyFatPct.toFixed(1)}%</span>}
                     {m.leanMassKg != null && <span>Lean: {isImperial ? kgToLbs(m.leanMassKg).toFixed(1) + 'lbs' : m.leanMassKg.toFixed(1) + 'kg'}</span>}
                   </div>

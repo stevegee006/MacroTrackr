@@ -101,6 +101,7 @@ export const createBodyMeasurementSchema = z.object({
   calfR: z.number().positive().max(100).nullable().optional(),
   calfL: z.number().positive().max(100).nullable().optional(),
   shoulder: z.number().positive().max(300).nullable().optional(),
+  weightKg: z.number().positive().max(500).nullable().optional(),
   bodyFatPct: z.number().positive().max(100).nullable().optional(),
   leanMassKg: z.number().positive().max(500).nullable().optional(),
   notes: z.string().max(500).optional(),
@@ -109,6 +110,11 @@ export const createBodyMeasurementSchema = z.object({
 export const measurementQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
+export const measurementRangeSchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
 export const createProgressPhotoSchema = z.object({

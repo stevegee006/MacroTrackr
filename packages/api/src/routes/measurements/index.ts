@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createBodyMeasurementSchema, measurementQuerySchema } from '@macrotracker/shared';
+import { createBodyMeasurementSchema, measurementQuerySchema, measurementRangeSchema } from '@macrotracker/shared';
 import * as measurementService from '../../services/measurement.service.js';
 
 export default async function measurementRoutes(fastify: FastifyInstance) {
@@ -15,6 +15,12 @@ export default async function measurementRoutes(fastify: FastifyInstance) {
     const { page, limit } = measurementQuerySchema.parse(request.query);
     const result = await measurementService.getMeasurements(fastify, request.user.sub, page, limit);
     return result;
+  });
+
+  fastify.get('/measurements/range', async (request) => {
+    const { from, to } = measurementRangeSchema.parse(request.query);
+    const data = await measurementService.getMeasurementRange(fastify, request.user.sub, from, to);
+    return { data };
   });
 
   fastify.delete('/measurements/:id', async (request, reply) => {

@@ -18,12 +18,13 @@ export async function createMeasurement(
     calfR?: number | null;
     calfL?: number | null;
     shoulder?: number | null;
+    weightKg?: number | null;
     bodyFatPct?: number | null;
     leanMassKg?: number | null;
     notes?: string;
   },
 ) {
-  return fastify.prisma.bodyMeasurement.create({
+  const entry = await fastify.prisma.bodyMeasurement.create({
     data: {
       userId,
       measuredAt: new Date(data.measuredAt + 'T00:00:00Z'),
@@ -39,11 +40,22 @@ export async function createMeasurement(
       calfR: data.calfR ?? null,
       calfL: data.calfL ?? null,
       shoulder: data.shoulder ?? null,
+      weightKg: data.weightKg ?? null,
       bodyFatPct: data.bodyFatPct ?? null,
       leanMassKg: data.leanMassKg ?? null,
       notes: data.notes ?? null,
     },
   });
+
+  // Auto-sync weight to user profile if provided
+  if (data.weightKg) {
+    await fastify.prisma.userProfile.updateMany({
+      where: { userId },
+      data: { weightKg: data.weightKg },
+    });
+  }
+
+  return entry;
 }
 
 export async function getMeasurements(
@@ -63,6 +75,24 @@ export async function getMeasurements(
     fastify.prisma.bodyMeasurement.count({ where: { userId } }),
   ]);
   return { data: items, meta: { page, totalPages: Math.ceil(total / limit) || 1 } };
+}
+
+export async function getMeasurementRange(
+  fastify: FastifyInstance,
+  userId: string,
+  from: string,
+  to: string,
+) {
+  return fastify.prisma.bodyMeasurement.findMany({
+    where: {
+      userId,
+      measuredAt: {
+        gte: new Date(from + 'T00:00:00Z'),
+        lte: new Date(to + 'T23:59:59Z'),
+      },
+    },
+    orderBy: { measuredAt: 'asc' },
+  });
 }
 
 export async function deleteMeasurement(

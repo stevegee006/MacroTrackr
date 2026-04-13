@@ -110,34 +110,100 @@ function LineChart({
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
-  const chartH = 80;
-  const chartW = 100; // percentage-based
+  const svgW = 400;
+  const svgH = 120;
+  const pad = { top: 20, right: 16, bottom: 28, left: 16 };
+  const plotW = svgW - pad.left - pad.right;
+  const plotH = svgH - pad.top - pad.bottom;
 
-  // Build SVG path
   const points = data.map((d, i) => {
-    const x = data.length === 1 ? 50 : (i / (data.length - 1)) * chartW;
-    const y = chartH - ((d.value - min) / range) * (chartH - 16) - 8;
+    const x = pad.left + (data.length === 1 ? plotW / 2 : (i / (data.length - 1)) * plotW);
+    const y = pad.top + plotH - ((d.value - min) / range) * plotH;
     return { x, y, ...d };
   });
 
-  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  // Smooth curve using catmull-rom to bezier conversion
+  function smoothPath(pts: { x: number; y: number }[]): string {
+    if (pts.length < 2) return `M ${pts[0].x} ${pts[0].y}`;
+    if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(i - 1, 0)];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[Math.min(i + 2, pts.length - 1)];
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+    }
+    return d;
+  }
+
+  // Gradient fill path
+  const fillD = smoothPath(points) + ` L ${points[points.length - 1].x} ${svgH - pad.bottom} L ${points[0].x} ${svgH - pad.bottom} Z`;
+  const gradId = `grad-${label.replace(/\W/g, '')}`;
+
+  // Date labels: show first, middle, last
+  const dateLabels: { x: number; text: string }[] = [];
+  const fmtDate = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (points.length >= 1) dateLabels.push({ x: points[0].x, text: fmtDate(data[0].date) });
+  if (points.length >= 3) {
+    const mid = Math.floor(points.length / 2);
+    dateLabels.push({ x: points[mid].x, text: fmtDate(data[mid].date) });
+  }
+  if (points.length >= 2) dateLabels.push({ x: points[points.length - 1].x, text: fmtDate(data[data.length - 1].date) });
 
   return (
     <Card>
-      <p className="text-sm font-semibold mb-3 text-gray-800 dark:text-gray-100">{label}</p>
-      <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-20" preserveAspectRatio="none">
-        <path d={pathD} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <div className="flex items-baseline justify-between mb-2">
+        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{label}</p>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          Latest: <span className="text-gray-700 dark:text-gray-200">{data[data.length - 1].value.toFixed(1)}{unit}</span>
+        </p>
+      </div>
+      <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" style={{ height: 120 }}>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Fill area */}
+        <path d={fillD} fill={`url(#${gradId})`} />
+        {/* Line */}
+        <path d={smoothPath(points)} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Data points */}
         {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="2.5" fill={color} vectorEffect="non-scaling-stroke" />
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r="4" fill="#030712" stroke={color} strokeWidth="2" />
+            <text
+              x={p.x}
+              y={p.y - 8}
+              textAnchor="middle"
+              className="fill-gray-400 dark:fill-gray-500"
+              fontSize="9"
+              fontWeight="500"
+            >
+              {p.value.toFixed(1)}
+            </text>
+          </g>
+        ))}
+        {/* Date labels */}
+        {dateLabels.map((dl, i) => (
+          <text
+            key={i}
+            x={dl.x}
+            y={svgH - 6}
+            textAnchor={i === 0 ? 'start' : i === dateLabels.length - 1 ? 'end' : 'middle'}
+            className="fill-gray-400 dark:fill-gray-500"
+            fontSize="9"
+          >
+            {dl.text}
+          </text>
         ))}
       </svg>
-      <div className="flex justify-between mt-2 text-[9px] text-gray-400 dark:text-gray-500">
-        <span>{new Date(data[0].date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-        <span className="font-medium text-gray-600 dark:text-gray-300">
-          Latest: {data[data.length - 1].value.toFixed(1)}{unit}
-        </span>
-        <span>{new Date(data[data.length - 1].date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-      </div>
     </Card>
   );
 }

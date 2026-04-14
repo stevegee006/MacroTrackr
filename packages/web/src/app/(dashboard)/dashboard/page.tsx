@@ -399,7 +399,7 @@ export default function DashboardPage() {
           <h2 className="text-lg font-semibold">Today&apos;s Log</h2>
 
           {/* Quick-add strip — common foods for current meal */}
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none" data-tutorial="quick-add-strip">
             <Link
               href="/scan"
               className="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-emerald-500/40 px-4 py-2.5 shrink-0 hover:border-emerald-500/70 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all active:scale-95"

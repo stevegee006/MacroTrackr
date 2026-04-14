@@ -342,7 +342,7 @@ export default function TrendsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1" data-tutorial="trends-tabs">
         {([
           { key: 'nutrition' as const, label: 'Nutrition', icon: TrendingUp },
           { key: 'measurements' as const, label: 'Body', icon: Ruler },

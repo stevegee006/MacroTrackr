@@ -203,7 +203,7 @@ function BiometricsTab() {
   return (
     <div className="space-y-4">
       {/* Sub-tab bar */}
-      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+      <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1" data-tutorial="bio-sub-tabs">
         {([
           { key: 'profile' as const, label: 'Profile', icon: User },
           { key: 'measurements' as const, label: 'Measurements', icon: Ruler },

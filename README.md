@@ -1,90 +1,60 @@
-# MacroTrackr
+<p align="center">
+  <img src="packages/web/public/logo.svg" alt="MacroTrackr Logo" width="100" />
+</p>
 
-A self-hosted, privacy-first macro nutrition tracker PWA with barcode scanning, multi-provider AI integration, and daily food logging. Scan a barcode or search for food, log what you eat, and let AI generate personalized macro and meal plans based on your profile.
+<h1 align="center">MacroTrackr</h1>
 
-Built as a **pnpm monorepo** with a Next.js frontend and Fastify API, deployable as a Docker Compose stack. Installable as a Progressive Web App on mobile and desktop.
+<p align="center">
+  <strong>Self-hosted, privacy-first macro nutrition tracker</strong><br>
+  Barcode scanning &bull; Multi-provider AI &bull; Installable PWA
+</p>
 
-## Features
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.0.0-emerald?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA" />
+</p>
 
-### Core Tracking
-- **Barcode Scanning** - Scan food with your phone camera or enter barcodes manually. Product data pulled from OpenFoodFacts and USDA FoodData Central.
-- **Food Logging** - Log meals by type (breakfast, lunch, dinner, snack) with adjustable serving sizes and +/- stepper buttons. Daily macro totals update in real time.
-- **Macro Rings Dashboard** - Interactive progress rings for calories, protein, carbs, and fat against your daily targets. Tap any ring to see a per-food breakdown sorted by meal or by total contribution. Protein ring turns green when the goal is met.
-- **Per-Meal Totals** - Food log view shows macro subtotals for each meal section alongside tappable macro breakdown rings.
-- **Fuzzy Search** - Search saved foods by name or brand. Special characters are stripped for flexible matching (e.g. "MoBettahs" finds "Mo'Bettahs").
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js_15-black?style=flat-square&logo=next.js" alt="Next.js" />
+  <img src="https://img.shields.io/badge/Fastify_5-202020?style=flat-square&logo=fastify" alt="Fastify" />
+  <img src="https://img.shields.io/badge/PostgreSQL_17-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Redis_7-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis" />
+  <img src="https://img.shields.io/badge/Prisma_6-2D3748?style=flat-square&logo=prisma" alt="Prisma" />
+</p>
 
-### AI-Powered
-- **AI Macro Plans** - Generate personalized calorie and macro targets using OpenAI, Anthropic, or Google Gemini based on your height, weight, age, sex, activity level, and goal. Or create plans manually.
-- **AI Meal Plans** - Generate structured 1, 3, or 7-day meal plans with recipes, ingredients, prep times, and per-meal macro breakdowns.
-- **AI Label Scanning** - Photograph a nutrition label and let AI extract the data automatically.
-- **AI Food Estimation** - Describe a food item and get AI-estimated macros.
-- **BYOAI (Bring Your Own AI)** - Users supply their own API key for OpenAI, Anthropic, or Google Gemini. Keys encrypted at rest with AES-256-GCM.
+---
 
-### User Experience
-- **Progressive Web App** - Installable on mobile and desktop with offline shell caching via service worker. Includes iOS splash screens and Android install prompts.
-- **Guided Tutorial** - Multi-page onboarding tutorial walks new users through scanning, searching, logging, and setting up macro plans. Restartable from settings.
-- **Editable Nutrition** - Edit any food item's nutrition data including serving size, fiber, and sugar via admin panel.
-- **Imperial & Metric** - Switch between unit systems in settings; the profile page adapts automatically.
-- **Dark Mode** - System-aware dark mode with manual toggle.
-- **Food Log Export** - Export your food log data from settings.
-- **Feedback Button** - Send feedback directly from the settings page.
+## What is MacroTrackr?
 
-### Auth & Security
-- **JWT Auth + Google OAuth** - Local email/password registration with refresh tokens, or sign in with Google.
-- **Refresh Tokens** - Stored in Redis with SHA-256 hashing and 7-day TTL.
-- **Encrypted API Keys** - User-provided AI keys encrypted with AES-256-GCM server-side.
+A complete nutrition tracking app you host yourself. Scan barcodes, search foods, log meals, and let AI generate personalized macro plans — all with your data staying on your server.
 
-## Tech Stack
+### Highlights
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Next.js 15 (App Router), React 19, Tailwind CSS 4, TanStack Query v5 |
-| Backend | Fastify 5, Prisma 6, PostgreSQL 17, Redis 7 |
-| AI | OpenAI, Anthropic, Google Gemini (user-provided keys, multi-provider) |
-| Food Data | OpenFoodFacts API v2, USDA FoodData Central |
-| Barcode | html5-qrcode (camera PWA + manual entry) |
-| Auth | JWT access/refresh tokens, Google OAuth via @fastify/oauth2 |
-| PWA | @serwist/next (service worker, precaching, offline shell) |
-| Monorepo | pnpm workspaces, Turborepo |
-| Deploy | Docker Compose, GitHub Actions for Docker Hub publishing |
+- **Scan & Search** — Camera barcode scanning, manual entry, OpenFoodFacts + USDA database lookup
+- **Smart Logging** — Log by meal type with quick-add suggestions based on your eating habits
+- **Macro Rings** — Interactive dashboard with progress rings, streak tracking, and shareable images
+- **AI-Powered** — Generate macro plans, meal plans, scan nutrition labels, or estimate food macros with OpenAI, Anthropic, or Gemini (bring your own key)
+- **Body Tracking** — Weight, body fat %, measurements with trend charts
+- **Progress Photos** — Encrypted photo storage with lightbox viewer
+- **PWA** — Install on any device, works offline
 
-## Project Structure
+---
 
-```
-MacroTracker/
-├── packages/
-│   ├── shared/          # @macrotracker/shared - Zod schemas, types, constants
-│   ├── api/             # @macrotracker/api   - Fastify backend (port 4000)
-│   │   ├── prisma/      #   Prisma schema & migrations
-│   │   └── src/
-│   │       ├── plugins/ #   Auth, Prisma, Redis plugins
-│   │       ├── routes/  #   auth, users, food, food-log, macro-plan, meal-plan, admin
-│   │       ├── services/#   Business logic layer
-│   │       └── utils/   #   Errors, encryption, logging, helpers
-│   └── web/             # @macrotracker/web   - Next.js frontend (port 3000)
-│       └── src/
-│           ├── app/     #   (auth) and (dashboard) route groups
-│           ├── components/  # UI, scanner, food, log, plan, tutorial components
-│           ├── hooks/   #   useTutorial, custom hooks
-│           ├── lib/     #   API client, auth helpers, utils
-│           ├── providers/   # AuthProvider, QueryProvider, ThemeProvider
-│           └── sw.ts    #   Service worker (Serwist)
-├── docker-compose.yml
-├── docker-compose.dev.yml
-└── turbo.json
-```
+## Quick Start
 
-## Quick Start (Docker Compose)
+### Option A: Docker Compose (Recommended)
 
-The fastest way to get MacroTracker running. Pre-built images are pulled from Docker Hub — no build step required.
+Pre-built images from Docker Hub — no build step required.
 
-### 1. Create a project directory
+**1. Create project directory**
 
 ```bash
 mkdir macrotracker && cd macrotracker
 ```
 
-### 2. Create `docker-compose.yml`
+**2. Create `docker-compose.yml`**
 
 ```yaml
 services:
@@ -153,16 +123,16 @@ volumes:
   redis_data:
 ```
 
-### 3. Create `.env`
+**3. Create `.env`**
 
 ```env
-# Required — generate random secrets (e.g. openssl rand -hex 32)
+# Required — generate with: openssl rand -hex 32
 JWT_SECRET=<random-string-at-least-32-chars>
 JWT_REFRESH_SECRET=<another-random-string>
 ENCRYPTION_KEY=<64-hex-char-string-for-aes-256>
 POSTGRES_PASSWORD=<strong-db-password>
 
-# URLs — change if deploying behind a reverse proxy
+# URLs — change for production / reverse proxy
 FRONTEND_URL=http://localhost:3000
 API_BASE_URL=http://localhost:4000
 NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
@@ -175,15 +145,23 @@ GOOGLE_CLIENT_SECRET=
 USDA_FDC_API_KEY=
 ```
 
-### 4. Start
+> **Tip:** Generate all secrets at once:
+> ```bash
+> echo "JWT_SECRET=$(openssl rand -hex 32)"
+> echo "JWT_REFRESH_SECRET=$(openssl rand -hex 32)"
+> echo "ENCRYPTION_KEY=$(openssl rand -hex 32)"
+> echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)"
+> ```
+
+**4. Start**
 
 ```bash
 docker compose up -d
 ```
 
-The web app is at `http://localhost:3000` and the API at `http://localhost:4000`.
+Open `http://localhost:3000` and create your account.
 
-To update to the latest version:
+**Update to latest:**
 
 ```bash
 docker compose pull && docker compose up -d
@@ -191,9 +169,158 @@ docker compose pull && docker compose up -d
 
 ---
 
-## Development Setup
+### Option B: Portainer Stack
 
-For contributing or local development, clone the repo and build from source.
+If you use Portainer to manage Docker:
+
+1. Go to **Stacks** > **Add stack**
+2. Name it `macrotracker`
+3. Paste the `docker-compose.yml` contents from above into the **Web editor**
+4. Scroll down to **Environment variables** and add each `.env` variable:
+
+   | Name | Value |
+   |------|-------|
+   | `JWT_SECRET` | *(output of `openssl rand -hex 32`)* |
+   | `JWT_REFRESH_SECRET` | *(output of `openssl rand -hex 32`)* |
+   | `ENCRYPTION_KEY` | *(output of `openssl rand -hex 32`)* |
+   | `POSTGRES_PASSWORD` | *(strong password)* |
+   | `FRONTEND_URL` | `https://macros.yourdomain.com` |
+   | `API_BASE_URL` | `https://macros-api.yourdomain.com` |
+   | `NEXT_PUBLIC_API_URL` | `https://macros-api.yourdomain.com/api/v1` |
+
+5. Click **Deploy the stack**
+
+> **Updating:** In Portainer, go to your stack > click **Pull and redeploy** to grab the latest images.
+
+---
+
+## Features
+
+<table>
+<tr>
+<td width="50%">
+
+### Tracking
+- Barcode scanning (camera + manual)
+- Food search (local DB + USDA + OpenFoodFacts)
+- Meal logging (breakfast, lunch, dinner, snack)
+- Adjustable serving sizes with +/- stepper
+- Real-time macro totals
+- Fuzzy search with special character stripping
+- Food log export (CSV)
+
+</td>
+<td width="50%">
+
+### AI-Powered
+- Personalized macro plan generation
+- Structured meal plans (1/3/7 day)
+- Nutrition label photo scanning
+- Food macro estimation from text
+- Multi-provider: OpenAI, Anthropic, Gemini
+- Bring your own API key (encrypted at rest)
+
+</td>
+</tr>
+<tr>
+<td>
+
+### Body & Progress
+- Weight tracking with auto-sync to profile
+- Body measurements (12 body parts)
+- Body fat % and lean mass tracking
+- Progress photos (encrypted storage)
+- Trend charts (nutrition + body)
+- Streak tracking
+
+</td>
+<td>
+
+### User Experience
+- Progressive Web App (installable)
+- Dark mode (system-aware + manual)
+- Imperial & metric units
+- Guided onboarding tutorial
+- Shareable macro ring images (3x DPI)
+- Smart quick-add (learns your habits)
+- Passkey authentication support
+
+</td>
+</tr>
+</table>
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|:------|:-----------|
+| **Frontend** | Next.js 15 (App Router), React 19, Tailwind CSS 4, TanStack Query v5 |
+| **Backend** | Fastify 5, Prisma 6, PostgreSQL 17, Redis 7 |
+| **AI** | OpenAI, Anthropic, Google Gemini (user-provided keys) |
+| **Food Data** | OpenFoodFacts API v2, USDA FoodData Central |
+| **Auth** | JWT (access + refresh), Google OAuth, Passkeys (WebAuthn) |
+| **PWA** | @serwist/next (service worker, precaching, offline shell) |
+| **Monorepo** | pnpm 10 workspaces, Turborepo |
+| **Deploy** | Docker Compose, GitHub Actions CI/CD |
+
+---
+
+## Architecture
+
+```
+                    ┌──────────────┐
+                    │   Browser    │
+                    │  (PWA/Web)   │
+                    └──────┬───────┘
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+       ┌──────▼──────┐          ┌──────▼──────┐
+       │  Next.js 15 │          │  Fastify 5  │
+       │   :3000     │          │   :4000     │
+       │  (frontend) │─────────▶│   (API)     │
+       └─────────────┘          └──────┬──────┘
+                                       │
+                          ┌────────────┼────────────┐
+                          │            │            │
+                   ┌──────▼───┐ ┌─────▼────┐ ┌─────▼─────┐
+                   │ Postgres │ │  Redis   │ │ AI APIs   │
+                   │   :5432  │ │  :6379   │ │ (OpenAI,  │
+                   │  (data)  │ │ (cache/  │ │ Anthropic,│
+                   └──────────┘ │  tokens) │ │ Gemini)   │
+                                └──────────┘ └───────────┘
+```
+
+---
+
+## Project Structure
+
+```
+MacroTracker/
+├── packages/
+│   ├── shared/            # Types, Zod schemas, constants
+│   ├── api/               # Fastify backend
+│   │   ├── prisma/        #   Schema & migrations
+│   │   └── src/
+│   │       ├── plugins/   #   Auth, Prisma, Redis
+│   │       ├── routes/    #   API route handlers
+│   │       ├── services/  #   Business logic
+│   │       └── utils/     #   Encryption, errors, helpers
+│   └── web/               # Next.js frontend
+│       └── src/
+│           ├── app/       #   Route groups: (auth), (dashboard)
+│           ├── components/ #   UI, scanner, log, plan components
+│           ├── providers/  #   Auth, Query, Theme providers
+│           └── lib/       #   API client, utilities
+├── docker-compose.yml
+├── docker-compose.dev.yml
+└── turbo.json
+```
+
+---
+
+## Development Setup
 
 ### Prerequisites
 
@@ -201,13 +328,13 @@ For contributing or local development, clone the repo and build from source.
 - [pnpm 10+](https://pnpm.io/)
 - [Docker & Docker Compose](https://docs.docker.com/get-docker/)
 
-### Clone and install
+### Getting started
 
 ```bash
 git clone https://github.com/stevegee006/MacroTrackr.git
 cd MacroTrackr
 pnpm install
-cp .env.example .env   # Edit .env with your secrets
+cp .env.example .env   # Edit with your secrets
 ```
 
 ### Run with Docker (build from source)
@@ -232,110 +359,46 @@ pnpm db:seed       # Seed sample food data (optional)
 pnpm dev           # Start all services via Turborepo
 ```
 
-## Scripts
+### Commands
 
 | Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start all packages in dev mode (Turborepo) |
+|:--------|:------------|
+| `pnpm dev` | Start all packages in dev mode |
 | `pnpm build` | Build all packages |
 | `pnpm lint` | Lint all packages |
 | `pnpm db:migrate` | Run Prisma migrations |
-| `pnpm db:push` | Push Prisma schema to database |
+| `pnpm db:push` | Push schema to database |
 | `pnpm db:seed` | Seed sample food items |
 | `pnpm db:studio` | Open Prisma Studio GUI |
 
-## API Endpoints
+---
 
-All authenticated endpoints require a `Bearer` token in the `Authorization` header.
+## Database Models
 
-### Auth
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/auth/register` | Register with email/password |
-| POST | `/api/v1/auth/login` | Login, returns access + refresh tokens |
-| POST | `/api/v1/auth/refresh` | Refresh access token |
-| POST | `/api/v1/auth/logout` | Invalidate refresh token |
+| Model | Description |
+|:------|:------------|
+| **User** | Auth credentials, display name, OAuth/passkey providers |
+| **UserProfile** | Height, weight, age, birthday, sex, activity level, goal, macro targets |
+| **UserSettings** | Encrypted AI keys, preferred provider, units, dark mode, timezone |
+| **FoodItem** | Nutrition per 100g, barcode, brand, source |
+| **FoodLog** | Daily entries with pre-computed totals, grouped by meal type |
+| **BodyMeasurement** | Weight, body fat %, lean mass, 12 circumference measurements |
+| **ProgressPhoto** | Encrypted file paths, date, notes |
+| **MacroPlan** | AI or manual calorie/macro targets |
+| **MealPlan** | Structured JSON with daily meals, recipes, and macros |
 
-### Users
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/users/me` | Current user |
-| GET/PUT | `/api/v1/users/me/profile` | User profile (height, weight, age, etc.) |
-| GET/PUT | `/api/v1/users/me/settings` | Settings (API key, units, dark mode) |
-
-### Food
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/food/barcode/:barcode` | Lookup by barcode (checks DB, Redis cache, then OpenFoodFacts) |
-| GET | `/api/v1/food/search?q=` | Search saved foods by name or brand (fuzzy, strips special chars) |
-| GET | `/api/v1/food/search/external?q=` | Search USDA FoodData Central |
-| POST | `/api/v1/food/import/usda` | Import a USDA food into local DB |
-| GET | `/api/v1/food/:id` | Get food item by ID |
-| POST | `/api/v1/food` | Create manual food item |
-| PATCH | `/api/v1/food/:id` | Update food item nutrition |
-| POST | `/api/v1/food/scan-label` | AI-extract nutrition from a label photo |
-| POST | `/api/v1/food/:id/scan-label` | Re-scan label to update existing food |
-| POST | `/api/v1/food/estimate` | AI-estimate macros from a text description |
-
-### Food Log
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/food-log?date=YYYY-MM-DD` | Entries for a date |
-| GET | `/api/v1/food-log/summary?date=` | Daily totals + targets |
-| GET | `/api/v1/food-log/range?from=&to=` | Multi-day range |
-| POST | `/api/v1/food-log` | Log a food entry |
-| PATCH | `/api/v1/food-log/:id` | Update entry |
-| DELETE | `/api/v1/food-log/:id` | Delete entry |
-
-### Macro Plans
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/macro-plan/generate` | AI-generate a plan from profile |
-| POST | `/api/v1/macro-plan` | Create a manual plan |
-| GET | `/api/v1/macro-plan` | List all plans |
-| POST | `/api/v1/macro-plan/:id/activate` | Set as active plan |
-| DELETE | `/api/v1/macro-plan/:id` | Delete plan |
-
-### Meal Plans
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/meal-plan/generate` | AI-generate meal plan |
-| GET | `/api/v1/meal-plan` | List all plans |
-| DELETE | `/api/v1/meal-plan/:id` | Delete plan |
-
-### Health
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Basic health check |
-| GET | `/health/ready` | Checks DB + Redis connectivity |
-
-## Database Schema
-
-Seven models managed by Prisma:
-
-- **User** - Auth credentials, display name, OAuth provider
-- **UserProfile** - Height, weight, age, sex, activity level, goal, macro targets
-- **UserSettings** - Encrypted AI API key, preferred AI provider, units, dark mode
-- **FoodItem** - Nutrition per 100g, barcode, brand, source (OpenFoodFacts, USDA, manual, label scan, AI estimate)
-- **FoodLog** - Daily entries with pre-computed totals, grouped by meal type (breakfast, lunch, dinner, snack)
-- **MacroPlan** - AI or manual calorie/macro targets with activation support
-- **MealPlan** - Structured JSON with daily meals, ingredients, macros, and instructions
-
-## Docker Services
-
-| Service | Image | Port | Description |
-|---------|-------|------|-------------|
-| `db` | postgres:17-alpine | 5432 | PostgreSQL with health check |
-| `redis` | redis:7-alpine | 6379 | Redis for tokens + cache |
-| `api` | Custom multi-stage | 4000 | Fastify API, runs migrations on startup |
-| `web` | Custom multi-stage | 3000 | Next.js standalone build |
+---
 
 ## CI/CD
 
-GitHub Actions automatically builds and pushes Docker images to Docker Hub on pushes to `main` and version tags:
+GitHub Actions automatically builds and pushes Docker images on every push to `main`:
 
-- `geaves006/macrotrackr-api:latest`
-- `geaves006/macrotrackr-web:latest`
+| Image | Description |
+|:------|:------------|
+| `geaves006/macrotrackr-api:latest` | Fastify API (runs migrations on startup) |
+| `geaves006/macrotrackr-web:latest` | Next.js standalone build |
+
+---
 
 ## License
 

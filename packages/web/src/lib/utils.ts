@@ -30,3 +30,22 @@ export function addDays(dateStr: string, offset: number): string {
   d.setDate(d.getDate() + offset);
   return formatDate(d);
 }
+
+/**
+ * Evaluate a simple math expression string (e.g. "150-32", "100+50", "2*30").
+ * Only supports +, -, *, / with numbers. Returns null if invalid.
+ */
+export function evalMathExpr(expr: string): number | null {
+  const trimmed = expr.trim();
+  if (!trimmed) return null;
+  // Only allow digits, decimal points, spaces, and +-*/
+  if (!/^[\d\s.+\-*/()]+$/.test(trimmed)) return null;
+  try {
+    // Use Function constructor to safely evaluate (no access to scope)
+    const result = new Function(`"use strict"; return (${trimmed})`)() as number;
+    if (typeof result !== 'number' || !isFinite(result) || result < 0) return null;
+    return Math.round(result * 100) / 100;
+  } catch {
+    return null;
+  }
+}

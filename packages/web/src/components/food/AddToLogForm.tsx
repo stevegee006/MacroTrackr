@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { todayString, parseDateLocal, addDays } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { MathInput } from '@/components/ui/MathInput';
 import { Minus, Plus } from 'lucide-react';
 import type { FoodItem, MealType } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@macrotracker/shared';
@@ -112,12 +113,11 @@ export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLog
             </button>
           </div>
         </div>
-        <Input
+        <MathInput
           label="Serving size (g)"
-          type="number"
           min={1}
           value={servingSizeG}
-          onChange={(e) => setServingSizeG(e.target.value)}
+          onChange={setServingSizeG}
           className="w-32"
         />
       </div>

@@ -9,6 +9,7 @@ import { MacroBreakdownModal } from '@/components/log/MacroBreakdownModal';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { MathInput } from '@/components/ui/MathInput';
 import { Spinner } from '@/components/ui/Spinner';
 import { ChevronLeft, ChevronRight, Trash2, Pencil, Loader2, X, Plus } from 'lucide-react';
 import type { DailySummary, FoodLogEntry, MealType } from '@macrotracker/shared';
@@ -235,12 +236,11 @@ export default function LogPage() {
                             onChange={(e) => setEditForm({ ...editForm, servingQty: e.target.value })}
                             className="w-24"
                           />
-                          <Input
+                          <MathInput
                             label="Size (g)"
-                            type="number"
                             min={1}
                             value={editForm.servingSizeG}
-                            onChange={(e) => setEditForm({ ...editForm, servingSizeG: e.target.value })}
+                            onChange={(v) => setEditForm({ ...editForm, servingSizeG: v })}
                             className="w-28"
                           />
                         </div>

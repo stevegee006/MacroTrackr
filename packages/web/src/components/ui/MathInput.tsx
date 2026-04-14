@@ -82,19 +82,6 @@ export function MathInput({ label, value, onChange, min, step, className, inputM
     });
   }
 
-  function handleEquals() {
-    if (hasExpr) {
-      const result = evalMathExpr(raw);
-      if (result != null) {
-        const str = String(result);
-        setRaw(str);
-        onChange(str);
-        setHasExpr(false);
-      }
-    }
-    inputRef.current?.focus();
-  }
-
   const inputId = label?.toLowerCase().replace(/\s+/g, '-');
 
   return (
@@ -106,8 +93,8 @@ export function MathInput({ label, value, onChange, min, step, className, inputM
       )}
       {/* Operator buttons — show when input is focused */}
       <div
-        className={`flex gap-1 overflow-hidden transition-all duration-150 ${
-          focused ? 'max-h-8 opacity-100 mb-0' : 'max-h-0 opacity-0 -mb-1'
+        className={`flex gap-1.5 overflow-hidden transition-all duration-150 ${
+          focused ? 'max-h-9 opacity-100 pb-1.5' : 'max-h-0 opacity-0 pb-0'
         }`}
       >
         {OPS.map((op) => (
@@ -116,7 +103,7 @@ export function MathInput({ label, value, onChange, min, step, className, inputM
             type="button"
             tabIndex={-1}
             onPointerDown={(e) => {
-              e.preventDefault(); // prevent blur
+              e.preventDefault();
               insertOp(op);
             }}
             className="flex-1 h-7 rounded-md bg-gray-100 dark:bg-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 active:bg-gray-200 dark:active:bg-gray-600 transition-colors"
@@ -124,19 +111,6 @@ export function MathInput({ label, value, onChange, min, step, className, inputM
             {op}
           </button>
         ))}
-        {hasExpr && (
-          <button
-            type="button"
-            tabIndex={-1}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              handleEquals();
-            }}
-            className="flex-1 h-7 rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-xs font-semibold text-emerald-700 dark:text-emerald-400 active:bg-emerald-200 dark:active:bg-emerald-800/40 transition-colors"
-          >
-            =
-          </button>
-        )}
       </div>
       <div className="relative">
         <input

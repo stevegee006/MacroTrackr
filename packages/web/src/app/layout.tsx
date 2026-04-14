@@ -37,6 +37,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* iOS standalone PWA — Next.js outputs mobile-web-app-capable but iOS needs the apple- prefix */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         {/* iOS PWA Splash Screens — portrait orientation for all devices */}
         <link rel="apple-touch-startup-image" href="/splash/iPhone_16_Pro_Max.png" media="screen and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
         <link rel="apple-touch-startup-image" href="/splash/iPhone_16_Pro.png" media="screen and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />

@@ -75,6 +75,7 @@ export function MathInput({ label, value, onChange, min, step, className, inputM
           inputMode={inputMode ?? 'decimal'}
           value={raw}
           onChange={handleChange}
+          onFocus={(e) => e.target.select()}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           min={min}

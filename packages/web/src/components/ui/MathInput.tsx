@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { cn, evalMathExpr } from '@/lib/utils';
 
 interface MathInputProps {
@@ -13,14 +13,19 @@ interface MathInputProps {
   inputMode?: 'decimal' | 'numeric';
 }
 
+const OPS = ['+', '\u2212', '\u00d7', '\u00f7'] as const;
+const OP_MAP: Record<string, string> = { '+': '+', '\u2212': '-', '\u00d7': '*', '\u00f7': '/' };
+
 /**
  * A number input that also accepts simple math expressions.
  * Users can type e.g. "150-32" and it evaluates to "118" on blur.
- * Shows a subtle indicator when the input contains an expression.
+ * Operator buttons appear above the input on focus for mobile number pads.
  */
 export function MathInput({ label, value, onChange, min, step, className, inputMode }: MathInputProps) {
   const [raw, setRaw] = useState(value);
   const [hasExpr, setHasExpr] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Sync external value changes
   useEffect(() => {
@@ -28,19 +33,21 @@ export function MathInput({ label, value, onChange, min, step, className, inputM
     setHasExpr(false);
   }, [value]);
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const v = e.target.value;
+  function updateRaw(v: string) {
     setRaw(v);
-    // Check if it contains math operators
-    const isMath = /[+\-*/]/.test(v.replace(/^-/, '')); // ignore leading negative
+    const isMath = /[+\-*/]/.test(v.replace(/^-/, ''));
     setHasExpr(isMath);
-    // If it's a plain number, update immediately
     if (!isMath) {
       onChange(v);
     }
   }
 
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    updateRaw(e.target.value);
+  }
+
   function handleBlur() {
+    setFocused(false);
     if (hasExpr) {
       const result = evalMathExpr(raw);
       if (result != null) {
@@ -59,6 +66,35 @@ export function MathInput({ label, value, onChange, min, step, className, inputM
     }
   }
 
+  function insertOp(displayOp: string) {
+    const actualOp = OP_MAP[displayOp];
+    const el = inputRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? raw.length;
+    const end = el.selectionEnd ?? raw.length;
+    const next = raw.slice(0, start) + actualOp + raw.slice(end);
+    updateRaw(next);
+    // Restore cursor position after the inserted operator
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + 1;
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
+  function handleEquals() {
+    if (hasExpr) {
+      const result = evalMathExpr(raw);
+      if (result != null) {
+        const str = String(result);
+        setRaw(str);
+        onChange(str);
+        setHasExpr(false);
+      }
+    }
+    inputRef.current?.focus();
+  }
+
   const inputId = label?.toLowerCase().replace(/\s+/g, '-');
 
   return (
@@ -68,14 +104,48 @@ export function MathInput({ label, value, onChange, min, step, className, inputM
           {label}
         </label>
       )}
+      {/* Operator buttons — show when input is focused */}
+      {focused && (
+        <div className="flex gap-1">
+          {OPS.map((op) => (
+            <button
+              key={op}
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault(); // prevent blur
+                insertOp(op);
+              }}
+              className="flex-1 h-7 rounded-md bg-gray-100 dark:bg-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 active:bg-gray-200 dark:active:bg-gray-600 transition-colors"
+            >
+              {op}
+            </button>
+          ))}
+          {hasExpr && (
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                handleEquals();
+              }}
+              className="flex-1 h-7 rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-xs font-semibold text-emerald-700 dark:text-emerald-400 active:bg-emerald-200 dark:active:bg-emerald-800/40 transition-colors"
+            >
+              =
+            </button>
+          )}
+        </div>
+      )}
       <div className="relative">
         <input
+          ref={inputRef}
           id={inputId}
           type="text"
           inputMode={inputMode ?? 'decimal'}
           value={raw}
           onChange={handleChange}
-          onFocus={(e) => e.target.select()}
+          onFocus={(e) => {
+            setFocused(true);
+            e.target.select();
+          }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           min={min}

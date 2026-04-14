@@ -28,6 +28,15 @@ export default async function foodLogRoutes(fastify: FastifyInstance) {
     return { data: range };
   });
 
+  fastify.get('/food-log/frequent', async (request) => {
+    const { mealType, days, limit } = (request.query as { mealType?: string; days?: string; limit?: string });
+    const mt = mealType || 'BREAKFAST';
+    const d = days ? parseInt(days) : 30;
+    const l = limit ? parseInt(limit) : 10;
+    const data = await foodLogService.getFrequentFoods(fastify, request.user.sub, mt, d, l);
+    return { data };
+  });
+
   fastify.get('/food-log/export', async (request) => {
     const { from, to } = foodLogRangeSchema.parse(request.query);
     const entries = await foodLogService.getLogEntriesForExport(fastify, request.user.sub, from, to);

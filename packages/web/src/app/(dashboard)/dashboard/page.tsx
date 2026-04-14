@@ -13,7 +13,23 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Share2, Check, Plus } from 'lucide-react';
 import type { DailySummary, FoodLogEntry } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS } from '@macrotracker/shared';
+import type { MealType } from '@macrotracker/shared';
 import Link from 'next/link';
+
+function getCurrentMealType(): MealType {
+  const hour = new Date().getHours();
+  if (hour < 10) return 'BREAKFAST';
+  if (hour < 14) return 'LUNCH';
+  if (hour < 17) return 'SNACK';
+  return 'DINNER';
+}
+
+interface FrequentFood {
+  foodItem: { id: string; name: string; brand: string | null; caloriesPer100g: number };
+  count: number;
+  servingSizeG: number;
+  servingQty: number;
+}
 
 function drawRingToCanvas(
   ctx: CanvasRenderingContext2D,
@@ -265,6 +281,16 @@ export default function DashboardPage() {
     queryFn: () => apiFetch<{ data: FoodLogEntry[] }>(`/food-log?date=${today}`),
   });
 
+  // Frequent foods for current meal type
+  const currentMeal = getCurrentMealType();
+  const { data: frequentRes } = useQuery({
+    queryKey: ['frequent-foods', currentMeal],
+    queryFn: () =>
+      apiFetch<{ data: FrequentFood[] }>(
+        `/food-log/frequent?mealType=${currentMeal}&days=60&limit=8`,
+      ),
+  });
+
   // Fetch last 30 days for streak calculation
   const thirtyDaysAgo = addDays(today, -30);
   const { data: rangeData } = useQuery({
@@ -372,7 +398,7 @@ export default function DashboardPage() {
         <div className="space-y-4 mt-6 lg:mt-0 lg:col-span-2">
           <h2 className="text-lg font-semibold">Today&apos;s Log</h2>
 
-          {/* Quick-add strip */}
+          {/* Quick-add strip — common foods for current meal */}
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
             <Link
               href="/scan"
@@ -381,28 +407,18 @@ export default function DashboardPage() {
               <Plus className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">Add food</span>
             </Link>
-            {(() => {
-              // Deduplicate recent foods by foodItem id
-              const seen = new Set<string>();
-              const recentFoods: typeof logs = [];
-              for (const entry of logs) {
-                const fid = entry.foodItem?.id;
-                if (fid && !seen.has(fid)) {
-                  seen.add(fid);
-                  recentFoods.push(entry);
-                }
-              }
-              return recentFoods.map((entry) => (
-                <Link
-                  key={entry.foodItem!.id}
-                  href={`/scan?foodId=${entry.foodItem!.id}`}
-                  className="flex flex-col justify-center rounded-xl bg-gray-100 dark:bg-gray-800 px-4 py-2.5 shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all active:scale-95"
-                >
-                  <span className="text-xs font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">{entry.foodItem?.name}</span>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400">{Math.round(entry.totalCalories)} kcal</span>
-                </Link>
-              ));
-            })()}
+            {(frequentRes?.data ?? []).map((item) => (
+              <Link
+                key={item.foodItem.id}
+                href={`/scan?foodId=${item.foodItem.id}`}
+                className="flex flex-col justify-center rounded-xl bg-gray-100 dark:bg-gray-800 px-4 py-2.5 shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all active:scale-95"
+              >
+                <span className="text-xs font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap max-w-[140px] truncate">{item.foodItem.name}</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                  {Math.round(item.foodItem.caloriesPer100g * item.servingSizeG * item.servingQty / 100)} kcal · {MEAL_TYPE_LABELS[currentMeal].toLowerCase()}
+                </span>
+              </Link>
+            ))}
           </div>
 
           {logs.length === 0 ? (

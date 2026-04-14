@@ -102,6 +102,69 @@ export async function getLogEntriesForExport(
   });
 }
 
+export async function getFrequentFoods(
+  fastify: FastifyInstance,
+  userId: string,
+  mealType: string,
+  days: number = 30,
+  limit: number = 10,
+) {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  // Get all food log entries for this meal type in the lookback period
+  const logs = await fastify.prisma.foodLog.findMany({
+    where: {
+      userId,
+      mealType: mealType as any,
+      logDate: { gte: since },
+    },
+    select: {
+      foodItemId: true,
+      servingSizeG: true,
+      servingQty: true,
+      foodItem: {
+        select: {
+          id: true,
+          name: true,
+          brand: true,
+          caloriesPer100g: true,
+          proteinPer100g: true,
+          carbsPer100g: true,
+          fatPer100g: true,
+        },
+      },
+    },
+  });
+
+  // Count occurrences per foodItem, keep most recent serving info
+  const counts = new Map<string, { count: number; foodItem: typeof logs[0]['foodItem']; servingSizeG: number; servingQty: number }>();
+  for (const log of logs) {
+    const existing = counts.get(log.foodItemId);
+    if (existing) {
+      existing.count++;
+    } else {
+      counts.set(log.foodItemId, {
+        count: 1,
+        foodItem: log.foodItem,
+        servingSizeG: log.servingSizeG,
+        servingQty: log.servingQty,
+      });
+    }
+  }
+
+  // Sort by frequency, return top N
+  return Array.from(counts.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map((item) => ({
+      foodItem: item.foodItem,
+      count: item.count,
+      servingSizeG: item.servingSizeG,
+      servingQty: item.servingQty,
+    }));
+}
+
 export async function createLogEntry(
   fastify: FastifyInstance,
   userId: string,

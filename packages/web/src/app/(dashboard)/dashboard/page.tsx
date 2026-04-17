@@ -46,31 +46,53 @@ function getSmartGreeting(
   if (totals && targets && targets.calories > 0 && logCount > 0) {
     const calPct = totals.calories / targets.calories;
     const protPct = targets.proteinG > 0 ? totals.proteinG / targets.proteinG : 0;
+    const protRemaining = Math.round(targets.proteinG - totals.proteinG);
+    const calRemaining = Math.round(targets.calories - totals.calories);
 
-    // All macros hit perfectly (within 90-105%)
-    if (calPct >= 0.9 && calPct <= 1.05 && protPct >= 0.9) {
-      return { emoji: '\ud83c\udf1f', message: 'Perfect day! Your macros are right on target.' };
+    // Nailed it — both calories and protein within 95-105%
+    if (calPct >= 0.95 && calPct <= 1.05 && protPct >= 0.95) {
+      return { emoji: '\ud83c\udf1f', message: 'Nailed it! Calories and protein are spot on.' };
     }
 
-    // Protein goal crushed
-    if (protPct >= 1.0 && calPct <= 1.05) {
-      return { emoji: '\ud83d\udcaa', message: 'Protein goal crushed! Great job fueling your body.' };
+    // Protein on point (95%+) even if calories aren't perfect
+    if (protPct >= 0.95 && protPct <= 1.1) {
+      if (calPct <= 1.05) {
+        return { emoji: '\ud83d\udcaa', message: `Protein on point at ${Math.round(totals.proteinG)}g! Great job.` };
+      }
+      return { emoji: '\ud83d\udcaa', message: `Protein locked in at ${Math.round(totals.proteinG)}g \u2014 watch the calories though.` };
     }
 
-    // Over on calories
+    // Protein goal exceeded
+    if (protPct > 1.1 && calPct <= 1.05) {
+      return { emoji: '\ud83e\udd47', message: 'Protein goal smashed! You went above and beyond today.' };
+    }
+
+    // Over on calories significantly
     if (calPct > 1.15) {
-      return { emoji: '\ud83d\ude4c', message: "You're over your calorie target \u2014 tomorrow's a new day!" };
+      if (protPct >= 0.85) {
+        return { emoji: '\ud83d\ude4c', message: "Over on calories but protein's solid \u2014 not a bad trade-off!" };
+      }
+      return { emoji: '\ud83d\ude4c', message: "Over your calorie target \u2014 no stress, tomorrow's a fresh start!" };
+    }
+
+    // Close to protein (85-95%) — give specific encouragement
+    if (protPct >= 0.85 && protPct < 0.95 && protRemaining > 0) {
+      return { emoji: '\ud83c\udfaf', message: `Only ${protRemaining}g of protein to go \u2014 you're so close!` };
     }
 
     // Close to calorie target (85-100%)
-    if (calPct >= 0.85 && calPct <= 1.0) {
-      const remaining = Math.round(targets.calories - totals.calories);
-      return { emoji: '\ud83c\udfaf', message: `Almost there! ${remaining} calories left to hit your target.` };
+    if (calPct >= 0.85 && calPct <= 1.0 && calRemaining > 0) {
+      return { emoji: '\ud83c\udfaf', message: `${calRemaining} calories left to hit your target. Almost there!` };
+    }
+
+    // Slightly over calories (100-115%)
+    if (calPct > 1.0 && calPct <= 1.15) {
+      return { emoji: '\ud83d\udc4d', message: `Slightly over on calories \u2014 you're still in a good range.` };
     }
 
     // Low protein warning
     if (calPct > 0.5 && protPct < 0.4) {
-      return { emoji: '\ud83e\udd69', message: 'Looking low on protein \u2014 try adding a high-protein snack!' };
+      return { emoji: '\ud83e\udd69', message: 'Protein is running low \u2014 try a high-protein snack!' };
     }
 
     // Halfway through the day, barely logged

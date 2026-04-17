@@ -313,15 +313,50 @@ export default function TrendsPage() {
       });
   }
 
-  const weightData = extractSeries('weightKg', isImperial ? (v) => Math.round(v * LB_PER_KG * 10) / 10 : undefined);
+  const toIn = isImperial ? (v: number) => Math.round(v * IN_PER_CM * 10) / 10 : undefined;
+  const toLbs = isImperial ? (v: number) => Math.round(v * LB_PER_KG * 10) / 10 : undefined;
+  const lenUnit = isImperial ? 'in' : 'cm';
+  const wtUnit = isImperial ? 'lbs' : 'kg';
+
+  // Primary (always shown at top)
+  const weightData = extractSeries('weightKg', toLbs);
   const bfData = extractSeries('bodyFatPct');
-  const waistData = extractSeries('waist', isImperial ? (v) => Math.round(v * IN_PER_CM * 10) / 10 : undefined);
-  const hipData = extractSeries('hip', isImperial ? (v) => Math.round(v * IN_PER_CM * 10) / 10 : undefined);
+  const leanData = extractSeries('leanMassKg', toLbs);
+
+  // Circumference measurements
+  const waistData = extractSeries('waist', toIn);
+  const hipData = extractSeries('hip', toIn);
+  const chestData = extractSeries('chest', toIn);
+  const abdomenData = extractSeries('abdomen', toIn);
+  const neckData = extractSeries('neck', toIn);
+  const shoulderData = extractSeries('shoulder', toIn);
+  const thighRData = extractSeries('thighR', toIn);
+  const thighLData = extractSeries('thighL', toIn);
+  const bicepRData = extractSeries('bicepR', toIn);
+  const bicepLData = extractSeries('bicepL', toIn);
+  const calfRData = extractSeries('calfR', toIn);
+  const calfLData = extractSeries('calfL', toIn);
 
   const latestWeight = weightData.length > 0 ? weightData[weightData.length - 1].value : null;
   const firstWeight = weightData.length > 0 ? weightData[0].value : null;
   const weightChange = latestWeight != null && firstWeight != null && weightData.length > 1 ? latestWeight - firstWeight : null;
   const latestBf = bfData.length > 0 ? bfData[bfData.length - 1].value : null;
+
+  // Build list of circumference charts that have data (only show charts with logged data)
+  const circumCharts = [
+    { data: waistData, label: `Waist (${lenUnit})`, color: '#3b82f6', unit: lenUnit },
+    { data: hipData, label: `Hip (${lenUnit})`, color: '#a855f7', unit: lenUnit },
+    { data: chestData, label: `Chest (${lenUnit})`, color: '#ef4444', unit: lenUnit },
+    { data: abdomenData, label: `Abdomen (${lenUnit})`, color: '#f97316', unit: lenUnit },
+    { data: neckData, label: `Neck (${lenUnit})`, color: '#06b6d4', unit: lenUnit },
+    { data: shoulderData, label: `Shoulder (${lenUnit})`, color: '#8b5cf6', unit: lenUnit },
+    { data: thighRData, label: `Thigh R (${lenUnit})`, color: '#ec4899', unit: lenUnit },
+    { data: thighLData, label: `Thigh L (${lenUnit})`, color: '#f43f5e', unit: lenUnit },
+    { data: bicepRData, label: `Bicep R (${lenUnit})`, color: '#14b8a6', unit: lenUnit },
+    { data: bicepLData, label: `Bicep L (${lenUnit})`, color: '#0d9488', unit: lenUnit },
+    { data: calfRData, label: `Calf R (${lenUnit})`, color: '#64748b', unit: lenUnit },
+    { data: calfLData, label: `Calf L (${lenUnit})`, color: '#475569', unit: lenUnit },
+  ].filter((c) => c.data.length > 0);
 
   if (isLoading) {
     return (
@@ -436,11 +471,20 @@ export default function TrendsPage() {
             </Card>
           </div>
 
-          {/* Line charts */}
-          <LineChart data={weightData} label={`Weight (${isImperial ? 'lbs' : 'kg'})`} color="#10b981" unit={isImperial ? 'lbs' : 'kg'} />
+          {/* Primary charts — always shown */}
+          <LineChart data={weightData} label={`Weight (${wtUnit})`} color="#10b981" unit={wtUnit} />
           <LineChart data={bfData} label="Body Fat (%)" color="#f59e0b" unit="%" />
-          <LineChart data={waistData} label={`Waist (${isImperial ? 'in' : 'cm'})`} color="#3b82f6" unit={isImperial ? 'in' : 'cm'} />
-          <LineChart data={hipData} label={`Hip (${isImperial ? 'in' : 'cm'})`} color="#a855f7" unit={isImperial ? 'in' : 'cm'} />
+          <LineChart data={leanData} label={`Lean Mass (${wtUnit})`} color="#06b6d4" unit={wtUnit} />
+
+          {/* Circumference charts — only shown if data exists */}
+          {circumCharts.length > 0 && (
+            <>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Measurements</p>
+              {circumCharts.map((c) => (
+                <LineChart key={c.label} data={c.data} label={c.label} color={c.color} unit={c.unit} />
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>

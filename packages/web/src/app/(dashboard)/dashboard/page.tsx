@@ -11,7 +11,7 @@ import { MacroBreakdownModal } from '@/components/log/MacroBreakdownModal';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { Share2, Check, Plus } from 'lucide-react';
-import type { DailySummary, FoodLogEntry } from '@macrotracker/shared';
+import type { DailySummary, FoodLogEntry, UserProfile } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS } from '@macrotracker/shared';
 import type { MealType } from '@macrotracker/shared';
 import Link from 'next/link';
@@ -22,6 +22,85 @@ function getCurrentMealType(): MealType {
   if (hour < 14) return 'LUNCH';
   if (hour < 17) return 'SNACK';
   return 'DINNER';
+}
+
+function getSmartGreeting(
+  profile: UserProfile | undefined,
+  totals: DailySummary['totals'] | undefined,
+  targets: DailySummary['targets'] | undefined,
+  streak: number,
+  logCount: number,
+): { emoji: string; message: string } {
+  const hour = new Date().getHours();
+
+  // Birthday check
+  if (profile?.birthDate) {
+    const bd = profile.birthDate.slice(5, 10); // "MM-DD"
+    const todayMD = new Date().toISOString().slice(5, 10);
+    if (bd === todayMD) {
+      return { emoji: '\ud83c\udf82', message: 'Happy Birthday! Enjoy your day \u2014 you deserve it!' };
+    }
+  }
+
+  // If we have macro data, give contextual feedback
+  if (totals && targets && targets.calories > 0 && logCount > 0) {
+    const calPct = totals.calories / targets.calories;
+    const protPct = targets.proteinG > 0 ? totals.proteinG / targets.proteinG : 0;
+
+    // All macros hit perfectly (within 90-105%)
+    if (calPct >= 0.9 && calPct <= 1.05 && protPct >= 0.9) {
+      return { emoji: '\ud83c\udf1f', message: 'Perfect day! Your macros are right on target.' };
+    }
+
+    // Protein goal crushed
+    if (protPct >= 1.0 && calPct <= 1.05) {
+      return { emoji: '\ud83d\udcaa', message: 'Protein goal crushed! Great job fueling your body.' };
+    }
+
+    // Over on calories
+    if (calPct > 1.15) {
+      return { emoji: '\ud83d\ude4c', message: "You're over your calorie target \u2014 tomorrow's a new day!" };
+    }
+
+    // Close to calorie target (85-100%)
+    if (calPct >= 0.85 && calPct <= 1.0) {
+      const remaining = Math.round(targets.calories - totals.calories);
+      return { emoji: '\ud83c\udfaf', message: `Almost there! ${remaining} calories left to hit your target.` };
+    }
+
+    // Low protein warning
+    if (calPct > 0.5 && protPct < 0.4) {
+      return { emoji: '\ud83e\udd69', message: 'Looking low on protein \u2014 try adding a high-protein snack!' };
+    }
+
+    // Halfway through the day, barely logged
+    if (hour >= 14 && calPct < 0.3) {
+      return { emoji: '\u23f0', message: "It's afternoon \u2014 don't forget to log your meals!" };
+    }
+  }
+
+  // Streak celebrations
+  if (streak >= 30) {
+    return { emoji: '\ud83d\udd25', message: `${streak}-day streak! You're an absolute machine.` };
+  }
+  if (streak >= 14) {
+    return { emoji: '\ud83d\ude80', message: `${streak} days in a row! Incredible consistency.` };
+  }
+  if (streak >= 7) {
+    return { emoji: '\u2b50', message: `${streak}-day streak! A full week of tracking \u2014 keep it up!` };
+  }
+  if (streak >= 3) {
+    return { emoji: '\ud83d\udcaa', message: `${streak}-day streak! You're building a great habit.` };
+  }
+
+  // Time-of-day defaults
+  if (hour < 12) {
+    return { emoji: '\u2600\ufe0f', message: "Good morning! Let's make today count." };
+  }
+  if (hour < 17) {
+    return { emoji: '\ud83d\udc4b', message: "Here's your nutrition for today" };
+  }
+  return { emoji: '\ud83c\udf19', message: 'Good evening! How did your nutrition look today?' };
 }
 
 interface FrequentFood {
@@ -281,6 +360,12 @@ export default function DashboardPage() {
     queryFn: () => apiFetch<{ data: FoodLogEntry[] }>(`/food-log?date=${today}`),
   });
 
+  // Profile for birthday check
+  const { data: profileData } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => apiFetch<{ data: UserProfile }>('/users/me/profile'),
+  });
+
   // Frequent foods for current meal type
   const currentMeal = getCurrentMealType();
   const { data: frequentRes } = useQuery({
@@ -328,6 +413,8 @@ export default function DashboardPage() {
     }
   }
 
+  const greeting = getSmartGreeting(profileData?.data, s?.totals, s?.targets, streak, logs.length);
+
   const MEAL_COLORS: Record<string, string> = {
     BREAKFAST: 'bg-amber-500',
     LUNCH: 'bg-blue-500',
@@ -344,7 +431,9 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight">
           Hi, {user?.displayName?.split(' ')[0] || 'there'}
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Here&apos;s your nutrition for today</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          {greeting.emoji} {greeting.message}
+        </p>
       </div>
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-6">

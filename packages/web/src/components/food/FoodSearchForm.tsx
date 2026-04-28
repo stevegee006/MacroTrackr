@@ -16,8 +16,9 @@ interface SearchResponse {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
-interface UsdaFood {
-  fdcId: number;
+interface ExternalFood {
+  source: 'USDA' | 'OPENFOODFACTS';
+  id: string;
   name: string;
   brand: string | null;
   servingSizeG: number;
@@ -28,7 +29,7 @@ interface UsdaFood {
   fiberPer100g: number | null;
   sugarPer100g: number | null;
   sodiumPer100g: number | null;
-  dataType: string;
+  categories?: string | null;
 }
 
 type SearchMode = 'saved' | 'external';
@@ -38,7 +39,7 @@ export function FoodSearchForm({ onResult }: FoodSearchFormProps) {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [mode, setMode] = useState<SearchMode>('saved');
-  const [importingId, setImportingId] = useState<number | null>(null);
+  const [importingId, setImportingId] = useState<string | null>(null);
 
   function handleQueryChange(value: string) {
     setQuery(value);
@@ -57,21 +58,56 @@ export function FoodSearchForm({ onResult }: FoodSearchFormProps) {
     enabled: mode === 'saved' && debouncedQuery.length >= 1,
   });
 
-  // External USDA search
+  // External search (USDA + OpenFoodFacts merged)
   const externalSearch = useQuery({
     queryKey: ['foodSearchExternal', debouncedQuery],
     queryFn: () =>
-      apiFetch<{ data: UsdaFood[] }>(`/food/search/external?q=${encodeURIComponent(debouncedQuery)}&limit=15`),
+      apiFetch<{ data: ExternalFood[] }>(`/food/search/external?q=${encodeURIComponent(debouncedQuery)}&limit=20`),
     enabled: mode === 'external' && debouncedQuery.length >= 2,
   });
 
-  // Import USDA food
+  // Import external food (routes to USDA or OFF based on source)
   const importMutation = useMutation({
-    mutationFn: async (food: UsdaFood) => {
-      setImportingId(food.fdcId);
+    mutationFn: async (food: ExternalFood) => {
+      setImportingId(food.id);
+      if (food.source === 'OPENFOODFACTS') {
+        const res = await apiFetch<{ data: FoodItem }>('/food/import/off', {
+          method: 'POST',
+          body: JSON.stringify({
+            code: food.id,
+            name: food.name,
+            brand: food.brand,
+            servingSizeG: food.servingSizeG,
+            caloriesPer100g: food.caloriesPer100g,
+            proteinPer100g: food.proteinPer100g,
+            carbsPer100g: food.carbsPer100g,
+            fatPer100g: food.fatPer100g,
+            fiberPer100g: food.fiberPer100g,
+            sugarPer100g: food.sugarPer100g,
+            sodiumPer100g: food.sodiumPer100g,
+            imageUrl: null,
+            categories: food.categories ?? null,
+          }),
+        });
+        return res.data;
+      }
+      // USDA
       const res = await apiFetch<{ data: FoodItem }>('/food/import/usda', {
         method: 'POST',
-        body: JSON.stringify(food),
+        body: JSON.stringify({
+          fdcId: parseInt(food.id),
+          name: food.name,
+          brand: food.brand,
+          servingSizeG: food.servingSizeG,
+          caloriesPer100g: food.caloriesPer100g,
+          proteinPer100g: food.proteinPer100g,
+          carbsPer100g: food.carbsPer100g,
+          fatPer100g: food.fatPer100g,
+          fiberPer100g: food.fiberPer100g,
+          sugarPer100g: food.sugarPer100g,
+          sodiumPer100g: food.sodiumPer100g,
+          dataType: 'Branded',
+        }),
       });
       return res.data;
     },
@@ -197,49 +233,56 @@ export function FoodSearchForm({ onResult }: FoodSearchFormProps) {
       {mode === 'external' && externalFoods.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {externalFoods.length} result{externalFoods.length !== 1 ? 's' : ''} from USDA
+            {externalFoods.length} result{externalFoods.length !== 1 ? 's' : ''} from USDA &amp; OpenFoodFacts
           </p>
           <div className="divide-y divide-gray-100 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {externalFoods.map((food) => (
-              <button
-                key={food.fdcId}
-                onClick={() => importMutation.mutate(food)}
-                disabled={importingId === food.fdcId}
-                className="w-full text-left px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                        {food.name}
-                      </p>
-                      <span className="text-[9px] font-semibold uppercase bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1 py-0.5 rounded shrink-0">
-                        USDA
-                      </span>
+            {externalFoods.map((food) => {
+              const isOff = food.source === 'OPENFOODFACTS';
+              const badgeClass = isOff
+                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+              const badgeLabel = isOff ? 'OFF' : 'USDA';
+              return (
+                <button
+                  key={`${food.source}-${food.id}`}
+                  onClick={() => importMutation.mutate(food)}
+                  disabled={importingId === food.id}
+                  className="w-full text-left px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {food.name}
+                        </p>
+                        <span className={`text-[9px] font-semibold uppercase px-1 py-0.5 rounded shrink-0 ${badgeClass}`}>
+                          {badgeLabel}
+                        </span>
+                      </div>
+                      {food.brand && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {food.brand}
+                        </p>
+                      )}
                     </div>
-                    {food.brand && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {food.brand}
-                      </p>
-                    )}
+                    <div className="ml-3 text-right shrink-0">
+                      {importingId === food.id ? (
+                        <Spinner />
+                      ) : (
+                        <>
+                          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            {Math.round(food.caloriesPer100g)} kcal
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            P {Math.round(food.proteinPer100g)}g · C {Math.round(food.carbsPer100g)}g · F {Math.round(food.fatPer100g)}g
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="ml-3 text-right shrink-0">
-                    {importingId === food.fdcId ? (
-                      <Spinner />
-                    ) : (
-                      <>
-                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          {Math.round(food.caloriesPer100g)} kcal
-                        </p>
-                        <p className="text-[10px] text-gray-400">
-                          P {Math.round(food.proteinPer100g)}g · C {Math.round(food.carbsPer100g)}g · F {Math.round(food.fatPer100g)}g
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

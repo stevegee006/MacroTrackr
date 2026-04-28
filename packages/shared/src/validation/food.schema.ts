@@ -71,5 +71,22 @@ export const importUsdaFoodSchema = z.object({
   dataType: z.string().max(50),
 });
 
+export const importOffFoodSchema = z.object({
+  code: z.string().min(1).max(50),
+  name: z.string().min(1).max(255),
+  brand: z.string().max(255).nullable(),
+  servingSizeG: z.number().positive(),
+  caloriesPer100g: z.number().nonnegative(),
+  proteinPer100g: z.number().nonnegative(),
+  carbsPer100g: z.number().nonnegative(),
+  fatPer100g: z.number().nonnegative(),
+  fiberPer100g: z.number().nonnegative().nullable(),
+  sugarPer100g: z.number().nonnegative().nullable(),
+  sodiumPer100g: z.number().nonnegative().nullable(),
+  imageUrl: z.string().nullable(),
+  categories: z.string().nullable().optional(),
+});
+
 export type ExternalFoodSearchInput = z.infer<typeof externalFoodSearchSchema>;
 export type ImportUsdaFoodInput = z.infer<typeof importUsdaFoodSchema>;
+export type ImportOffFoodInput = z.infer<typeof importOffFoodSchema>;

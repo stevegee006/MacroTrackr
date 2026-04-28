@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { CreateFoodItemInput } from '@macrotracker/shared';
 import { labelScanResponseSchema } from '@macrotracker/shared';
-import { lookupBarcode } from './openfoodfacts.service.js';
+import { lookupBarcode, searchProducts as offSearchProducts, type OffSearchResult } from './openfoodfacts.service.js';
 import { searchFoods as usdaSearchFoods, type UsdaParsedFood } from './usda.service.js';
 import { getUsdaApiKey } from './app-config.service.js';
 import { aiVisionCompletion, aiChatCompletion } from './ai-provider.service.js';
@@ -344,36 +344,123 @@ export async function estimateFoodMacros(
   });
 }
 
+export interface ExternalSearchResult {
+  source: 'USDA' | 'OPENFOODFACTS';
+  id: string; // fdcId for USDA, barcode for OFF
+  name: string;
+  brand: string | null;
+  servingSizeG: number;
+  caloriesPer100g: number;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatPer100g: number;
+  fiberPer100g: number | null;
+  sugarPer100g: number | null;
+  sodiumPer100g: number | null;
+  categories?: string | null;
+}
+
 export async function searchExternalFoods(
   fastify: FastifyInstance,
   query: string,
   limit: number,
-) {
-  const apiKey = await getUsdaApiKey(fastify);
-  if (!apiKey) {
-    throw new AppError(503, 'USDA_NOT_CONFIGURED', 'USDA FoodData Central API key is not configured. Set it in Admin > Settings.');
-  }
-
-  // Check Redis cache first
-  const cacheKey = `usda:search:${query.toLowerCase().trim()}:${limit}`;
+): Promise<ExternalSearchResult[]> {
+  const cacheKey = `external:search:${query.toLowerCase().trim()}:${limit}`;
   const cached = await fastify.redis.get(cacheKey);
   if (cached) {
-    return JSON.parse(cached) as UsdaParsedFood[];
+    return JSON.parse(cached) as ExternalSearchResult[];
   }
 
-  let results: UsdaParsedFood[];
-  try {
-    results = await usdaSearchFoods(apiKey, query, limit);
-  } catch (err: any) {
-    throw new AppError(502, 'USDA_ERROR', err.message || 'USDA search failed');
+  const apiKey = await getUsdaApiKey(fastify);
+  const halfLimit = Math.ceil(limit / 2);
+
+  // Run USDA and OpenFoodFacts searches in parallel — both are best-effort
+  const [usdaResults, offResults] = await Promise.allSettled([
+    apiKey ? usdaSearchFoods(apiKey, query, halfLimit) : Promise.resolve([] as UsdaParsedFood[]),
+    offSearchProducts(query, halfLimit),
+  ]);
+
+  const usda: UsdaParsedFood[] = usdaResults.status === 'fulfilled' ? usdaResults.value : [];
+  const off: OffSearchResult[] = offResults.status === 'fulfilled' ? offResults.value : [];
+
+  if (usdaResults.status === 'rejected') {
+    logger.warn({ err: usdaResults.reason }, 'USDA search failed');
+  }
+  if (offResults.status === 'rejected') {
+    logger.warn({ err: offResults.reason }, 'OpenFoodFacts search failed');
   }
 
-  // Only cache non-empty results (don't cache empty so retries work)
-  if (results.length > 0) {
-    await fastify.redis.set(cacheKey, JSON.stringify(results), 'EX', 86400);
+  // If USDA isn't configured AND OFF returned nothing, surface a clear error
+  if (!apiKey && off.length === 0 && offResults.status === 'rejected') {
+    throw new AppError(502, 'EXTERNAL_SEARCH_FAILED', 'External food search failed. Try again later.');
   }
 
-  return results;
+  // Map both into a unified result format
+  const merged: ExternalSearchResult[] = [
+    ...usda.map((f) => ({
+      source: 'USDA' as const,
+      id: String(f.fdcId),
+      name: f.name,
+      brand: f.brand,
+      servingSizeG: f.servingSizeG,
+      caloriesPer100g: f.caloriesPer100g,
+      proteinPer100g: f.proteinPer100g,
+      carbsPer100g: f.carbsPer100g,
+      fatPer100g: f.fatPer100g,
+      fiberPer100g: f.fiberPer100g,
+      sugarPer100g: f.sugarPer100g,
+      sodiumPer100g: f.sodiumPer100g,
+    })),
+    ...off.map((f) => ({
+      source: 'OPENFOODFACTS' as const,
+      id: f.code,
+      name: f.name,
+      brand: f.brand,
+      servingSizeG: f.servingSizeG,
+      caloriesPer100g: f.caloriesPer100g,
+      proteinPer100g: f.proteinPer100g,
+      carbsPer100g: f.carbsPer100g,
+      fatPer100g: f.fatPer100g,
+      fiberPer100g: f.fiberPer100g,
+      sugarPer100g: f.sugarPer100g,
+      sodiumPer100g: f.sodiumPer100g,
+      categories: f.categories,
+    })),
+  ];
+
+  // Cache combined results for 24h (only if non-empty)
+  if (merged.length > 0) {
+    await fastify.redis.set(cacheKey, JSON.stringify(merged), 'EX', 86400);
+  }
+
+  return merged;
+}
+
+export async function importOffFood(
+  fastify: FastifyInstance,
+  food: OffSearchResult,
+) {
+  // OFF foods use their actual barcode
+  const existing = await fastify.prisma.foodItem.findUnique({ where: { barcode: food.code } });
+  if (existing) return existing;
+
+  return fastify.prisma.foodItem.create({
+    data: {
+      barcode: food.code,
+      name: food.name,
+      brand: food.brand,
+      servingSizeG: food.servingSizeG,
+      caloriesPer100g: food.caloriesPer100g,
+      proteinPer100g: food.proteinPer100g,
+      carbsPer100g: food.carbsPer100g,
+      fatPer100g: food.fatPer100g,
+      fiberPer100g: food.fiberPer100g,
+      sugarPer100g: food.sugarPer100g,
+      sodiumPer100g: food.sodiumPer100g,
+      imageUrl: food.imageUrl,
+      source: 'OPENFOODFACTS',
+    },
+  });
 }
 
 export async function importUsdaFood(

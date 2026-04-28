@@ -1,7 +1,8 @@
 import { logger } from '../utils/logger.js';
 
 const OFF_BASE_URL = 'https://world.openfoodfacts.org/api/v2/product';
-const OFF_SEARCH_URL = 'https://world.openfoodfacts.org/cgi/search.pl';
+const OFF_SEARCH_V2_URL = 'https://world.openfoodfacts.org/api/v2/search';
+const OFF_SEARCH_LEGACY_URL = 'https://world.openfoodfacts.org/cgi/search.pl';
 const USER_AGENT = 'MacroTrackr/1.0 (https://github.com/macrotrackr)';
 
 interface OffProduct {
@@ -109,52 +110,126 @@ interface OffSearchResponse {
   products?: OffSearchProduct[];
 }
 
-export async function searchProducts(query: string, limit: number = 15): Promise<OffSearchResult[]> {
-  const params = new URLSearchParams({
-    search_terms: query,
-    search_simple: '1',
-    action: 'process',
-    json: '1',
-    page_size: String(limit),
-    fields: 'code,product_name,brands,nutriments,serving_size,image_url,categories',
-  });
-  const url = `${OFF_SEARCH_URL}?${params.toString()}`;
+function mapOffProduct(p: OffSearchProduct): OffSearchResult | null {
+  if (!p.code || (!p.product_name && !p.brands)) return null;
+  const n = p.nutriments ?? {};
+  const cal = n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0;
+  if (!cal || cal <= 0) return null;
+  return {
+    code: p.code,
+    name: p.product_name || p.brands || `Product ${p.code}`,
+    brand: p.brands || null,
+    servingSizeG: parseServingSize(p.serving_size),
+    caloriesPer100g: cal,
+    proteinPer100g: n['proteins_100g'] ?? 0,
+    carbsPer100g: n['carbohydrates_100g'] ?? 0,
+    fatPer100g: n['fat_100g'] ?? 0,
+    fiberPer100g: n['fiber_100g'] ?? null,
+    sugarPer100g: n['sugars_100g'] ?? null,
+    sodiumPer100g: n['sodium_100g'] ?? null,
+    imageUrl: p.image_url || null,
+    categories: p.categories || null,
+  };
+}
 
-  logger.debug({ query, url }, 'Searching OpenFoodFacts');
+/** Sanitize: strip special chars (commas, quotes, parens), collapse whitespace, lowercase */
+function sanitizeQuery(q: string): string {
+  return q
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  const response = await fetch(url, {
-    headers: { 'User-Agent': USER_AGENT },
-    signal: AbortSignal.timeout(10000),
-  });
+/** Convert query into a brand tag slug — e.g. "Mo'Bettahs" → "mo-bettahs" */
+function toBrandTag(q: string): string {
+  return q
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
-  if (!response.ok) {
-    logger.warn({ query, status: response.status }, 'OpenFoodFacts search error');
+const FIELDS = 'code,product_name,brands,nutriments,serving_size,image_url,categories';
+
+async function fetchOff(url: string, label: string): Promise<OffSearchProduct[]> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) {
+      logger.warn({ label, status: res.status }, 'OpenFoodFacts search error');
+      return [];
+    }
+    const data = (await res.json()) as OffSearchResponse;
+    return data.products ?? [];
+  } catch (err) {
+    logger.warn({ label, err }, 'OpenFoodFacts fetch failed');
     return [];
   }
+}
 
-  const data = (await response.json()) as OffSearchResponse;
-  const products = data.products ?? [];
+export async function searchProducts(query: string, limit: number = 15): Promise<OffSearchResult[]> {
+  const sanitized = sanitizeQuery(query);
+  if (!sanitized) return [];
 
-  return products
-    .filter((p) => p.code && (p.product_name || p.brands))
-    .map((p) => {
-      const n = p.nutriments ?? {};
-      return {
-        code: p.code,
-        name: p.product_name || p.brands || `Product ${p.code}`,
-        brand: p.brands || null,
-        servingSizeG: parseServingSize(p.serving_size),
-        caloriesPer100g: n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0,
-        proteinPer100g: n['proteins_100g'] ?? 0,
-        carbsPer100g: n['carbohydrates_100g'] ?? 0,
-        fatPer100g: n['fat_100g'] ?? 0,
-        fiberPer100g: n['fiber_100g'] ?? null,
-        sugarPer100g: n['sugars_100g'] ?? null,
-        sodiumPer100g: n['sodium_100g'] ?? null,
-        imageUrl: p.image_url || null,
-        categories: p.categories || null,
-      };
-    })
-    // Filter out products with no calorie data (incomplete entries)
-    .filter((p) => p.caloriesPer100g > 0);
+  // Fetch ~3x the limit since many results lack calorie data and get filtered out
+  const fetchSize = Math.max(limit * 3, 30);
+
+  // Strategy: run text search and brand-tag search in parallel.
+  // Brand search surfaces branded products (Subway, McDonald's) for short queries.
+  const textUrl = `${OFF_SEARCH_V2_URL}?${new URLSearchParams({
+    search_terms: sanitized,
+    page_size: String(fetchSize),
+    fields: FIELDS,
+    sort_by: 'unique_scans_n',
+  }).toString()}`;
+
+  const brandTag = toBrandTag(query);
+  const brandUrl = brandTag
+    ? `${OFF_SEARCH_V2_URL}?${new URLSearchParams({
+        brands_tags: brandTag,
+        page_size: String(fetchSize),
+        fields: FIELDS,
+        sort_by: 'unique_scans_n',
+      }).toString()}`
+    : null;
+
+  logger.debug({ query, sanitized, brandTag }, 'Searching OpenFoodFacts');
+
+  const [textProducts, brandProducts] = await Promise.all([
+    fetchOff(textUrl, 'text'),
+    brandUrl ? fetchOff(brandUrl, 'brand') : Promise.resolve([] as OffSearchProduct[]),
+  ]);
+
+  // Merge, dedupe by code (brand results first since they're more relevant for branded queries)
+  const seen = new Set<string>();
+  const results: OffSearchResult[] = [];
+  for (const p of [...brandProducts, ...textProducts]) {
+    if (seen.has(p.code)) continue;
+    seen.add(p.code);
+    const mapped = mapOffProduct(p);
+    if (mapped) results.push(mapped);
+    if (results.length >= limit) break;
+  }
+
+  // Fallback: if v2 returned nothing, try the legacy cgi search (it indexes some older products)
+  if (results.length === 0) {
+    const legacyUrl = `${OFF_SEARCH_LEGACY_URL}?${new URLSearchParams({
+      search_terms: sanitized,
+      search_simple: '1',
+      action: 'process',
+      json: '1',
+      page_size: String(fetchSize),
+      fields: FIELDS,
+    }).toString()}`;
+    const legacyProducts = await fetchOff(legacyUrl, 'legacy');
+    for (const p of legacyProducts) {
+      const mapped = mapOffProduct(p);
+      if (mapped) results.push(mapped);
+      if (results.length >= limit) break;
+    }
+  }
+
+  return results;
 }

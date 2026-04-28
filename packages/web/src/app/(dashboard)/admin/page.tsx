@@ -1200,7 +1200,7 @@ function SettingsTab() {
           {usdaApiKeySet && (
             <button
               onClick={() => {
-                if (confirm('Remove the USDA API key? Restaurant & USDA search will stop working.')) {
+                if (confirm('Remove the USDA API key? Search will only return OpenFoodFacts results.')) {
                   usdaMutation.mutate('');
                 }
               }}

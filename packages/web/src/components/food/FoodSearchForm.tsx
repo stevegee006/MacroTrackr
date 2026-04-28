@@ -149,7 +149,7 @@ export function FoodSearchForm({ onResult }: FoodSearchFormProps) {
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
         >
-          Restaurant & USDA
+          Restaurant & Brands
         </button>
       </div>
 
@@ -158,7 +158,7 @@ export function FoodSearchForm({ onResult }: FoodSearchFormProps) {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
           type="text"
-          placeholder={mode === 'saved' ? 'Search by name or brand...' : 'Search restaurants, brands, foods...'}
+          placeholder={mode === 'saved' ? 'Search by name or brand...' : 'Search restaurants, brands, packaged foods...'}
           value={query}
           onChange={(e) => handleQueryChange(e.target.value)}
           className="block w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2.5 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
@@ -292,7 +292,7 @@ export function FoodSearchForm({ onResult }: FoodSearchFormProps) {
         <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-4">
           {mode === 'saved'
             ? "Search for foods you've previously added by name or brand."
-            : 'Search restaurant, fast food, and branded nutrition data from USDA.'}
+            : 'Search restaurants, fast food, and branded products from USDA & OpenFoodFacts.'}
         </p>
       )}
 

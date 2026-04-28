@@ -173,16 +173,18 @@ export async function searchProducts(query: string, limit: number = 15): Promise
   const sanitized = sanitizeQuery(query);
   if (!sanitized) return [];
 
-  // Fetch ~3x the limit since many results lack calorie data and get filtered out
-  const fetchSize = Math.max(limit * 3, 30);
+  // Fetch larger pages — many OFF entries lack complete calorie data and get filtered out
+  const fetchSize = Math.max(limit * 4, 40);
 
-  // Strategy: run text search and brand-tag search in parallel.
-  // Brand search surfaces branded products (Subway, McDonald's) for short queries.
-  const textUrl = `${OFF_SEARCH_V2_URL}?${new URLSearchParams({
+  // Text search uses the legacy cgi/search.pl endpoint — it has better full-text matching.
+  // Brand search uses v2 with brands_tags — surfaces branded products for short queries.
+  const textUrl = `${OFF_SEARCH_LEGACY_URL}?${new URLSearchParams({
     search_terms: sanitized,
+    search_simple: '1',
+    action: 'process',
+    json: '1',
     page_size: String(fetchSize),
     fields: FIELDS,
-    sort_by: 'unique_scans_n',
   }).toString()}`;
 
   const brandTag = toBrandTag(query);
@@ -195,14 +197,20 @@ export async function searchProducts(query: string, limit: number = 15): Promise
       }).toString()}`
     : null;
 
-  logger.debug({ query, sanitized, brandTag }, 'Searching OpenFoodFacts');
+  logger.info({ query, sanitized, brandTag, textUrl, brandUrl }, 'OFF search');
 
   const [textProducts, brandProducts] = await Promise.all([
     fetchOff(textUrl, 'text'),
     brandUrl ? fetchOff(brandUrl, 'brand') : Promise.resolve([] as OffSearchProduct[]),
   ]);
 
-  // Merge, dedupe by code (brand results first since they're more relevant for branded queries)
+  logger.info(
+    { query, textCount: textProducts.length, brandCount: brandProducts.length },
+    'OFF search raw counts',
+  );
+
+  // Merge with brand results first (more relevant for branded queries),
+  // then dedupe and map to results
   const seen = new Set<string>();
   const results: OffSearchResult[] = [];
   for (const p of [...brandProducts, ...textProducts]) {
@@ -213,23 +221,6 @@ export async function searchProducts(query: string, limit: number = 15): Promise
     if (results.length >= limit) break;
   }
 
-  // Fallback: if v2 returned nothing, try the legacy cgi search (it indexes some older products)
-  if (results.length === 0) {
-    const legacyUrl = `${OFF_SEARCH_LEGACY_URL}?${new URLSearchParams({
-      search_terms: sanitized,
-      search_simple: '1',
-      action: 'process',
-      json: '1',
-      page_size: String(fetchSize),
-      fields: FIELDS,
-    }).toString()}`;
-    const legacyProducts = await fetchOff(legacyUrl, 'legacy');
-    for (const p of legacyProducts) {
-      const mapped = mapOffProduct(p);
-      if (mapped) results.push(mapped);
-      if (results.length >= limit) break;
-    }
-  }
-
+  logger.info({ query, finalCount: results.length }, 'OFF search final count');
   return results;
 }

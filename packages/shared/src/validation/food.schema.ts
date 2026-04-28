@@ -90,3 +90,31 @@ export const importOffFoodSchema = z.object({
 export type ExternalFoodSearchInput = z.infer<typeof externalFoodSearchSchema>;
 export type ImportUsdaFoodInput = z.infer<typeof importUsdaFoodSchema>;
 export type ImportOffFoodInput = z.infer<typeof importOffFoodSchema>;
+
+// Admin AI Ingest
+export const parsedFoodItemSchema = z.object({
+  name: z.string().min(1).max(255),
+  brand: z.string().max(255).nullable(),
+  servingSizeG: z.number().positive(),
+  caloriesPer100g: z.number().nonnegative(),
+  proteinPer100g: z.number().nonnegative(),
+  carbsPer100g: z.number().nonnegative(),
+  fatPer100g: z.number().nonnegative(),
+  fiberPer100g: z.number().nonnegative().nullable().optional(),
+  sugarPer100g: z.number().nonnegative().nullable().optional(),
+  sodiumPer100g: z.number().nonnegative().nullable().optional(),
+});
+
+export const ingestParseSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('pdf'), data: z.string().min(1) }),
+  z.object({ type: z.literal('images'), data: z.array(z.string().min(1)).min(1).max(10) }),
+  z.object({ type: z.literal('csv'), data: z.string().min(1) }),
+]);
+
+export const ingestImportSchema = z.object({
+  items: z.array(parsedFoodItemSchema).min(1).max(500),
+});
+
+export type ParsedFoodItem = z.infer<typeof parsedFoodItemSchema>;
+export type IngestParseInput = z.infer<typeof ingestParseSchema>;
+export type IngestImportInput = z.infer<typeof ingestImportSchema>;

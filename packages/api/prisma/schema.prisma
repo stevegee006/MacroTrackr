@@ -218,6 +218,7 @@ enum FoodSource {
   LABEL_SCAN
   AI_ESTIMATE
   USDA
+  AI_INGEST
 }
 
 // ─── Food Log ────────────────────────────────────────────────────

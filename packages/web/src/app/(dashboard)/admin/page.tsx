@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
-import { Trash2, Loader2, Users, UtensilsCrossed, BarChart3, Brain, ChevronLeft, ChevronRight, Shield, Pencil, Plus, X, KeyRound, Copy, Check, Settings, UserPlus } from 'lucide-react';
+import { Trash2, Loader2, Users, UtensilsCrossed, BarChart3, Brain, ChevronLeft, ChevronRight, Shield, Pencil, Plus, X, KeyRound, Copy, Check, Settings, UserPlus, Upload, ChevronDown } from 'lucide-react';
+import type { ParsedFoodItem } from '@macrotracker/shared';
 
 type Tab = 'stats' | 'users' | 'food' | 'sso' | 'settings';
 
@@ -439,6 +440,283 @@ function UsersTab() {
   );
 }
 
+function AiIngestCard() {
+  const queryClient = useQueryClient();
+  const [expanded, setExpanded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [parsedItems, setParsedItems] = useState<ParsedFoodItem[] | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
+
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setBusy(true);
+    setError('');
+    setParsedItems(null);
+    setImportResult(null);
+
+    try {
+      const first = files[0];
+      let body: { type: 'pdf' | 'images' | 'csv'; data: string | string[] };
+
+      if (first.type === 'application/pdf' || first.name.toLowerCase().endsWith('.pdf')) {
+        const data = await fileToBase64(first);
+        body = { type: 'pdf', data };
+      } else if (first.type === 'text/csv' || first.name.toLowerCase().endsWith('.csv')) {
+        const text = await first.text();
+        body = { type: 'csv', data: text };
+      } else if (first.type.startsWith('image/')) {
+        const data = await Promise.all(Array.from(files).map((f) => fileToBase64(f)));
+        body = { type: 'images', data };
+      } else {
+        throw new Error('Unsupported file type. Use PDF, image, or CSV.');
+      }
+
+      const res = await apiFetch<{ data: ParsedFoodItem[] }>(
+        '/admin/food-items/ingest/parse',
+        { method: 'POST', body: JSON.stringify(body) },
+      );
+
+      setParsedItems(res.data);
+      setSelected(new Set(res.data.map((_, i) => i)));
+    } catch (err: any) {
+      setError(err?.message || 'Failed to parse file');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function updateItem(idx: number, patch: Partial<ParsedFoodItem>) {
+    if (!parsedItems) return;
+    const next = [...parsedItems];
+    next[idx] = { ...next[idx], ...patch };
+    setParsedItems(next);
+  }
+
+  function toggleSelected(idx: number) {
+    const next = new Set(selected);
+    if (next.has(idx)) next.delete(idx);
+    else next.add(idx);
+    setSelected(next);
+  }
+
+  async function handleImport() {
+    if (!parsedItems) return;
+    const items = parsedItems.filter((_, i) => selected.has(i));
+    if (items.length === 0) return;
+
+    setBusy(true);
+    setError('');
+    try {
+      const res = await apiFetch<{ data: { created: number; skipped: number } }>(
+        '/admin/food-items/ingest/import',
+        { method: 'POST', body: JSON.stringify({ items }) },
+      );
+      setImportResult(res.data);
+      setParsedItems(null);
+      setSelected(new Set());
+      queryClient.invalidateQueries({ queryKey: ['admin-food-items'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+    } catch (err: any) {
+      setError(err?.message || 'Import failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <div className="flex items-center gap-2">
+          <Brain className="h-4 w-4 text-emerald-500" />
+          <h3 className="text-sm font-semibold">AI Ingest</h3>
+          <span className="text-xs text-gray-500 dark:text-gray-400">Bulk-add foods from PDF, images, or CSV</span>
+        </div>
+        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+
+      {expanded && (
+        <div className="mt-3 space-y-3">
+          {/* Upload */}
+          {!parsedItems && (
+            <div>
+              <label className="block">
+                <span className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Choose file (PDF, image(s), or CSV)
+                </span>
+                <input
+                  type="file"
+                  accept=".pdf,.csv,image/*"
+                  multiple
+                  disabled={busy}
+                  onChange={(e) => handleFiles(e.target.files)}
+                  className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-950 dark:file:text-emerald-300 disabled:opacity-50"
+                />
+              </label>
+              <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                PDF requires Anthropic AI provider. Images use any AI provider. CSV requires headers (name, calories, protein, carbs, fat, etc.).
+              </p>
+            </div>
+          )}
+
+          {busy && (
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {parsedItems ? 'Importing...' : 'Parsing file with AI (this may take 30-60 seconds)...'}
+            </div>
+          )}
+
+          {error && (
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
+
+          {importResult && (
+            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 p-3 text-sm">
+              <p className="font-medium text-emerald-700 dark:text-emerald-300">
+                <Check className="inline h-4 w-4 mr-1" />
+                Imported {importResult.created} food{importResult.created !== 1 ? 's' : ''}
+                {importResult.skipped > 0 && `, skipped ${importResult.skipped} duplicate${importResult.skipped !== 1 ? 's' : ''}`}
+              </p>
+            </div>
+          )}
+
+          {/* Preview */}
+          {parsedItems && parsedItems.length > 0 && !busy && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Found {parsedItems.length} item{parsedItems.length !== 1 ? 's' : ''} &middot; {selected.size} selected
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelected(new Set(parsedItems.map((_, i) => i)))}
+                    className="text-[11px] text-emerald-600 hover:underline"
+                  >
+                    Select all
+                  </button>
+                  <button
+                    onClick={() => setSelected(new Set())}
+                    className="text-[11px] text-gray-500 hover:underline"
+                  >
+                    None
+                  </button>
+                </div>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                {parsedItems.map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-2 p-2">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(idx)}
+                      onChange={() => toggleSelected(idx)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => updateItem(idx, { name: e.target.value })}
+                        className="w-full text-sm font-medium bg-transparent border-b border-transparent hover:border-gray-300 focus:border-emerald-500 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={item.brand ?? ''}
+                        placeholder="Brand"
+                        onChange={(e) => updateItem(idx, { brand: e.target.value || null })}
+                        className="w-full text-xs text-gray-500 dark:text-gray-400 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-emerald-500 focus:outline-none"
+                      />
+                      <div className="flex flex-wrap gap-2 text-[11px] text-gray-600 dark:text-gray-400">
+                        <label className="flex items-center gap-1">
+                          Serv:
+                          <input
+                            type="number"
+                            value={item.servingSizeG}
+                            onChange={(e) => updateItem(idx, { servingSizeG: parseFloat(e.target.value) || 100 })}
+                            className="w-14 bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:outline-none"
+                          />g
+                        </label>
+                        <label className="flex items-center gap-1">
+                          Cal:
+                          <input
+                            type="number"
+                            value={Math.round(item.caloriesPer100g)}
+                            onChange={(e) => updateItem(idx, { caloriesPer100g: parseFloat(e.target.value) || 0 })}
+                            className="w-14 bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </label>
+                        <label className="flex items-center gap-1 text-red-500">
+                          P:
+                          <input
+                            type="number"
+                            value={Math.round(item.proteinPer100g)}
+                            onChange={(e) => updateItem(idx, { proteinPer100g: parseFloat(e.target.value) || 0 })}
+                            className="w-12 bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:outline-none"
+                          />g
+                        </label>
+                        <label className="flex items-center gap-1 text-amber-500">
+                          C:
+                          <input
+                            type="number"
+                            value={Math.round(item.carbsPer100g)}
+                            onChange={(e) => updateItem(idx, { carbsPer100g: parseFloat(e.target.value) || 0 })}
+                            className="w-12 bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:outline-none"
+                          />g
+                        </label>
+                        <label className="flex items-center gap-1 text-blue-500">
+                          F:
+                          <input
+                            type="number"
+                            value={Math.round(item.fatPer100g)}
+                            onChange={(e) => updateItem(idx, { fatPer100g: parseFloat(e.target.value) || 0 })}
+                            className="w-12 bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:outline-none"
+                          />g
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleImport}
+                  isLoading={busy}
+                  disabled={selected.size === 0 || busy}
+                  className="flex-1"
+                >
+                  <Upload className="h-4 w-4 mr-1.5 inline" />
+                  Import {selected.size} item{selected.size !== 1 ? 's' : ''}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => { setParsedItems(null); setSelected(new Set()); }}
+                  disabled={busy}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function FoodItemsTab() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -477,6 +755,8 @@ function FoodItemsTab() {
 
   return (
     <div className="space-y-3">
+      <AiIngestCard />
+
       <Input
         placeholder="Search food items..."
         value={search}

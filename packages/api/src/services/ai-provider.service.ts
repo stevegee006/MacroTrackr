@@ -457,3 +457,81 @@ export async function aiVisionCompletion(
     handleProviderError(error, provider);
   }
 }
+
+// ─── PDF completion (Anthropic only) ──────────────────────────
+
+export async function aiPdfCompletion(
+  fastify: FastifyInstance,
+  userId: string,
+  systemPrompt: string,
+  userPrompt: string,
+  pdfBase64: string,
+  options: {
+    temperature?: number;
+    maxTokens?: number;
+  } = {},
+): Promise<AiResult> {
+  const { provider, apiKey } = await resolveProviderAndKey(fastify, userId);
+
+  if (provider !== 'ANTHROPIC') {
+    throw new AppError(
+      400,
+      'PDF_NOT_SUPPORTED',
+      'PDF ingest requires Anthropic. Switch your AI provider in Profile → Settings.',
+    );
+  }
+
+  const model = MODEL_MAP.ANTHROPIC.heavy;
+  const temperature = options.temperature ?? 0.1;
+  const maxTokens = options.maxTokens ?? 8000;
+
+  logger.info({ provider, model }, 'AI PDF completion');
+
+  // Strip data: URI prefix if present
+  let base64Data = pdfBase64;
+  const match = pdfBase64.match(/^data:application\/pdf;base64,(.+)$/i);
+  if (match) base64Data = match[1];
+
+  try {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk');
+    const client = new Anthropic({ apiKey, timeout: 180_000 });
+
+    const message = await client.messages.create({
+      model,
+      max_tokens: maxTokens,
+      temperature,
+      system: systemPrompt + '\n\nIMPORTANT: Respond ONLY with valid JSON. No markdown, no code fences, just raw JSON.',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: base64Data,
+              },
+            },
+            { type: 'text', text: userPrompt },
+          ],
+        },
+      ],
+    });
+
+    const block = message.content[0];
+    const content = block?.type === 'text' ? block.text : null;
+    if (!content) throw new AppError(502, 'AI_ERROR', 'Anthropic returned an empty response');
+
+    return {
+      content: stripCodeFences(content),
+      model,
+      usage: {
+        promptTokens: message.usage?.input_tokens ?? 0,
+        completionTokens: message.usage?.output_tokens ?? 0,
+      },
+    };
+  } catch (error) {
+    handleProviderError(error, provider);
+  }
+}

@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { createSsoProviderSchema, updateSsoProviderSchema, adminCreateUserSchema, appSettingsSchema, updateFoodItemSchema, adminListQuerySchema } from '@macrotracker/shared';
+import { createSsoProviderSchema, updateSsoProviderSchema, adminCreateUserSchema, appSettingsSchema, updateFoodItemSchema, adminListQuerySchema, ingestParseSchema, ingestImportSchema } from '@macrotracker/shared';
 import * as adminService from '../../services/admin.service.js';
 import * as ssoService from '../../services/sso.service.js';
 import * as appConfigService from '../../services/app-config.service.js';
+import * as foodIngestService from '../../services/food-ingest.service.js';
 import { ForbiddenError } from '../../utils/errors.js';
 
 export default async function adminRoutes(fastify: FastifyInstance) {
@@ -72,6 +73,30 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     const { id } = request.params as { id: string };
     await adminService.deleteFoodItem(fastify, id);
     reply.code(204).send();
+  });
+
+  // AI Ingest — parse uploaded file into food items (no save)
+  fastify.post('/admin/food-items/ingest/parse', {
+    bodyLimit: 25 * 1024 * 1024, // 25MB for large PDFs
+    handler: async (request) => {
+      const body = ingestParseSchema.parse(request.body);
+      let items;
+      if (body.type === 'pdf') {
+        items = await foodIngestService.parsePdfIngest(fastify, request.user.sub, body.data);
+      } else if (body.type === 'images') {
+        items = await foodIngestService.parseImagesIngest(fastify, request.user.sub, body.data);
+      } else {
+        items = await foodIngestService.parseCsvIngest(body.data);
+      }
+      return { data: items };
+    },
+  });
+
+  // AI Ingest — bulk import the (possibly edited) parsed items
+  fastify.post('/admin/food-items/ingest/import', async (request, reply) => {
+    const body = ingestImportSchema.parse(request.body);
+    const result = await foodIngestService.bulkImportFoods(fastify, body.items);
+    reply.code(201).send({ data: result });
   });
 
   // SSO management routes

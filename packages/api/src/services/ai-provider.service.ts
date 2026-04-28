@@ -483,7 +483,8 @@ export async function aiPdfCompletion(
 
   const model = MODEL_MAP.ANTHROPIC.heavy;
   const temperature = options.temperature ?? 0.1;
-  const maxTokens = options.maxTokens ?? 8000;
+  // Claude Sonnet supports up to 64k output tokens — needed for large nutrition docs
+  const maxTokens = options.maxTokens ?? 32000;
 
   logger.info({ provider, model }, 'AI PDF completion');
 

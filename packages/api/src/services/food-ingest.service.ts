@@ -29,21 +29,104 @@ Return a JSON array directly (no wrapper object). Maximum 200 items per response
 
 const responseSchema = z.array(parsedFoodItemSchema);
 
+/**
+ * Try to repair a truncated JSON array by finding the last complete object
+ * and closing the array. Common when AI hits max_tokens mid-response.
+ */
+function repairTruncatedArray(text: string): string | null {
+  // Find the start of the array
+  const startIdx = text.indexOf('[');
+  if (startIdx === -1) return null;
+
+  // Walk through the string tracking brace depth, find last position
+  // where we were at depth 1 (inside array, just closed an object)
+  let depth = 0;
+  let inString = false;
+  let escapeNext = false;
+  let lastObjectEnd = -1;
+
+  for (let i = startIdx; i < text.length; i++) {
+    const ch = text[i];
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escapeNext = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+
+    if (ch === '{' || ch === '[') depth++;
+    else if (ch === '}' || ch === ']') {
+      depth--;
+      // Just closed an object inside the outer array (depth back to 1)
+      if (ch === '}' && depth === 1) {
+        lastObjectEnd = i;
+      }
+    }
+  }
+
+  if (lastObjectEnd === -1) return null;
+  return text.slice(startIdx, lastObjectEnd + 1) + ']';
+}
+
 function parseAiResponse(content: string): ParsedFoodItem[] {
   let parsed: unknown;
+  let parseSucceeded = false;
+
+  // Attempt 1: direct parse
   try {
     parsed = JSON.parse(content);
+    parseSucceeded = true;
   } catch {
-    // Try to extract JSON array from response (sometimes wrapped in prose)
+    // continue
+  }
+
+  // Attempt 2: extract array from prose-wrapped response
+  if (!parseSucceeded) {
     const match = content.match(/\[[\s\S]*\]/);
-    if (!match) {
-      throw new AppError(502, 'AI_PARSE_ERROR', 'AI did not return valid JSON');
+    if (match) {
+      try {
+        parsed = JSON.parse(match[0]);
+        parseSucceeded = true;
+      } catch {
+        // continue
+      }
     }
-    try {
-      parsed = JSON.parse(match[0]);
-    } catch {
-      throw new AppError(502, 'AI_PARSE_ERROR', 'AI did not return valid JSON');
+  }
+
+  // Attempt 3: repair truncated array (response hit max_tokens mid-item)
+  if (!parseSucceeded) {
+    const repaired = repairTruncatedArray(content);
+    if (repaired) {
+      try {
+        parsed = JSON.parse(repaired);
+        parseSucceeded = true;
+        logger.warn(
+          { snippet: content.slice(-200) },
+          'Repaired truncated JSON response from AI (output likely hit max_tokens)',
+        );
+      } catch {
+        // continue
+      }
     }
+  }
+
+  if (!parseSucceeded) {
+    logger.error(
+      { snippet: content.slice(0, 500) + (content.length > 500 ? '...' : '') },
+      'AI response could not be parsed as JSON',
+    );
+    throw new AppError(
+      502,
+      'AI_PARSE_ERROR',
+      'AI did not return valid JSON. The document may be too large — try splitting it into smaller PDFs.',
+    );
   }
 
   // Allow either bare array or { items: [...] } wrapper
@@ -53,7 +136,7 @@ function parseAiResponse(content: string): ParsedFoodItem[] {
 
   const result = responseSchema.safeParse(parsed);
   if (!result.success) {
-    logger.warn({ errors: result.error.issues }, 'AI response failed validation');
+    logger.warn({ errors: result.error.issues.slice(0, 5) }, 'AI response failed validation');
     throw new AppError(502, 'AI_PARSE_ERROR', 'AI response did not match expected food item structure');
   }
   return result.data;

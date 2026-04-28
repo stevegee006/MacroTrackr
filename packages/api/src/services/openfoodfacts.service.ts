@@ -274,17 +274,50 @@ export async function searchProducts(query: string, limit: number = 15): Promise
     'OFF search raw counts',
   );
 
+  // Words 3+ chars long that aren't generic food words (used for relevance filtering)
+  const STOPWORDS = new Set([
+    'the', 'and', 'with', 'for', 'from', 'this', 'that', 'food', 'oz', 'ml', 'low', 'fat', 'free',
+    'one', 'two', 'cup', 'cups', 'tbsp', 'tsp', 'piece', 'serving', 'sandwich', 'cold', 'hot',
+  ]);
+  const queryWords = sanitized
+    .split(' ')
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+
+  /** Check if a product name+brand contains at least one significant query word */
+  function isRelevant(p: OffSearchResult, isBrandResult: boolean): boolean {
+    if (isBrandResult) return true; // Trust brand_tags matches — they're confirmed brand products
+    if (queryWords.length === 0) return true;
+    const haystack = `${p.name} ${p.brand ?? ''}`.toLowerCase();
+    // For multi-word queries, require at least one significant word to match.
+    // For single significant word, require it to match.
+    return queryWords.some((w) => haystack.includes(w));
+  }
+
   // Merge order: brand (most relevant for branded queries) → alicious (best text match) → legacy fallback
   const seen = new Set<string>();
   const results: OffSearchResult[] = [];
-  for (const p of [...brandProducts, ...aliciousProducts, ...legacyProducts]) {
-    if (seen.has(p.code)) continue;
-    seen.add(p.code);
-    const mapped = mapOffProduct(p);
-    if (mapped) results.push(mapped);
+  const sources: Array<{ products: OffSearchProduct[]; isBrand: boolean }> = [
+    { products: brandProducts, isBrand: true },
+    { products: aliciousProducts, isBrand: false },
+    { products: legacyProducts, isBrand: false },
+  ];
+  let filteredOut = 0;
+  for (const { products, isBrand } of sources) {
+    for (const p of products) {
+      if (seen.has(p.code)) continue;
+      seen.add(p.code);
+      const mapped = mapOffProduct(p);
+      if (!mapped) continue;
+      if (!isRelevant(mapped, isBrand)) {
+        filteredOut++;
+        continue;
+      }
+      results.push(mapped);
+      if (results.length >= limit) break;
+    }
     if (results.length >= limit) break;
   }
 
-  logger.info({ query, finalCount: results.length }, 'OFF search final count');
+  logger.info({ query, finalCount: results.length, filteredOut }, 'OFF search final count');
   return results;
 }

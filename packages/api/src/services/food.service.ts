@@ -365,8 +365,8 @@ export async function searchExternalFoods(
   query: string,
   limit: number,
 ): Promise<ExternalSearchResult[]> {
-  // Cache version bumped (v3) when OFF search switched to 3-pronged approach
-  const cacheKey = `external:search:v3:${query.toLowerCase().trim()}:${limit}`;
+  // Cache version bumped (v4) when relevance filtering was added
+  const cacheKey = `external:search:v4:${query.toLowerCase().trim()}:${limit}`;
   const cached = await fastify.redis.get(cacheKey);
   if (cached) {
     return JSON.parse(cached) as ExternalSearchResult[];

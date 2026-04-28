@@ -365,8 +365,8 @@ export async function searchExternalFoods(
   query: string,
   limit: number,
 ): Promise<ExternalSearchResult[]> {
-  // Cache version bumped (v4) when relevance filtering was added
-  const cacheKey = `external:search:v4:${query.toLowerCase().trim()}:${limit}`;
+  // Cache version bumped (v5) when OFF switched to search-a-licious only (v2 endpoint was 503)
+  const cacheKey = `external:search:v5:${query.toLowerCase().trim()}:${limit}`;
   const cached = await fastify.redis.get(cacheKey);
   if (cached) {
     return JSON.parse(cached) as ExternalSearchResult[];

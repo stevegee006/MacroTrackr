@@ -167,7 +167,13 @@ async function fetchOff(url: string, label: string): Promise<OffSearchProduct[]>
       logger.warn({ label, status: res.status, url }, 'OpenFoodFacts search error');
       return [];
     }
-    const data = (await res.json()) as OffSearchResponse;
+    // Detect HTML error pages (OFF sometimes returns 200 with an HTML maintenance page)
+    const text = await res.text();
+    if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+      logger.warn({ label, url }, 'OpenFoodFacts returned HTML (likely error page)');
+      return [];
+    }
+    const data = JSON.parse(text) as OffSearchResponse;
     return data.products ?? [];
   } catch (err) {
     logger.warn({ label, err }, 'OpenFoodFacts fetch failed');
@@ -189,11 +195,10 @@ interface AliciousResponse {
   hits?: AliciousHit[];
 }
 
-async function fetchAlicious(query: string, pageSize: number): Promise<OffSearchProduct[]> {
+async function fetchAlicious(query: string, pageSize: number, label: string): Promise<OffSearchProduct[]> {
   const url = `${OFF_SEARCH_ALICIOUS_URL}?${new URLSearchParams({
     q: query,
     page_size: String(pageSize),
-    fields: FIELDS,
   }).toString()}`;
   try {
     const res = await fetch(url, {
@@ -201,27 +206,37 @@ async function fetchAlicious(query: string, pageSize: number): Promise<OffSearch
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
-      logger.warn({ status: res.status, url }, 'OFF search-a-licious error');
+      logger.warn({ label, status: res.status, url }, 'OFF search-a-licious error');
       return [];
     }
-    const data = (await res.json()) as AliciousResponse;
+    const text = await res.text();
+    if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+      logger.warn({ label, url }, 'OFF search-a-licious returned HTML (likely error page)');
+      return [];
+    }
+    const data = JSON.parse(text) as AliciousResponse;
     const hits = data.hits ?? [];
+    // search-a-licious response: brands is an array, not a string
     return hits
       .filter((h): h is AliciousHit & { code: string } => !!h.code)
-      .map((h) => ({
-        code: h.code,
-        product_name:
-          typeof h.product_name === 'string'
-            ? h.product_name
-            : h.product_name?.en,
-        brands: h.brands,
-        serving_size: h.serving_size,
-        image_url: h.image_url,
-        categories: h.categories,
-        nutriments: h.nutriments,
-      }));
+      .map((h) => {
+        const rawBrands = (h as unknown as { brands?: unknown }).brands;
+        const brands = Array.isArray(rawBrands) ? rawBrands.join(', ') : (typeof rawBrands === 'string' ? rawBrands : undefined);
+        return {
+          code: h.code,
+          product_name:
+            typeof h.product_name === 'string'
+              ? h.product_name
+              : h.product_name?.en,
+          brands,
+          serving_size: h.serving_size,
+          image_url: h.image_url,
+          categories: h.categories,
+          nutriments: h.nutriments,
+        };
+      });
   } catch (err) {
-    logger.warn({ err }, 'OFF search-a-licious fetch failed');
+    logger.warn({ label, err }, 'OFF search-a-licious fetch failed');
     return [];
   }
 }
@@ -230,85 +245,97 @@ export async function searchProducts(query: string, limit: number = 15): Promise
   const sanitized = sanitizeQuery(query);
   if (!sanitized) return [];
 
-  // Fetch larger pages — many OFF entries lack complete calorie data and get filtered out
-  const fetchSize = Math.max(limit * 4, 40);
+  // Fetch larger pages — many OFF entries lack complete calorie data
+  const fetchSize = Math.max(limit * 3, 30);
 
-  // 3-pronged search:
-  //  1. search-a-licious — OFF's dedicated full-text search (best for free-text queries)
-  //  2. Brand-tag search via v2 — surfaces branded products (Subway, McDonald's) using only the first word
-  //  3. Legacy cgi/search.pl — fallback for older indexed products
-  const brandTag = toBrandTag(query);
-  const brandUrl = brandTag
-    ? `${OFF_SEARCH_V2_URL}?${new URLSearchParams({
-        brands_tags: brandTag,
+  const words = sanitized.split(' ');
+  const firstWord = words[0];
+  const isMultiWord = words.length > 1;
+
+  // Strategy:
+  //  1. Run search-a-licious twice in parallel:
+  //     a) Brand search — just the first word (e.g. "subway") to surface ALL brand items
+  //     b) Full query — all words for general text search
+  //  2. Brand search results win priority (so "Subway" items appear first for branded queries)
+  //  3. Legacy cgi/search.pl as backup if alicious is unavailable
+  //  4. Apply relevance filter — must contain at least one significant query word
+  //
+  // We dropped the v2 brand_tags endpoint because world.openfoodfacts.org/api/v2 has been
+  // returning 503 errors. search-a-licious already includes brand fields in its query.
+  const brandQueryDifferent = isMultiWord && firstWord.length >= 3;
+
+  logger.info({ query, sanitized, firstWord, brandQueryDifferent }, 'OFF search starting');
+
+  const [brandHits, fullHits, legacyProducts] = await Promise.all([
+    brandQueryDifferent ? fetchAlicious(firstWord, fetchSize, 'brand') : Promise.resolve([] as OffSearchProduct[]),
+    fetchAlicious(sanitized, fetchSize, 'full'),
+    fetchOff(
+      `${OFF_SEARCH_LEGACY_URL}?${new URLSearchParams({
+        search_terms: sanitized,
+        search_simple: '1',
+        action: 'process',
+        json: '1',
         page_size: String(fetchSize),
         fields: FIELDS,
-        sort_by: 'unique_scans_n',
-      }).toString()}`
-    : null;
-
-  const legacyUrl = `${OFF_SEARCH_LEGACY_URL}?${new URLSearchParams({
-    search_terms: sanitized,
-    search_simple: '1',
-    action: 'process',
-    json: '1',
-    page_size: String(fetchSize),
-    fields: FIELDS,
-  }).toString()}`;
-
-  logger.info({ query, sanitized, brandTag }, 'OFF search starting');
-
-  const [aliciousProducts, brandProducts, legacyProducts] = await Promise.all([
-    fetchAlicious(sanitized, fetchSize),
-    brandUrl ? fetchOff(brandUrl, 'brand') : Promise.resolve([] as OffSearchProduct[]),
-    fetchOff(legacyUrl, 'legacy'),
+      }).toString()}`,
+      'legacy',
+    ),
   ]);
 
   logger.info(
     {
       query,
-      aliciousCount: aliciousProducts.length,
-      brandCount: brandProducts.length,
+      brandHitCount: brandHits.length,
+      fullHitCount: fullHits.length,
       legacyCount: legacyProducts.length,
     },
     'OFF search raw counts',
   );
 
-  // Words 3+ chars long that aren't generic food words (used for relevance filtering)
+  // Words 3+ chars that aren't common stopwords (used for relevance filtering)
   const STOPWORDS = new Set([
-    'the', 'and', 'with', 'for', 'from', 'this', 'that', 'food', 'oz', 'ml', 'low', 'fat', 'free',
-    'one', 'two', 'cup', 'cups', 'tbsp', 'tsp', 'piece', 'serving', 'sandwich', 'cold', 'hot',
+    'the', 'and', 'with', 'for', 'from', 'this', 'that', 'food', 'low', 'fat', 'free',
+    'one', 'two', 'cup', 'cups', 'tbsp', 'tsp', 'piece', 'serving',
   ]);
-  const queryWords = sanitized
-    .split(' ')
-    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+  const queryWords = sanitized.split(' ').filter((w) => w.length >= 3 && !STOPWORDS.has(w));
 
-  /** Check if a product name+brand contains at least one significant query word */
-  function isRelevant(p: OffSearchResult, isBrandResult: boolean): boolean {
-    if (isBrandResult) return true; // Trust brand_tags matches — they're confirmed brand products
+  /** Result is relevant if its name/brand contains at least one significant query word */
+  function isRelevant(p: OffSearchResult): boolean {
     if (queryWords.length === 0) return true;
     const haystack = `${p.name} ${p.brand ?? ''}`.toLowerCase();
-    // For multi-word queries, require at least one significant word to match.
-    // For single significant word, require it to match.
     return queryWords.some((w) => haystack.includes(w));
   }
 
-  // Merge order: brand (most relevant for branded queries) → alicious (best text match) → legacy fallback
-  const seen = new Set<string>();
-  const results: OffSearchResult[] = [];
-  const sources: Array<{ products: OffSearchProduct[]; isBrand: boolean }> = [
-    { products: brandProducts, isBrand: true },
-    { products: aliciousProducts, isBrand: false },
-    { products: legacyProducts, isBrand: false },
-  ];
+  // For brand hits, also check if the rest of the query terms match (gives Subway+ColdCut > Subway+other)
+  const remainingWords = queryWords.filter((w) => w !== firstWord);
+  function brandHitScore(p: OffSearchResult): number {
+    if (remainingWords.length === 0) return 0;
+    const haystack = `${p.name} ${p.brand ?? ''}`.toLowerCase();
+    return remainingWords.filter((w) => haystack.includes(w)).length;
+  }
+
+  // Map and dedupe brand results, then sort by how many remaining query words they match
+  const brandSeen = new Set<string>();
+  const brandMapped: OffSearchResult[] = [];
+  for (const p of brandHits) {
+    if (brandSeen.has(p.code)) continue;
+    brandSeen.add(p.code);
+    const m = mapOffProduct(p);
+    if (m && isRelevant(m)) brandMapped.push(m);
+  }
+  brandMapped.sort((a, b) => brandHitScore(b) - brandHitScore(a));
+
+  // Merge: brand-relevant hits first, then full query hits, then legacy fallback
+  const seen = new Set<string>(brandMapped.map((r) => r.code));
+  const results: OffSearchResult[] = [...brandMapped];
   let filteredOut = 0;
-  for (const { products, isBrand } of sources) {
+  for (const products of [fullHits, legacyProducts]) {
     for (const p of products) {
       if (seen.has(p.code)) continue;
       seen.add(p.code);
       const mapped = mapOffProduct(p);
       if (!mapped) continue;
-      if (!isRelevant(mapped, isBrand)) {
+      if (!isRelevant(mapped)) {
         filteredOut++;
         continue;
       }
@@ -318,6 +345,7 @@ export async function searchProducts(query: string, limit: number = 15): Promise
     if (results.length >= limit) break;
   }
 
-  logger.info({ query, finalCount: results.length, filteredOut }, 'OFF search final count');
-  return results;
+  const trimmed = results.slice(0, limit);
+  logger.info({ query, finalCount: trimmed.length, filteredOut }, 'OFF search final count');
+  return trimmed;
 }

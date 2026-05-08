@@ -16,25 +16,24 @@ const CHALLENGE_TTL = 300; // 5 minutes
 type AuthenticatorTransport = 'ble' | 'cable' | 'hybrid' | 'internal' | 'nfc' | 'smart-card' | 'usb';
 
 /**
- * Derive rpID and origin from the client's Origin or Referer header.
- * Uses the registrable domain (eTLD+1) as rpID so passkeys work across
- * subdomains and on iOS Safari which is strict about rpID matching.
+ * Derive rpID from the client's hostname. Uses the FULL hostname so passkeys
+ * are isolated to this app's subdomain — other apps on sibling subdomains
+ * (e.g. fit.geehive.com) won't see MacroTrackr passkeys in the browser's
+ * passkey picker, and vice versa.
  *
  * Examples:
- *   macros.geehive.com  → rpID = geehive.com
+ *   macros.geehive.com  → rpID = macros.geehive.com
+ *   geehive.com          → rpID = geehive.com
  *   localhost            → rpID = localhost
  *   192.168.1.50         → rpID = 192.168.1.50
+ *
+ * NOTE: Changing this from the previous eTLD+1 behavior invalidates all
+ * existing passkeys. Users must re-register their passkeys after deploy.
  */
-function getRegistrableDomain(hostname: string): string {
-  // IP addresses and localhost: use as-is
-  if (hostname === 'localhost' || /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) || hostname.startsWith('[')) {
-    return hostname;
-  }
-  // For domain names with 3+ labels, use the last 2 (eTLD+1 for standard TLDs)
-  const parts = hostname.split('.');
-  if (parts.length > 2) {
-    return parts.slice(-2).join('.');
-  }
+function getRpID(hostname: string): string {
+  // Use the hostname as-is for everything (IPs, localhost, and full domains).
+  // WebAuthn allows the rpID to be any registrable suffix of the origin's
+  // hostname, including the full hostname itself.
   return hostname;
 }
 
@@ -42,7 +41,7 @@ function getRpConfigFromOrigin(origin: string) {
   const url = new URL(origin);
   return {
     rpName: 'MacroTrackr',
-    rpID: getRegistrableDomain(url.hostname),
+    rpID: getRpID(url.hostname),
     origin: url.origin,
   };
 }

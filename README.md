@@ -11,8 +11,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.0-emerald?style=flat-square" alt="Version" />
-  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License" />
-  <img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
+    <img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA" />
 </p>
 

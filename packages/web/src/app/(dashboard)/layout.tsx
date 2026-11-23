@@ -45,12 +45,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname]);
 
   if (isLoading) {
-    // Fixed positioning so this doesn't add 100vh to the document if the
-    // element lingers past isLoading flipping — Next.js App Router on
+    // Transparent overlay with no pointer events: Next.js App Router on
     // Capacitor's static export has been observed keeping the loading UI
-    // mounted beside the ready content, pushing real content below the fold.
+    // mounted beside the ready content. A solid bg would paint a full-
+    // screen curtain over the destination page's content; a transparent
+    // overlay means a stale mount only contributes a small spinner ring.
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
         <Spinner />
       </div>
     );

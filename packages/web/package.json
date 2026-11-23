@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:mobile": "cross-env NEXT_MOBILE=1 next build",
+    "build:mobile": "pnpm --filter @macrotracker/shared build && cross-env NEXT_MOBILE=1 next build",
     "start": "next start",
     "lint": "next lint",
     "cap:sync": "pnpm build:mobile && cap sync ios",

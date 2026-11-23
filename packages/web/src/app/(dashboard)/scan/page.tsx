@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
@@ -29,6 +29,15 @@ const TABS: { key: InputMethod; label: string }[] = [
 ];
 
 export default function ScanPage() {
+  // useSearchParams requires a Suspense boundary for static export (NEXT_MOBILE=1)
+  return (
+    <Suspense fallback={<div className="flex justify-center py-12"><Spinner /></div>}>
+      <ScanPageInner />
+    </Suspense>
+  );
+}
+
+function ScanPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const dateParam = searchParams.get('date') ?? undefined;

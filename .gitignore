@@ -26,3 +26,19 @@ packages/web/public/swe-worker-*.js
 
 # Docker
 *.log
+
+# Next.js static export (NEXT_MOBILE=1 build output)
+packages/web/out/
+
+# Capacitor iOS — Xcode build artifacts, generated pods, user state
+packages/web/ios/App/Pods/
+packages/web/ios/App/App.xcworkspace/xcuserdata/
+packages/web/ios/App/App.xcodeproj/xcuserdata/
+packages/web/ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+packages/web/ios/App/build/
+packages/web/ios/App/public/
+packages/web/ios/DerivedData/
+packages/web/ios/capacitor-cordova-ios-plugins/
+
+# macOS Xcode user state
+*.xcuserstate

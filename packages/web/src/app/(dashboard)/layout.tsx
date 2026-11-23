@@ -21,9 +21,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user, isLoading, router]);
 
-  // Scroll to top on route change to prevent stale scroll position
+  // Scroll to top on route change to prevent stale scroll position.
+  // WKWebView can open a page with a non-zero contentOffset after its own
+  // viewport-fit=cover layout pass, which hides the top of the page behind
+  // what looks like empty safe-area space. Reset via document.documentElement
+  // (which iOS honors even when window.scrollTo races) and repeat after a
+  // frame + a short timeout so the final layout sticks at 0.
   useEffect(() => {
-    window.scrollTo(0, 0);
+    const reset = () => {
+      try {
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      } catch {}
+      window.scrollTo(0, 0);
+    };
+    reset();
+    const raf = requestAnimationFrame(reset);
+    const t = setTimeout(reset, 50);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+    };
   }, [pathname]);
 
   if (isLoading) {
@@ -48,7 +66,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           it exact across devices: 5.5rem of visual clearance above the nav + the
           device's actual safe-area-inset-bottom.
         */}
-        <main className="mx-auto max-w-lg lg:max-w-5xl px-4 lg:px-8 pt-safe-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">{children}</main>
+        <main className="mx-auto max-w-lg lg:max-w-5xl px-4 lg:px-8 pt-safe pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">{children}</main>
       </div>
       <BottomNav />
       <TutorialOverlay {...tutorial} />

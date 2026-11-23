@@ -84,16 +84,17 @@ const plistAdditions = [
     key: 'UIViewControllerBasedStatusBarAppearance',
     value: '<false/>',
   },
-  {
-    // Force the whole app to dark appearance regardless of the user's system
-    // setting — the UI only ships a dark skin. Also ensures the native container
-    // behind the webview is dark so any transient gap (bounce overscroll, modal
-    // transition) doesn't flash white. Capacitor 8 doesn't expose this as a
-    // config option, so it goes straight into Info.plist.
-    key: 'UIUserInterfaceStyle',
-    value: '<string>Dark</string>',
-  },
 ];
+
+// Keys we want to ensure are NOT present. Earlier revisions of this script set
+// UIUserInterfaceStyle = Dark to force the whole app dark, but that global
+// appearance trait leaks into every native view controller the app presents —
+// including @capacitor-mlkit/barcode-scanning's camera UI, where it hides the
+// AVCaptureVideoPreviewLayer so the user sees only the scan reticle on a black
+// background. The native container behind the WKWebView is already dark via
+// backgroundColor: '#030712' in capacitor.config.ts, which is enough to avoid
+// white flashes without forcing appearance on presented view controllers.
+const plistRemovals = ['UIUserInterfaceStyle'];
 
 if (existsSync(infoPlist)) {
   let plist = readFileSync(infoPlist, 'utf8');
@@ -104,6 +105,20 @@ if (existsSync(infoPlist)) {
         `	<key>${key}</key>\n	${value}\n</dict>\n</plist>\n`,
       );
       console.log(`  Info.plist: ${key} added`);
+      changed = true;
+    }
+  }
+  for (const key of plistRemovals) {
+    // Match the key tag plus the value tag that follows it (single-line like
+    // <string>Dark</string> or self-closing like <true/>) and any surrounding
+    // whitespace, so the file stays well-formed.
+    const pattern = new RegExp(
+      `[\\t ]*<key>${key}</key>\\s*<[^>]+>[^<]*</[^>]+>\\s*|[\\t ]*<key>${key}</key>\\s*<[^/>]+/>\\s*`,
+      'g',
+    );
+    if (pattern.test(plist)) {
+      plist = plist.replace(pattern, '');
+      console.log(`  Info.plist: ${key} removed`);
       changed = true;
     }
   }

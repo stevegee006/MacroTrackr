@@ -7,9 +7,18 @@ const config: CapacitorConfig = {
   webDir: 'out',
   backgroundColor: '#030712',
   ios: {
-    // Allow http localhost for dev-time live reload from the Mac host
     allowsLinkPreview: false,
     contentInset: 'always',
+  },
+  // Serve bundled web assets as if they came from the real web origin.
+  // Changes only the Origin header the WKWebView sends when calling the
+  // API; the bundle still loads from local files. This lets the Fastify
+  // CORS allowlist (which already accepts https://macros.geehive.com)
+  // accept requests from the native app without any server change.
+  server: {
+    hostname: 'macros.geehive.com',
+    iosScheme: 'https',
+    androidScheme: 'https',
   },
   plugins: {
     SplashScreen: {

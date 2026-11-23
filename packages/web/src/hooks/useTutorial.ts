@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { Capacitor } from '@capacitor/core';
 import { TUTORIAL_STEPS } from '@/components/tutorial/tutorial-steps';
 
 const STORAGE_KEY = 'macrotrackr-tutorial-complete';
@@ -13,8 +14,15 @@ export function useTutorial() {
   const [stepIndex, setStepIndex] = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
 
-  // Auto-start on first visit (after a short delay for dashboard to load)
+  // Auto-start on first visit (after a short delay for dashboard to load).
+  // Skipped on native (Capacitor iOS/Android) because the tutorial was written
+  // for a browser context and silently stalls in the WKWebView — probably a
+  // target `data-tutorial` element not found, or the tooltip positioning math
+  // ending up off-screen under the status bar. Tutorial is still fully
+  // available via Profile → Settings → Restart Tutorial, which fires the
+  // 'tutorial-restart' event handled below.
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) return;
     const timer = setTimeout(() => {
       if (!localStorage.getItem(STORAGE_KEY)) {
         setIsActive(true);

@@ -15,10 +15,6 @@ const config: CapacitorConfig = {
     // iOS's native white view peeking around the webview. 'always' was
     // leaving ~30px white strips at both ends of every screen.
     contentInset: 'never',
-    // Force the native container behind the webview to dark so any transient
-    // gap (during a bounce, a modal transition) is also dark rather than
-    // the system-default white.
-    overrideUserInterfaceStyle: 'dark',
   },
   // Serve bundled web assets as if they came from the real web origin.
   // Changes only the Origin header the WKWebView sends when calling the

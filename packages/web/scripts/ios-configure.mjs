@@ -84,6 +84,15 @@ const plistAdditions = [
     key: 'UIViewControllerBasedStatusBarAppearance',
     value: '<false/>',
   },
+  {
+    // Force the whole app to dark appearance regardless of the user's system
+    // setting — the UI only ships a dark skin. Also ensures the native container
+    // behind the webview is dark so any transient gap (bounce overscroll, modal
+    // transition) doesn't flash white. Capacitor 8 doesn't expose this as a
+    // config option, so it goes straight into Info.plist.
+    key: 'UIUserInterfaceStyle',
+    value: '<string>Dark</string>',
+  },
 ];
 
 if (existsSync(infoPlist)) {

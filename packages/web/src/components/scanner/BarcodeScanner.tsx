@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ScanBarcode } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { isNativeScannerAvailable, scanBarcodeNative } from '@/lib/barcode-scanner';
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -14,6 +15,33 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
   const html5QrCodeRef = useRef<any>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+
+  // On native (Capacitor iOS/Android) render a simple button that launches the
+  // fullscreen MLKit scanner. The result comes back as a string and we pass it
+  // straight to onScan. Keeps the inline html5-qrcode UI off native.
+  if (isNativeScannerAvailable()) {
+    return (
+      <div className="space-y-4">
+        <Button
+          onClick={async () => {
+            try {
+              const code = await scanBarcodeNative();
+              if (code) onScan(code);
+            } catch (err: any) {
+              onError?.(err?.message ?? 'Scanner failed');
+            }
+          }}
+          variant="secondary"
+          className="w-full"
+        >
+          <span className="inline-flex items-center gap-2">
+            <ScanBarcode className="h-4 w-4" />
+            Scan Barcode
+          </span>
+        </Button>
+      </div>
+    );
+  }
 
   async function startScanning() {
     if (!scannerRef.current) return;

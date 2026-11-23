@@ -40,7 +40,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen lg:flex">
       <SidebarNav />
       <div className="flex-1 lg:pl-64">
-        <main className="mx-auto max-w-lg lg:max-w-5xl px-4 lg:px-8 pt-safe-6 pb-24 lg:pb-6">{children}</main>
+        {/*
+          Bottom padding must clear the fixed BottomNav (~60px of its own height)
+          PLUS the home-indicator safe-area inset (~34px on iPhones with notch/Dynamic
+          Island). Using a static pb-24 (96px) was tight and the WKWebView's
+          scroll bounce could drift content under the nav. The arbitrary calc keeps
+          it exact across devices: 5.5rem of visual clearance above the nav + the
+          device's actual safe-area-inset-bottom.
+        */}
+        <main className="mx-auto max-w-lg lg:max-w-5xl px-4 lg:px-8 pt-safe-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">{children}</main>
       </div>
       <BottomNav />
       <TutorialOverlay {...tutorial} />

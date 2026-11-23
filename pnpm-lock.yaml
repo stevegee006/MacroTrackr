@@ -109,6 +109,9 @@ importers:
 
   packages/web:
     dependencies:
+      '@capacitor-mlkit/barcode-scanning':
+        specifier: ^8
+        version: 8.2.2(@capacitor/core@8.6.2)
       '@capacitor/app':
         specifier: ^8
         version: 8.1.2(@capacitor/core@8.6.2)
@@ -204,6 +207,11 @@ packages:
   '@babel/runtime@7.28.6':
     resolution: {integrity: sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA==}
     engines: {node: '>=6.9.0'}
+
+  '@capacitor-mlkit/barcode-scanning@8.2.2':
+    resolution: {integrity: sha512-ifQbo09HDAveFpu89H9jhKbYw1sISdHCpXOi3qJDp/geVuxtJC2GDffBLAL3R6mXNDSjm8jO00AIP2Z1GlV8hQ==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   '@capacitor/app@8.1.2':
     resolution: {integrity: sha512-uKBlsrXH0IdvUn69e/KKYbZ32A06pcrUdG8LWuZ/6y33YMXZXLEEdNSwl+jKS/SrsTWqnePs8EqSWaiQM3mUGA==}
@@ -2350,6 +2358,10 @@ snapshots:
       zod: 3.25.76
 
   '@babel/runtime@7.28.6': {}
+
+  '@capacitor-mlkit/barcode-scanning@8.2.2(@capacitor/core@8.6.2)':
+    dependencies:
+      '@capacitor/core': 8.6.2
 
   '@capacitor/app@8.1.2(@capacitor/core@8.6.2)':
     dependencies:

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { ThemeProvider } from '@/providers/ThemeProvider';
+import { BackgroundDecoration } from '@/components/layout/BackgroundDecoration';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -56,9 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-startup-image" href="/splash/v2-iPad_mini_6.png" media="screen and (device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
       </head>
       <body className="bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900 dark:bg-none dark:bg-gray-950 dark:text-gray-100 antialiased">
-        <div className="pointer-events-none fixed inset-0 z-0 hidden dark:block">
-          <div className="absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-emerald-500/5 blur-3xl" />
-        </div>
+        <BackgroundDecoration />
         <ThemeProvider>
           <QueryProvider>
             <AuthProvider>{children}</AuthProvider>

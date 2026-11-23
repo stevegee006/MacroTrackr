@@ -67,17 +67,38 @@ if (existsSync(pbxproj)) {
 }
 
 // --- Info.plist --------------------------------------------------------------
+// Entries we want to add if missing. Order matters only aesthetically.
+const plistAdditions = [
+  {
+    key: 'NSCameraUsageDescription',
+    value: `<string>${CAMERA_USAGE}</string>`,
+  },
+  {
+    // Status bar text/icons should be white because the app's dark background
+    // extends under the status bar (contentInset: 'never' in capacitor.config).
+    key: 'UIStatusBarStyle',
+    value: '<string>UIStatusBarStyleLightContent</string>',
+  },
+  {
+    // Let Info.plist drive the status bar, not each view controller.
+    key: 'UIViewControllerBasedStatusBarAppearance',
+    value: '<false/>',
+  },
+];
+
 if (existsSync(infoPlist)) {
   let plist = readFileSync(infoPlist, 'utf8');
-  if (!plist.includes('<key>NSCameraUsageDescription</key>')) {
-    plist = plist.replace(
-      /<\/dict>\s*<\/plist>\s*$/,
-      `	<key>NSCameraUsageDescription</key>\n	<string>${CAMERA_USAGE}</string>\n</dict>\n</plist>\n`,
-    );
-    writeFileSync(infoPlist, plist);
-    console.log('  Info.plist: NSCameraUsageDescription added');
-    changed = true;
+  for (const { key, value } of plistAdditions) {
+    if (!plist.includes(`<key>${key}</key>`)) {
+      plist = plist.replace(
+        /<\/dict>\s*<\/plist>\s*$/,
+        `	<key>${key}</key>\n	${value}\n</dict>\n</plist>\n`,
+      );
+      console.log(`  Info.plist: ${key} added`);
+      changed = true;
+    }
   }
+  writeFileSync(infoPlist, plist);
 } else {
   console.warn(`  [skip] ${infoPlist} does not exist — did you run \`cap add ios\`?`);
 }

@@ -14,8 +14,12 @@ export default function Home() {
     }
   }, [user, isLoading, router]);
 
+  // Use fixed positioning so this spinner doesn't take up document height
+  // if Next.js keeps it mounted after router.replace() (seen on Capacitor
+  // static export: the Home page can stick around above the destination
+  // route, scrolling the real content below the fold).
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-950">
       <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
     </div>
   );

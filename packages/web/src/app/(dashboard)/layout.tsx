@@ -45,8 +45,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname]);
 
   if (isLoading) {
+    // Fixed positioning so this doesn't add 100vh to the document if the
+    // element lingers past isLoading flipping — Next.js App Router on
+    // Capacitor's static export has been observed keeping the loading UI
+    // mounted beside the ready content, pushing real content below the fold.
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-950">
         <Spinner />
       </div>
     );

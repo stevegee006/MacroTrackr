@@ -18,7 +18,10 @@ const podfile = resolve(iosDir, 'Podfile');
 const infoPlist = resolve(iosDir, 'App', 'Info.plist');
 
 const CAMERA_USAGE = 'MacroTrackr uses the camera to scan food barcodes.';
-const IOS_MIN = '16.0';
+// GoogleMLKit 8.x actually requires iOS 17+. 16 isn't enough — pod install
+// fails with "Specs satisfying GoogleMLKit/BarcodeScanning (~> 8.0.0) were
+// found, but they required a higher minimum deployment target."
+const IOS_MIN = '17.0';
 
 let changed = false;
 

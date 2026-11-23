@@ -38,20 +38,3 @@
   }
 }
 
-/*
- * @capacitor-mlkit/barcode-scanning attaches the AVCaptureVideoPreviewLayer to
- * the native view BEHIND the WKWebView on iOS. Our dark body background covers
- * it, so the user sees only the reticle on a black screen. Toggling this class
- * on <html> and <body> during a scan makes the webview transparent and hides
- * all HTML content, letting the native camera feed show through. MLKit's own
- * controls (X, reticle, flashlight) are native UIViews layered above the
- * webview, so they keep rendering.
- */
-html.barcode-scanner-active,
-body.barcode-scanner-active {
-  background: transparent !important;
-  background-color: transparent !important;
-}
-body.barcode-scanner-active {
-  visibility: hidden;
-}

@@ -39,31 +39,23 @@ export async function scanBarcodeNative(): Promise<string | null> {
     }
   }
 
-  // Hide the webview before launching MLKit. The plugin attaches the
-  // AVCaptureVideoPreviewLayer to a native view BEHIND the WKWebView, so our
-  // dark body background covers the camera feed and the user sees only the
-  // reticle on black. The barcode-scanner-active class (defined in
-  // globals.css) sets background: transparent and visibility: hidden so the
-  // native camera preview shows through. The scanner's X/reticle/flashlight
-  // are native UIViews above the webview and stay visible.
-  document.documentElement.classList.add('barcode-scanner-active');
-  document.body.classList.add('barcode-scanner-active');
-  try {
-    const { barcodes } = await BarcodeScanner.scan({
-      formats: [
-        BarcodeFormat.Ean13,
-        BarcodeFormat.Ean8,
-        BarcodeFormat.UpcA,
-        BarcodeFormat.UpcE,
-        BarcodeFormat.Code128,
-        BarcodeFormat.Code39,
-        BarcodeFormat.QrCode,
-      ],
-    });
-    if (!barcodes.length) return null;
-    return barcodes[0].rawValue ?? null;
-  } finally {
-    document.documentElement.classList.remove('barcode-scanner-active');
-    document.body.classList.remove('barcode-scanner-active');
-  }
+  // scan() on iOS presents its own native modal view controller with the
+  // camera preview + reticle + close/flashlight controls INSIDE that modal.
+  // It's an opaque native UI on top of the webview — no webview transparency
+  // needed. (Earlier attempts to hide the webview via visibility: hidden
+  // prevented iOS from presenting the modal and the scan immediately
+  // canceled with Fig error -12710.)
+  const { barcodes } = await BarcodeScanner.scan({
+    formats: [
+      BarcodeFormat.Ean13,
+      BarcodeFormat.Ean8,
+      BarcodeFormat.UpcA,
+      BarcodeFormat.UpcE,
+      BarcodeFormat.Code128,
+      BarcodeFormat.Code39,
+      BarcodeFormat.QrCode,
+    ],
+  });
+  if (!barcodes.length) return null;
+  return barcodes[0].rawValue ?? null;
 }

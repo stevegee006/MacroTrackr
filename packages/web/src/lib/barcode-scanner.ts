@@ -23,7 +23,18 @@
 import { Capacitor } from '@capacitor/core';
 
 export function isNativeScannerAvailable(): boolean {
-  return Capacitor.isNativePlatform();
+  // Intentionally returning false: on iOS 26 @capacitor-mlkit/barcode-scanning
+  // fails to open an AVCaptureSession (Fig err=-12710 on both scan() and
+  // startScan()), leaving the user staring at a frozen reticle. Rather than
+  // chase the native plugin, we let every platform fall through to the
+  // html5-qrcode path in BarcodeScanner.tsx, which uses WKWebView's
+  // getUserMedia — iOS 14.3+ supports it and NSCameraUsageDescription is
+  // already in Info.plist for the native permission prompt.
+  //
+  // To re-enable the native MLKit scanner later, flip this back to
+  // `Capacitor.isNativePlatform()`.
+  void Capacitor;
+  return false;
 }
 
 const OVERLAY_ID = 'native-scanner-overlay';

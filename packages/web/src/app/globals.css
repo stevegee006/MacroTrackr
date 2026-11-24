@@ -38,3 +38,65 @@
   }
 }
 
+/*
+ * Native barcode scanner (Capacitor + @capacitor-mlkit/barcode-scanning
+ * startScan). The plugin attaches an AVCaptureVideoPreviewLayer to a native
+ * UIView BEHIND the WKWebView. These rules make the webview transparent and
+ * hide all HTML except our scanner overlay, so the camera feed is visible
+ * edge-to-edge with our close button + reticle + hint on top.
+ */
+html.scanner-active,
+body.scanner-active {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+body.scanner-active > *:not(#native-scanner-overlay) {
+  visibility: hidden !important;
+}
+
+#native-scanner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+#native-scanner-overlay .ns-close {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 16px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border: none;
+  pointer-events: auto;
+  cursor: pointer;
+}
+#native-scanner-overlay .ns-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 260px;
+  height: 260px;
+  margin-top: -130px;
+  margin-left: -130px;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+}
+#native-scanner-overlay .ns-hint {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 44px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+

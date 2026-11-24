@@ -1,17 +1,63 @@
 // Barcode scanning abstraction.
 //
-// On native (Capacitor iOS/Android) uses @capacitor-mlkit/barcode-scanning,
-// which shows a fast, full-screen native scanner with a reticle and torch.
+// On native (Capacitor iOS/Android) we use @capacitor-mlkit/barcode-scanning's
+// startScan() API, not scan(). Earlier builds used scan() because it provides
+// its own native UI, but on iOS v7.5 scan() reliably fails: the modal view
+// controller presents (reticle visible) but AVCaptureVideoPreviewLayer never
+// renders the camera feed — the user just sees a reticle on black. The native
+// logs show `Fig err=-12710` right after the scan() call, then TensorFlow Lite
+// initializes, then the scan auto-cancels.
+//
+// startScan() is a different code path: the plugin attaches the preview layer
+// to a native UIView BEHIND the WKWebView and emits barcodeScanned events
+// through the Capacitor bridge. We make the webview transparent and render our
+// own close-button + reticle overlay as HTML, so the camera feed is visible
+// edge-to-edge behind our UI. More code, but it actually works.
+//
 // On web, callers fall back to the inline html5-qrcode flow in BarcodeScanner.tsx.
 //
 // scanBarcodeNative() resolves with the decoded string, or null if the user
 // cancelled / the scanner closed without a hit. It throws if permission was
-// denied or Google ML Kit's on-device barcode module can't be installed.
+// denied.
 
 import { Capacitor } from '@capacitor/core';
 
 export function isNativeScannerAvailable(): boolean {
   return Capacitor.isNativePlatform();
+}
+
+const OVERLAY_ID = 'native-scanner-overlay';
+
+function mountOverlay(onClose: () => void): void {
+  // Idempotent — remove any stale overlay before mounting a new one.
+  document.getElementById(OVERLAY_ID)?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = OVERLAY_ID;
+  overlay.innerHTML = `
+    <button class="ns-close" aria-label="Close scanner" type="button">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <div class="ns-frame" aria-hidden="true"></div>
+    <div class="ns-hint">Point the camera at a barcode</div>
+  `;
+  overlay.querySelector('.ns-close')?.addEventListener('click', onClose);
+  document.body.appendChild(overlay);
+
+  // Toggling these classes on <html> + <body> makes the WKWebView fully
+  // transparent so the camera preview layer underneath becomes visible.
+  // Styles are defined in globals.css.
+  document.documentElement.classList.add('scanner-active');
+  document.body.classList.add('scanner-active');
+}
+
+function unmountOverlay(): void {
+  document.documentElement.classList.remove('scanner-active');
+  document.body.classList.remove('scanner-active');
+  document.getElementById(OVERLAY_ID)?.remove();
 }
 
 export async function scanBarcodeNative(): Promise<string | null> {
@@ -20,15 +66,6 @@ export async function scanBarcodeNative(): Promise<string | null> {
   }
 
   const { BarcodeScanner, BarcodeFormat } = await import('@capacitor-mlkit/barcode-scanning');
-
-  // Make sure the Google ML Kit module is installed on-device. On iOS the
-  // framework ships with the app; on Android it is downloaded on first use.
-  // isGoogleBarcodeScannerModuleAvailable + installGoogleBarcodeScannerModule
-  // are Android-only and no-op on iOS.
-  const moduleCheck = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable().catch(() => ({ available: true }));
-  if (!moduleCheck.available) {
-    await BarcodeScanner.installGoogleBarcodeScannerModule();
-  }
 
   // Ask for camera permission if we don't have it yet.
   const perm = await BarcodeScanner.checkPermissions();
@@ -39,23 +76,57 @@ export async function scanBarcodeNative(): Promise<string | null> {
     }
   }
 
-  // scan() on iOS presents its own native modal view controller with the
-  // camera preview + reticle + close/flashlight controls INSIDE that modal.
-  // It's an opaque native UI on top of the webview — no webview transparency
-  // needed. (Earlier attempts to hide the webview via visibility: hidden
-  // prevented iOS from presenting the modal and the scan immediately
-  // canceled with Fig error -12710.)
-  const { barcodes } = await BarcodeScanner.scan({
-    formats: [
-      BarcodeFormat.Ean13,
-      BarcodeFormat.Ean8,
-      BarcodeFormat.UpcA,
-      BarcodeFormat.UpcE,
-      BarcodeFormat.Code128,
-      BarcodeFormat.Code39,
-      BarcodeFormat.QrCode,
-    ],
+  return new Promise<string | null>((resolve, reject) => {
+    let listener: { remove: () => Promise<void> } | null = null;
+    let settled = false;
+
+    const cleanup = async () => {
+      try {
+        await listener?.remove();
+      } catch {}
+      try {
+        await BarcodeScanner.stopScan();
+      } catch {}
+      unmountOverlay();
+    };
+
+    const finish = async (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      await cleanup();
+      resolve(value);
+    };
+
+    const fail = async (err: unknown) => {
+      if (settled) return;
+      settled = true;
+      await cleanup();
+      reject(err);
+    };
+
+    (async () => {
+      try {
+        mountOverlay(() => void finish(null));
+
+        listener = await BarcodeScanner.addListener('barcodeScanned', (result) => {
+          const value = result?.barcode?.rawValue ?? null;
+          if (value) void finish(value);
+        });
+
+        await BarcodeScanner.startScan({
+          formats: [
+            BarcodeFormat.Ean13,
+            BarcodeFormat.Ean8,
+            BarcodeFormat.UpcA,
+            BarcodeFormat.UpcE,
+            BarcodeFormat.Code128,
+            BarcodeFormat.Code39,
+            BarcodeFormat.QrCode,
+          ],
+        });
+      } catch (err) {
+        void fail(err);
+      }
+    })();
   });
-  if (!barcodes.length) return null;
-  return barcodes[0].rawValue ?? null;
 }

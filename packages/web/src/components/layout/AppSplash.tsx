@@ -5,16 +5,19 @@ import { useEffect, useState } from 'react';
 // Animated launch splash that continues from the native iOS launch screen.
 //
 // Boot sequence on iOS (what the user actually sees):
-//   1. iOS launch storyboard (static flame on #030712) from tap to webview-ready.
+//   1. iOS launch storyboard (solid #030712, no flame — generated from
+//      assets/splash.png) from tap to webview-ready. Reads as a brief dark
+//      pause, not a static image of the brand.
 //   2. Capacitor SplashScreen plugin covers the webview until we dismiss it.
 //   3. We mount, call SplashScreen.hide() with no fade, and run our ignite
-//      animation on top of the app for ~2200ms, then fade ourselves out.
+//      animation on top of the app for ~3200ms, then fade ourselves out.
 //
-// Background colour matches the native storyboard so the handoff is a single
-// continuous dark field; only the flame changes state across the transition.
+// Because the native launch image has no flame on it, the first flame the
+// user sees is the animated one — it feels like the app itself is igniting
+// into existence rather than fading up from a pre-existing logo.
 
-const TOTAL_MS = 2200;
-const FADE_MS = 400;
+const TOTAL_MS = 3200;
+const FADE_MS = 500;
 
 export function AppSplash() {
   const [stage, setStage] = useState<'intro' | 'fading' | 'gone'>('intro');

@@ -135,19 +135,22 @@ await solidBg({
   color: BRAND_BG,
 });
 
-// --- Splash: flame smaller (~17% of canvas width) so it reads at phone size
-// even though the source is 2732x2732 and gets cropped per-device.
-await compositeOnBg({
-  bgColor: BRAND_BG,
+// --- Splash: SOLID brand-dark, no flame. This is the native iOS launch
+// screen image, shown from tap-open until the webview is ready to render.
+// Putting the flame here makes the launch feel disjoint because the user
+// sees a static flame BEFORE the AppSplash ignite animation starts — the
+// animation then has nothing to "ignite" from. A solid dark field lets
+// AppSplash provide the entire flame visual via its CSS animation, so the
+// native launch reads as a brief dark pause before the app lights up.
+await solidBg({
   canvasPx: 2732,
-  logoPx: 460,
   outPath: resolve(assetsDir, 'splash.png'),
+  color: BRAND_BG,
 });
-await compositeOnBg({
-  bgColor: BRAND_BG,
+await solidBg({
   canvasPx: 2732,
-  logoPx: 460,
   outPath: resolve(assetsDir, 'splash-dark.png'),
+  color: BRAND_BG,
 });
 
 console.log('\n  brand assets ready. Next: npx capacitor-assets generate --ios');

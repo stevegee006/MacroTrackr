@@ -28,8 +28,11 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 1500,
-      launchAutoHide: true,
+      // We hide the native SplashScreen manually from AppSplash.tsx as soon
+      // as React mounts, so our HTML ignite animation can actually be seen
+      // instead of playing behind a static native cover.
+      launchShowDuration: 3000, // upper bound; AppSplash dismisses sooner
+      launchAutoHide: false,
       launchFadeOutDuration: 200,
       backgroundColor: '#030712',
       showSpinner: false,

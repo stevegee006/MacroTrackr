@@ -108,8 +108,10 @@ export async function scanBarcodeNative(): Promise<string | null> {
       try {
         mountOverlay(() => void finish(null));
 
-        listener = await BarcodeScanner.addListener('barcodeScanned', (result) => {
-          const value = result?.barcode?.rawValue ?? null;
+        listener = await BarcodeScanner.addListener('barcodesScanned', (event) => {
+          // The event payload holds `barcodes: Barcode[]`. Any non-empty
+          // rawValue wins — we only need the first hit to resolve.
+          const value = event?.barcodes?.find((b) => b?.rawValue)?.rawValue ?? null;
           if (value) void finish(value);
         });
 

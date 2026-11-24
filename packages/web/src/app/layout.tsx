@@ -3,6 +3,7 @@ import { AuthProvider } from '@/providers/AuthProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import { BackgroundDecoration } from '@/components/layout/BackgroundDecoration';
+import { AppSplash } from '@/components/layout/AppSplash';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900 dark:bg-none dark:bg-gray-950 dark:text-gray-100 antialiased">
         <BackgroundDecoration />
+        <AppSplash />
         <ThemeProvider>
           <QueryProvider>
             <AuthProvider>{children}</AuthProvider>

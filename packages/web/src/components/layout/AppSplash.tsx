@@ -96,10 +96,17 @@ export function AppSplash() {
          * down to 0.02em, which made every letter shift sideways during the
          * fade-in — the "o" sits dead center and so read most clearly as
          * drifting. Fixed spacing keeps the whole wordmark anchored.
+         *
+         * translateZ(0) is deliberate on BOTH keyframe stops — not for
+         * motion, but to keep the wordmark on its own GPU compositor layer
+         * for the entire animation. Without it, the flame's flicker
+         * forces the whole splash region to re-composite each frame and
+         * the wordmark text gets re-rasterized at sub-pixel offsets,
+         * which reads as the round letters (notably the "o") jiggling.
          */
         @keyframes mt-word {
-          0%   { transform: translateY(10px); opacity: 0; }
-          100% { transform: translateY(0);    opacity: 1; }
+          0%   { transform: translateY(10px) translateZ(0); opacity: 0; }
+          100% { transform: translateY(0)    translateZ(0); opacity: 1; }
         }
 
         .mt-flame-wrap {
@@ -125,6 +132,16 @@ export function AppSplash() {
           letter-spacing: 0.02em;
           color: #f3f4f6;
           animation: mt-word 500ms ease-out 750ms both;
+          /* Keep the wordmark on its own compositor layer even after the
+             animation finishes — the flame's flicker loop runs forever
+             and will keep jiggling text that isn't isolated. */
+          will-change: transform, opacity;
+          transform: translateZ(0);
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          /* backface-visibility: hidden has no visual effect here but tells
+             mobile Safari to keep the compositor layer around. */
+          backface-visibility: hidden;
         }
         .mt-word .mt-word-light { color: #9ca3af; font-weight: 400; }
       `}</style>

@@ -91,9 +91,15 @@ export function AppSplash() {
           0%, 100% { filter: brightness(1)   drop-shadow(0 0 10px rgba(255, 120, 40, 0.35)); }
           50%      { filter: brightness(1.1) drop-shadow(0 0 18px rgba(255, 170, 70, 0.55)); }
         }
+        /*
+         * Fade + rise only. We previously animated letter-spacing from 0.18em
+         * down to 0.02em, which made every letter shift sideways during the
+         * fade-in — the "o" sits dead center and so read most clearly as
+         * drifting. Fixed spacing keeps the whole wordmark anchored.
+         */
         @keyframes mt-word {
-          0%   { transform: translateY(10px); opacity: 0; letter-spacing: 0.18em; }
-          100% { transform: translateY(0);    opacity: 1; letter-spacing: 0.02em; }
+          0%   { transform: translateY(10px); opacity: 0; }
+          100% { transform: translateY(0);    opacity: 1; }
         }
 
         .mt-flame-wrap {
@@ -116,6 +122,7 @@ export function AppSplash() {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
           font-size: 1.25rem;
           font-weight: 600;
+          letter-spacing: 0.02em;
           color: #f3f4f6;
           animation: mt-word 500ms ease-out 750ms both;
         }

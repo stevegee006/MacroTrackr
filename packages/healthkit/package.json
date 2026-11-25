@@ -15,7 +15,7 @@
   "files": [
     "dist/",
     "ios/Plugin/",
-    "MacroTrackerHealthKit.podspec",
+    "MacrotrackerHealthkit.podspec",
     "README.md"
   ],
   "capacitor": {

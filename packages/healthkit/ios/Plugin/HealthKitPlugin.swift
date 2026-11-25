@@ -2,16 +2,13 @@ import Foundation
 import Capacitor
 import HealthKit
 
-// Minimal HealthKit bridge for MacroTrackr. Uses the classic Capacitor
-// registration pattern: Swift class extends CAPPlugin and sets identifier
-// / jsName / pluginMethods inside init(); registration happens through the
-// CAP_PLUGIN macro in HealthKitPlugin.m. The newer Capacitor 8
-// CAPBridgedPlugin protocol + `public let` property pattern looked cleaner
-// but collided with CAPPlugin's base-class @objc var declarations in the
-// installed pod version, producing "overriding declaration requires an
-// 'override' keyword" errors on every one of the properties. Setting them
-// in init() mutates the inherited stored properties instead of redeclaring
-// them, which sidesteps the whole class of override errors.
+// Minimal HealthKit bridge for MacroTrackr. Classic Capacitor plugin
+// shape: a Swift CAPPlugin subclass that declares only its @objc methods,
+// with ALL registration delegated to the CAP_PLUGIN macro in
+// HealthKitPlugin.m. Every attempt to declare identifier / jsName /
+// pluginMethods in Swift — as `let` properties, computed overrides, or
+// init assignments — tripped "overriding declaration" errors on this
+// Capacitor-8 pod version, so the Swift side owns no registration surface.
 //
 // Exposes three methods to JS:
 //   - requestPermissions()      → prompts for the exact types we use
@@ -26,26 +23,15 @@ import HealthKit
 
 @objc(HealthKitPlugin)
 public class HealthKitPlugin: CAPPlugin {
-    // Set identifier / jsName / pluginMethods in init() rather than as
-    // `public let` properties. CAPPlugin's installed Capacitor-8 version
-    // declares these as `@objc public var` on the base class, so `let`
-    // overrides trip "Overriding declaration requires 'override' keyword"
-    // and "Overriding instance method must be as accessible as its
-    // enclosing type." Assigning in init sidesteps both by mutating the
-    // inherited stored properties instead of redeclaring them.
+    // No property or init overrides. All plugin registration (name, JS
+    // name, method table) is handled by the CAP_PLUGIN macro in
+    // HealthKitPlugin.m. This is the classic Capacitor plugin shape that
+    // has worked unchanged across Capacitor 2 through 8 — the moment this
+    // class tries to override anything CAPPlugin owns, the installed pod
+    // version throws override-keyword errors we can't satisfy without
+    // reading the base-class headers for this specific build.
 
     private let healthStore = HKHealthStore()
-
-    public override init() {
-        super.init()
-        self.identifier = "HealthKitPlugin"
-        self.jsName = "HealthKit"
-        self.pluginMethods = [
-            CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise),
-            CAPPluginMethod(name: "getActiveEnergyToday", returnType: CAPPluginReturnPromise),
-            CAPPluginMethod(name: "writeNutrition", returnType: CAPPluginReturnPromise),
-        ]
-    }
 
     @objc func requestPermissions(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable() else {

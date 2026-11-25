@@ -7,6 +7,8 @@ import {
   connectHealthKit,
   disconnectHealthKit,
   getTodayActiveEnergyKcal,
+  getAddBurnToBudget,
+  setAddBurnToBudget,
 } from '@/lib/healthkit';
 
 // React-level entry point for HealthKit. Wraps the lib facade in TanStack
@@ -21,6 +23,7 @@ import {
 
 const ENABLED_QUERY_KEY = ['healthkit', 'enabled'] as const;
 const TODAY_ACTIVE_KEY = ['healthkit', 'activeEnergyToday'] as const;
+const ADD_BURN_KEY = ['healthkit', 'addBurnToBudget'] as const;
 
 export function useHealthKit() {
   const queryClient = useQueryClient();
@@ -41,6 +44,23 @@ export function useHealthKit() {
     // minute while mounted so the dashboard reflects a fresh workout.
     refetchInterval: 60_000,
     staleTime: 30_000,
+  });
+
+  const addBurnQuery = useQuery({
+    queryKey: ADD_BURN_KEY,
+    queryFn: getAddBurnToBudget,
+    enabled: available,
+    staleTime: Infinity,
+  });
+
+  const toggleAddBurnMutation = useMutation({
+    mutationFn: async (next: boolean) => {
+      await setAddBurnToBudget(next);
+      return next;
+    },
+    onSuccess: (next) => {
+      queryClient.setQueryData(ADD_BURN_KEY, next);
+    },
   });
 
   const connectMutation = useMutation({
@@ -64,6 +84,8 @@ export function useHealthKit() {
     enabled: enabledQuery.data === true,
     loadingEnabled: enabledQuery.isLoading,
     todayKcal: todayQuery.data ?? null,
+    addBurnToBudget: addBurnQuery.data === true,
+    setAddBurnToBudget: toggleAddBurnMutation.mutateAsync,
     connect: connectMutation.mutateAsync,
     connecting: connectMutation.isPending,
     disconnect: disconnectMutation.mutateAsync,

@@ -1,42 +1,24 @@
 'use client';
 
 import { Activity } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useHealthKit } from '@/hooks/useHealthKit';
 
-// Profile Settings card for the Apple Health integration. Only renders on
-// iOS (hook's `available` flag). Shows one of three states:
-//   - Not connected:  "Connect Apple Health" button + rationale
-//   - Connected:      green confirmation + today's active energy preview +
-//                     "Disconnect" button
-//   - Loading:        subtle spinner inside the Connect button
+// Profile Settings card for the Apple Health integration. iOS only — the
+// hook's `available` flag hides it on web/Android where there's no
+// equivalent to wire up.
 //
-// TEMP: while debugging why the card wasn't appearing on-device, we render
-// a diagnostic badge on every platform so the user can see what the hook
-// thinks about availability. Will remove the fallback branch once we've
-// confirmed the card shows up correctly on iOS.
+// States:
+//   - Not connected:  "Connect Apple Health" button + rationale
+//   - Connected:      confirmation badge, today's active-energy preview,
+//                     the "Add to today's target" sub-toggle (Phase 2),
+//                     and a "Disconnect" button
 
 export function AppleHealthCard() {
   const hk = useHealthKit();
 
-  if (!hk.available) {
-    return (
-      <Card className="space-y-2">
-        <h2 className="font-semibold">Apple Health (diagnostic)</h2>
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-          Capacitor.isNativePlatform() = {String(Capacitor.isNativePlatform())}
-        </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-          Capacitor.getPlatform() = {Capacitor.getPlatform()}
-        </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Hook reports HealthKit not available; card hidden normally.
-        </p>
-      </Card>
-    );
-  }
+  if (!hk.available) return null;
 
   return (
     <Card className="space-y-4">
@@ -68,6 +50,32 @@ export function AppleHealthCard() {
               )}
             </div>
           </div>
+
+          {/*
+            Phase-2 sub-setting: when on, the dashboard inflates today's
+            calorie target by the HealthKit active-energy burn. Default
+            off so the ring stays stable for users who prefer awareness
+            without the moving goalpost.
+          */}
+          <label className="flex items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+            <input
+              type="checkbox"
+              checked={hk.addBurnToBudget}
+              onChange={(e) => void hk.setAddBurnToBudget(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:border-gray-600 dark:bg-gray-800"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Add activity calories to today&apos;s target
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                A workout that burns 400 cal raises today&apos;s target by
+                400. Off by default; macro targets (protein, carbs, fat)
+                are never changed.
+              </div>
+            </div>
+          </label>
+
           <Button
             variant="secondary"
             onClick={() => void hk.disconnect()}

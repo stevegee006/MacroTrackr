@@ -13,6 +13,7 @@ import { Preferences } from '@capacitor/preferences';
 import { HealthKit } from '@macrotracker/healthkit';
 
 const ENABLED_KEY = 'healthkit.enabled';
+const ADD_BURN_KEY = 'healthkit.addBurnToBudget';
 
 export function isHealthKitAvailable(): boolean {
   // HealthKit only exists on iOS. Capacitor.getPlatform() returns 'ios' in
@@ -54,6 +55,30 @@ export async function connectHealthKit(): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Phase-2 preference: when true, the dashboard adds today's active-energy
+ * kcal to the calorie target before computing the macro ring. Off by
+ * default to preserve the display-only behaviour we shipped in Phase 1.
+ * Only read when HealthKit is enabled; a true value with the integration
+ * disabled is a no-op in the dashboard code.
+ */
+export async function getAddBurnToBudget(): Promise<boolean> {
+  try {
+    const { value } = await Preferences.get({ key: ADD_BURN_KEY });
+    return value === '1';
+  } catch {
+    return false;
+  }
+}
+
+export async function setAddBurnToBudget(enabled: boolean): Promise<void> {
+  try {
+    await Preferences.set({ key: ADD_BURN_KEY, value: enabled ? '1' : '0' });
+  } catch {
+    // Non-fatal.
   }
 }
 

@@ -2,7 +2,10 @@ require 'json'
 package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
 
 Pod::Spec.new do |s|
-  s.name = 'MacroTrackerHealthKit'
+  # Name must match CocoaPods's expected derivation from the npm package
+  # name: @macrotracker/healthkit → MacrotrackerHealthkit (scope + package
+  # name, CamelCased with no internal capitalization preserved).
+  s.name = 'MacrotrackerHealthkit'
   s.version = package['version']
   s.summary = package['description']
   s.license = 'MIT'

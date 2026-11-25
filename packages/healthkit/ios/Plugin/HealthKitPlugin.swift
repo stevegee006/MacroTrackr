@@ -2,7 +2,13 @@ import Foundation
 import Capacitor
 import HealthKit
 
-// Minimal HealthKit bridge for MacroTrackr.
+// Minimal HealthKit bridge for MacroTrackr. Uses the Capacitor 8
+// CAPBridgedPlugin protocol for registration — the three `let` properties
+// (identifier / jsName / pluginMethods) are what Capacitor scans for at
+// startup, so no companion Objective-C .m file is needed. Mixing both
+// styles produces "overriding declaration requires 'override' keyword"
+// compile errors because the CAP_PLUGIN macro's Obj-C expansion collides
+// with the Swift property declarations.
 //
 // Exposes three methods to JS:
 //   - requestPermissions()      → prompts for the exact types we use

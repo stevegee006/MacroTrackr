@@ -33,7 +33,13 @@ public class HealthKitPlugin: CAPPlugin {
 
     private let healthStore = HKHealthStore()
 
-    @objc func requestPermissions(_ call: CAPPluginCall) {
+    // requestPermissions is a standard CAPPlugin API — the base class
+    // ships a stub that rejects with "unimplemented." We override it so
+    // Capacitor's generic permissions plumbing (and callers that do
+    // `plugin.requestPermissions()`) hit our HealthKit flow instead.
+    // Needs `override public` because the base version is public on a
+    // public class.
+    @objc override public func requestPermissions(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable() else {
             call.resolve(["granted": false])
             return

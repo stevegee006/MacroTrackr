@@ -1,6 +1,7 @@
 'use client';
 
 import { Activity } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useHealthKit } from '@/hooks/useHealthKit';
@@ -11,13 +12,31 @@ import { useHealthKit } from '@/hooks/useHealthKit';
 //   - Connected:      green confirmation + today's active energy preview +
 //                     "Disconnect" button
 //   - Loading:        subtle spinner inside the Connect button
+//
+// TEMP: while debugging why the card wasn't appearing on-device, we render
+// a diagnostic badge on every platform so the user can see what the hook
+// thinks about availability. Will remove the fallback branch once we've
+// confirmed the card shows up correctly on iOS.
 
 export function AppleHealthCard() {
   const hk = useHealthKit();
 
-  // Hide the entire card on non-iOS — there's no equivalent surface on web
-  // or Android, and seeing a dead toggle is worse than not seeing anything.
-  if (!hk.available) return null;
+  if (!hk.available) {
+    return (
+      <Card className="space-y-2">
+        <h2 className="font-semibold">Apple Health (diagnostic)</h2>
+        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+          Capacitor.isNativePlatform() = {String(Capacitor.isNativePlatform())}
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+          Capacitor.getPlatform() = {Capacitor.getPlatform()}
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Hook reports HealthKit not available; card hidden normally.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <Card className="space-y-4">

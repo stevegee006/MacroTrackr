@@ -372,7 +372,6 @@ export default function DashboardPage() {
   const today = todayString();
   const [shared, setShared] = useState(false);
   const [activeMacro, setActiveMacro] = useState<MacroKey | null>(null);
-  const hk = useHealthKit();
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['food-log-summary', today],
@@ -418,25 +417,15 @@ export default function DashboardPage() {
     );
   }
 
-  const rawSummary = summary?.data;
+  const s = summary?.data;
   const logs = entries?.data ?? [];
 
-  // Phase-2 HealthKit: when the user has opted in (addBurnToBudget), fold
-  // today's active-energy kcal into the calorie target so the macro ring
-  // and the greeting math reflect the adjusted budget. We ONLY touch
-  // calories — protein, carbs, and fat targets stay untouched regardless.
-  const burnToAdd =
-    hk.enabled && hk.addBurnToBudget && hk.todayKcal ? hk.todayKcal : 0;
-  const s =
-    rawSummary && burnToAdd > 0
-      ? {
-          ...rawSummary,
-          targets: {
-            ...rawSummary.targets,
-            calories: rawSummary.targets.calories + burnToAdd,
-          },
-        }
-      : rawSummary;
+  // Phase-2 HealthKit used to inflate targets.calories by today's burn,
+  // but that model invites eating MORE to match a moving goalpost — the
+  // opposite of what someone on a deficit actually wants. We now treat
+  // the burn as a surfaced deficit instead: target stays fixed, and the
+  // burn row below the macro ring displays activity as working alongside
+  // under-eating toward a combined daily deficit from target.
 
   // Calculate streak: consecutive days with logged food ending today
   const loggedDates = new Set(
@@ -522,7 +511,10 @@ export default function DashboardPage() {
               {shared ? <Check className="h-4 w-4 text-emerald-500" /> : <Share2 className="h-4 w-4" />}
             </button>
             <MacroRings totals={s.totals} targets={s.targets} onRingTap={setActiveMacro} streak={streak} />
-            <HealthKitBurnRow />
+            <HealthKitBurnRow
+              eatenCalories={s.totals.calories}
+              targetCalories={s.targets.calories}
+            />
           </Card>
         )}
 
@@ -614,23 +606,56 @@ export default function DashboardPage() {
 }
 
 // Thin row beneath the MacroRings that surfaces today's active-energy burn
-// from Apple Health, iOS only. Returns null whenever: HealthKit isn't
-// available on this platform, the user hasn't connected it, or the value
-// is 0. Copy changes based on the Phase-2 "add burn to budget" preference:
+// from Apple Health, iOS only. Copy switches based on the "count as
+// deficit" preference:
 //   - Off: awareness only ("+X cal from activity today")
-//   - On: makes clear the target has already been raised, so the user
-//         doesn't double-count the burn mentally
-function HealthKitBurnRow() {
+//   - On:  reframed as a deficit — "−X cal from activity · Y cal under
+//          target today" — target itself is untouched, so the ring stays
+//          honest and the user sees activity as contributing to a
+//          combined daily deficit rather than as license to eat more
+function HealthKitBurnRow({
+  eatenCalories,
+  targetCalories,
+}: {
+  eatenCalories: number;
+  targetCalories: number;
+}) {
   const hk = useHealthKit();
   if (!hk.available || !hk.enabled) return null;
   if (hk.todayKcal === null || hk.todayKcal <= 0) return null;
+
+  if (hk.addBurnToBudget) {
+    // Combined deficit: the gap between target and eaten, plus the burn.
+    // Clamp at 0 so an over-target day (eaten > target) still surfaces
+    // the activity contribution without going negative, which would read
+    // strangely.
+    const underTarget = Math.max(0, targetCalories - eatenCalories);
+    const combinedDeficit = underTarget + hk.todayKcal;
+    return (
+      <div className="mt-3 flex flex-col items-center gap-0.5 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-1.5">
+          <Flame className="h-3.5 w-3.5 text-orange-500" />
+          <span>
+            −<span className="font-semibold text-gray-700 dark:text-gray-200">{hk.todayKcal}</span>{' '}
+            cal from activity today
+          </span>
+        </div>
+        <div className="text-[11px] text-gray-400 dark:text-gray-500">
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+            {combinedDeficit}
+          </span>{' '}
+          cal deficit from target
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
       <Flame className="h-3.5 w-3.5 text-orange-500" />
       <span>
         +<span className="font-semibold text-gray-700 dark:text-gray-200">{hk.todayKcal}</span>{' '}
-        cal from activity
-        {hk.addBurnToBudget ? ' — added to today’s target' : ' today'}
+        cal from activity today
       </span>
     </div>
   );

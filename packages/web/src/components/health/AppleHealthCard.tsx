@@ -52,10 +52,12 @@ export function AppleHealthCard() {
           </div>
 
           {/*
-            Phase-2 sub-setting: when on, the dashboard inflates today's
-            calorie target by the HealthKit active-energy burn. Default
-            off so the ring stays stable for users who prefer awareness
-            without the moving goalpost.
+            Phase-2 sub-setting: when on, the dashboard reframes the burn
+            as a calorie deficit metric rather than license to eat more.
+            The calorie target doesn't move — the burn row below the
+            macro ring shows the day's combined deficit (under-target +
+            activity) so progress toward weight goals is visible without
+            the moving-goalpost effect.
           */}
           <label className="flex items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
             <input
@@ -66,12 +68,13 @@ export function AppleHealthCard() {
             />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Add activity calories to today&apos;s target
+                Count activity as calorie deficit
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                A workout that burns 400 cal raises today&apos;s target by
-                400. Off by default; macro targets (protein, carbs, fat)
-                are never changed.
+                Shows your activity burn as a deficit toward today&apos;s
+                target rather than raising the target. Your calorie goal
+                stays fixed — activity just surfaces as progress alongside
+                under-eating.
               </div>
             </div>
           </label>

@@ -59,11 +59,15 @@ export async function connectHealthKit(): Promise<boolean> {
 }
 
 /**
- * Phase-2 preference: when true, the dashboard adds today's active-energy
- * kcal to the calorie target before computing the macro ring. Off by
- * default to preserve the display-only behaviour we shipped in Phase 1.
- * Only read when HealthKit is enabled; a true value with the integration
- * disabled is a no-op in the dashboard code.
+ * Phase-2 preference: when true, the dashboard frames today's active-
+ * energy kcal as a calorie DEFICIT rather than extra budget to eat. The
+ * target itself does not shift — the burn is shown as "X cal deficit from
+ * activity" so the user sees progress toward their weight goal without
+ * being invited to eat the extra. Off by default, honouring the Phase-1
+ * awareness-only behaviour.
+ *
+ * Preference key kept as `addBurnToBudget` for backward-compat with
+ * anyone who already flipped it on before this semantic change.
  */
 export async function getAddBurnToBudget(): Promise<boolean> {
   try {

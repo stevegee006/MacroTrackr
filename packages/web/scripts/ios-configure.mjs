@@ -19,8 +19,13 @@ const iosDir = resolve(__dirname, '..', 'ios', 'App');
 const podfile = resolve(iosDir, 'Podfile');
 const infoPlist = resolve(iosDir, 'App', 'Info.plist');
 const pbxproj = resolve(iosDir, 'App.xcodeproj', 'project.pbxproj');
+const entitlements = resolve(iosDir, 'App', 'App.entitlements');
 
 const CAMERA_USAGE = 'MacroTrackr uses the camera to scan food barcodes.';
+const HEALTH_SHARE_USAGE =
+  'MacroTrackr reads workout calories to show your daily activity next to your macros.';
+const HEALTH_UPDATE_USAGE =
+  'MacroTrackr writes your logged meals to Apple Health so your nutrition shows up alongside your other health data.';
 // GoogleMLKit 7.x / 8.x transitive deps (MLKit* frameworks) advertise deployment
 // targets that CocoaPods reports as too high even when the online podspecs
 // claim 15.5. 17.0 is the empirical floor that gets pod install to succeed.
@@ -74,6 +79,14 @@ const plistAdditions = [
     value: `<string>${CAMERA_USAGE}</string>`,
   },
   {
+    key: 'NSHealthShareUsageDescription',
+    value: `<string>${HEALTH_SHARE_USAGE}</string>`,
+  },
+  {
+    key: 'NSHealthUpdateUsageDescription',
+    value: `<string>${HEALTH_UPDATE_USAGE}</string>`,
+  },
+  {
     // Status bar text/icons should be white because the app's dark background
     // extends under the status bar (contentInset: 'never' in capacitor.config).
     key: 'UIStatusBarStyle',
@@ -125,6 +138,63 @@ if (existsSync(infoPlist)) {
   writeFileSync(infoPlist, plist);
 } else {
   console.warn(`  [skip] ${infoPlist} does not exist — did you run \`cap add ios\`?`);
+}
+
+// --- App.entitlements --------------------------------------------------------
+// HealthKit requires BOTH an entitlement in App.entitlements AND a
+// CODE_SIGN_ENTITLEMENTS build setting pointing at it. Without the latter,
+// Xcode ignores the entitlement file entirely and the HealthKit prompt
+// never appears. We create the file if missing and ensure the pbxproj
+// references it.
+const ENTITLEMENT_FILE_CONTENTS = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.healthkit</key>
+	<true/>
+	<key>com.apple.developer.healthkit.access</key>
+	<array/>
+</dict>
+</plist>
+`;
+
+if (existsSync(iosDir)) {
+  if (!existsSync(entitlements)) {
+    writeFileSync(entitlements, ENTITLEMENT_FILE_CONTENTS);
+    console.log(`  App.entitlements: created with HealthKit entitlement`);
+    changed = true;
+  } else {
+    let ent = readFileSync(entitlements, 'utf8');
+    if (!ent.includes('com.apple.developer.healthkit')) {
+      ent = ent.replace(
+        /<\/dict>\s*<\/plist>\s*$/,
+        `	<key>com.apple.developer.healthkit</key>\n	<true/>\n	<key>com.apple.developer.healthkit.access</key>\n	<array/>\n</dict>\n</plist>\n`,
+      );
+      writeFileSync(entitlements, ent);
+      console.log(`  App.entitlements: HealthKit entitlement added`);
+      changed = true;
+    }
+  }
+
+  // Ensure CODE_SIGN_ENTITLEMENTS points at our file in every build config.
+  // Capacitor's generated pbxproj doesn't set this by default, so Xcode
+  // silently ignores App.entitlements until we add it.
+  if (existsSync(pbxproj)) {
+    let proj = readFileSync(pbxproj, 'utf8');
+    const entitlementPath = 'App/App.entitlements';
+    if (!proj.includes('CODE_SIGN_ENTITLEMENTS')) {
+      // Inject CODE_SIGN_ENTITLEMENTS next to every CODE_SIGN_STYLE line.
+      // Capacitor's pbxproj always has CODE_SIGN_STYLE in each build config,
+      // so this reliably hits all of them (Debug + Release × App target).
+      proj = proj.replace(
+        /CODE_SIGN_STYLE = Automatic;/g,
+        `CODE_SIGN_ENTITLEMENTS = ${entitlementPath};\n\t\t\t\tCODE_SIGN_STYLE = Automatic;`,
+      );
+      writeFileSync(pbxproj, proj);
+      console.log(`  pbxproj: CODE_SIGN_ENTITLEMENTS set to ${entitlementPath}`);
+      changed = true;
+    }
+  }
 }
 
 if (!changed) {

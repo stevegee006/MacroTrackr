@@ -10,7 +10,8 @@ import type { MacroKey } from '@/components/log/MacroRings';
 import { MacroBreakdownModal } from '@/components/log/MacroBreakdownModal';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
-import { Share2, Check, Plus } from 'lucide-react';
+import { Share2, Check, Plus, Flame } from 'lucide-react';
+import { useHealthKit } from '@/hooks/useHealthKit';
 import type { DailySummary, FoodLogEntry, UserProfile } from '@macrotracker/shared';
 import { MEAL_TYPE_LABELS } from '@macrotracker/shared';
 import type { MealType } from '@macrotracker/shared';
@@ -503,6 +504,7 @@ export default function DashboardPage() {
               {shared ? <Check className="h-4 w-4 text-emerald-500" /> : <Share2 className="h-4 w-4" />}
             </button>
             <MacroRings totals={s.totals} targets={s.targets} onRingTap={setActiveMacro} streak={streak} />
+            <HealthKitBurnRow />
           </Card>
         )}
 
@@ -589,6 +591,25 @@ export default function DashboardPage() {
           onClose={() => setActiveMacro(null)}
         />
       )}
+    </div>
+  );
+}
+
+// Thin row beneath the MacroRings that surfaces today's active-energy burn
+// from Apple Health, iOS only. Returns null whenever: HealthKit isn't
+// available on this platform, the user hasn't connected it, or the value
+// is 0. We intentionally don't subtract this from the calorie target —
+// the user's macro budget stays fixed; this is just awareness context.
+function HealthKitBurnRow() {
+  const hk = useHealthKit();
+  if (!hk.available || !hk.enabled) return null;
+  if (hk.todayKcal === null || hk.todayKcal <= 0) return null;
+  return (
+    <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+      <Flame className="h-3.5 w-3.5 text-orange-500" />
+      <span>
+        +<span className="font-semibold text-gray-700 dark:text-gray-200">{hk.todayKcal}</span> cal from activity today
+      </span>
     </div>
   );
 }

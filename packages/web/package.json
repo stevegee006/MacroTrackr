@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:mobile": "pnpm --filter @macrotracker/shared build && cross-env NEXT_MOBILE=1 NEXT_PUBLIC_API_URL=https://macros-api.geehive.com/api/v1 next build",
+    "build:mobile": "pnpm --filter @macrotracker/shared build && pnpm --filter @macrotracker/healthkit build && cross-env NEXT_MOBILE=1 NEXT_PUBLIC_API_URL=https://macros-api.geehive.com/api/v1 next build",
     "start": "next start",
     "lint": "next lint",
     "cap:sync": "pnpm build:mobile && node scripts/generate-brand-assets.mjs && node scripts/ios-configure.mjs && cap sync ios && capacitor-assets generate --ios --assetPath assets",
@@ -16,7 +16,9 @@
     "@capacitor-mlkit/barcode-scanning": "~7.5.0",
     "@capacitor/app": "^8",
     "@capacitor/core": "^8",
+    "@capacitor/preferences": "^8.0.1",
     "@capacitor/splash-screen": "^8",
+    "@macrotracker/healthkit": "workspace:*",
     "@macrotracker/shared": "workspace:*",
     "@serwist/next": "^9.5.7",
     "@simplewebauthn/browser": "^13.3.0",

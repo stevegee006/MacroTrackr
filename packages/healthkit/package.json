@@ -1,0 +1,36 @@
+{
+  "name": "@macrotracker/healthkit",
+  "version": "0.0.1",
+  "description": "Minimal Capacitor plugin: read ActiveEnergyBurned, write dietary nutrition samples",
+  "type": "module",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "ios/Plugin/",
+    "MacroTrackerHealthKit.podspec",
+    "README.md"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "peerDependencies": {
+    "@capacitor/core": "^8"
+  },
+  "devDependencies": {
+    "@capacitor/core": "^8.6.2",
+    "typescript": "^5.9.3"
+  }
+}

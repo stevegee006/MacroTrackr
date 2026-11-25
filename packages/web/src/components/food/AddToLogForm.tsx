@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { todayString, parseDateLocal, addDays } from '@/lib/utils';
+import { writeNutritionSample } from '@/lib/healthkit';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { MathInput } from '@/components/ui/MathInput';
@@ -53,6 +54,26 @@ export function AddToLogForm({ food, logDate: initialDate, onSuccess }: AddToLog
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['food-log'] });
       queryClient.invalidateQueries({ queryKey: ['food-log-summary'] });
+      // Fire-and-forget write to Apple Health with the same macros we just
+      // saved locally. Runs only on iOS when the user has connected Health
+      // (the facade gates this itself). We use noon of logDate rather than
+      // now so back-dated entries show up on the correct day in Health
+      // without timezone edge cases around midnight.
+      const sampleDate =
+        logDate === todayString()
+          ? new Date()
+          : (() => {
+              const d = parseDateLocal(logDate);
+              d.setHours(12, 0, 0, 0);
+              return d;
+            })();
+      void writeNutritionSample({
+        energyKcal: food.caloriesPer100g * factor,
+        proteinG: food.proteinPer100g * factor,
+        carbsG: food.carbsPer100g * factor,
+        fatG: food.fatPer100g * factor,
+        timestamp: sampleDate,
+      });
       onSuccess?.();
     },
   });

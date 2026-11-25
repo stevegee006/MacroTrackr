@@ -20,6 +20,7 @@ import { Activity, Camera, GraduationCap, HelpCircle, MessageSquare, Ruler, Shie
 import { compressImage } from '@/lib/image-utils';
 import { getApiUrl, getAccessToken } from '@/lib/api-client';
 import type { BodyMeasurement, ProgressPhotoMeta } from '@macrotracker/shared';
+import { AppleHealthCard } from '@/components/health/AppleHealthCard';
 
 type Tab = 'biometrics' | 'security' | 'settings' | 'photos';
 
@@ -993,6 +994,8 @@ function SettingsTab() {
           <p className="text-sm text-emerald-600">Mealie configuration saved!</p>
         )}
       </Card>
+
+      <AppleHealthCard />
 
       {mutation.isSuccess && (
         <p className="text-sm text-emerald-600 text-center lg:col-span-2">Settings saved!</p>
